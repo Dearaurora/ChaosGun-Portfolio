@@ -17,14 +17,14 @@ size = Vector3(100, 1, 100)
 [node name="DemoArena" type="Node3D" unique_id=2136944171]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=711160468]
-transform = Transform3D(0.8660253, -0.4330129, 0.2500001, 0, 0.49999994, 0.86602545, -0.50000024, -0.74999994, 0.43301257, 0, 65.60176, 0)
+transform = Transform3D(0.8660254, -0.43301272, 0.24999999, 0, 0.49999997, 0.86602545, -0.5, -0.75, 0.43301266, 0, 100, 0)
 shadow_enabled = true
 
 [node name="GlobalCamera" type="Camera3D" parent="." unique_id=1225939301]
-transform = Transform3D(1, 0, 0, 0, 0.50000024, 0.8660253, 0, -0.8660253, 0.50000024, 0, 50, 47.612278)
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 50, 50)
 projection = 1
 current = true
-size = 120.0
+size = 100.0
 
 [node name="Floor" type="StaticBody3D" parent="." unique_id=982512409]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
