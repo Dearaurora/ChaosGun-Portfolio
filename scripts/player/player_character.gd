@@ -1,8 +1,6 @@
 extends BaseCharacter
 class_name PlayerCharacter
 
-# 射击输入追踪
-var _prev_fire_pressed: bool = false
 
 # 狙击硬直
 var _stun_timer: float = 0.0
@@ -29,11 +27,6 @@ func _physics_process(delta: float) -> void:
 
 	# --- 移动输入 ---
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
-	if input_dir == Vector2.ZERO:
-		var x = float(Input.is_key_pressed(KEY_D)) - float(Input.is_key_pressed(KEY_A))
-		var z = float(Input.is_key_pressed(KEY_S)) - float(Input.is_key_pressed(KEY_W))
-		input_dir = Vector2(x, z).normalized()
-
 	var direction := Vector3(input_dir.x, 0, input_dir.y).normalized()
 
 	# 硬直期间不能移动/转向
@@ -64,19 +57,15 @@ func _handle_fire_input() -> void:
 	if not weapon_manager or _stun_timer > 0.0:
 		return
 
-	var fire_pressed = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var fire_just_pressed = fire_pressed and not _prev_fire_pressed
-	_prev_fire_pressed = fire_pressed
-
 	var fire_dir = -transform.basis.z
 	var fire_mode = weapon_manager.get_current_fire_mode()
 
 	var should_fire = false
 	match fire_mode:
 		WeaponData.FireMode.SEMI_AUTO, WeaponData.FireMode.BOLT_ACTION:
-			should_fire = fire_just_pressed
+			should_fire = Input.is_action_just_pressed("fire")
 		WeaponData.FireMode.FULL_AUTO:
-			should_fire = fire_pressed
+			should_fire = Input.is_action_pressed("fire")
 
 	if should_fire:
 		weapon_manager.try_fire(weapon_point, fire_dir, self)
@@ -87,12 +76,12 @@ func _handle_fire_input() -> void:
 func _handle_weapon_input() -> void:
 	if not weapon_manager:
 		return
-	if Input.is_key_pressed(KEY_1):
+	if Input.is_action_just_pressed("weapon_slot_1"):
 		weapon_manager.switch_to_slot(0)
-	elif Input.is_key_pressed(KEY_2):
+	elif Input.is_action_just_pressed("weapon_slot_2"):
 		weapon_manager.switch_to_slot(1)
 
-	if Input.is_action_just_pressed("ui_focus_next"):
+	if Input.is_action_just_pressed("weapon_cycle"):
 		weapon_manager.cycle_weapon()
 
 
@@ -145,14 +134,3 @@ func _spawn_drop_visual(pos: Vector3) -> void:
 	tween.parallel().tween_property(drop, "global_position:y", 0.0, 0.3).set_ease(Tween.EASE_IN)
 	tween.tween_callback(drop.queue_free)
 
-# ------------------------------------------------------------------
-#  滚轮输入（通过 _input 捕获）
-# ------------------------------------------------------------------
-func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and weapon_manager:
-		var mb = event as InputEventMouseButton
-		if mb.pressed:
-			if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-				weapon_manager.cycle_weapon()
-			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				weapon_manager.cycle_weapon()

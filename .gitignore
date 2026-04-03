@@ -15,3 +15,9 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Asset source files (keep only exports)
+*.psd
+*.xcf
+*.blend1
+*.blend2

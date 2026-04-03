@@ -21,6 +21,12 @@ request_feedback: true
 - 无法通过 InputMap 重新映射按键
 - 未来无法支持手柄
 
+## 任务清单 (Task Checklist)
+
+- [x] 1. 编写辅助脚本并执行，将自定义动作添加到 `project.godot` 的 InputMap 中。
+- [x] 2. 重构 `player_character.gd`，移除所有硬编码的输入检测和状态追踪（`_prev_fire_pressed` 等）。
+- [x] 3. 运行 Godot 系统验证 Input 映射是否生效。
+
 ## 拟议变更
 
 ### [MODIFY] `project.godot`

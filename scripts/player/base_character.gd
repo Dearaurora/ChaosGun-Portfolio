@@ -6,12 +6,14 @@ class_name BaseCharacter
 @export var friction: float = 6.0
 @export var gravity: float = 20.0
 
+@export var mass: float = 1.0
+@export var knockback_drag: float = 35.0
+
 @onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
 @onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
 @onready var _mesh: MeshInstance3D = get_node_or_null("MeshInstance3D")
 
-var knockback_velocity: Vector3 = Vector3.ZERO
-var knockback_resistance: float = 0.0
+var momentum: Vector3 = Vector3.ZERO
 
 # ============================================================
 #  生命与复活系统
@@ -25,9 +27,6 @@ var _respawn_timer: float = 0.0
 var _invincible_timer: float = 0.0
 
 func _base_process(delta: float) -> void:
-	if knockback_resistance > 0.0:
-		knockback_resistance = max(0.0, knockback_resistance - delta * 0.5)
-
 	# 复活倒计时
 	if is_dead:
 		_respawn_timer -= delta
@@ -55,33 +54,24 @@ func _check_fall() -> void:
 		_die()
 
 func _apply_movement(desired_vel: Vector3, delta: float) -> void:
-	if knockback_velocity.length_squared() > 0.1:
-		knockback_velocity = knockback_velocity.lerp(Vector3.ZERO, friction * 0.4 * delta)
-	else:
-		knockback_velocity = Vector3.ZERO
+	momentum = momentum.move_toward(Vector3.ZERO, knockback_drag * delta)
 
-	var current_move_vel = velocity - knockback_velocity
+	var current_move_vel = velocity - momentum
 	current_move_vel.y = 0
 
-	var control_factor = 1.0
-	if knockback_velocity.length() > speed * 0.3:
-		control_factor = 0.05
-
 	if desired_vel.length() > 0.1:
-		current_move_vel = current_move_vel.lerp(desired_vel, acceleration * control_factor * delta)
+		current_move_vel = current_move_vel.lerp(desired_vel, acceleration * delta)
 	else:
 		current_move_vel = current_move_vel.lerp(Vector3.ZERO, friction * delta)
 
-	velocity.x = current_move_vel.x + knockback_velocity.x
-	velocity.z = current_move_vel.z + knockback_velocity.z
+	velocity.x = current_move_vel.x + momentum.x
+	velocity.z = current_move_vel.z + momentum.z
 
-func apply_knockback(force: Vector3) -> void:
+func apply_knockback(impulse: Vector3) -> void:
 	# 无敌期间免疫击退
 	if is_invincible or is_dead:
 		return
-	var actual_force = force * max(0.2, (1.0 - knockback_resistance))
-	knockback_velocity += actual_force
-	knockback_resistance = min(0.4, knockback_resistance + 0.1)
+	momentum += impulse / mass
 
 func _is_near_edge(push_dir: Vector3) -> bool:
 	var space_state = get_world_3d().direct_space_state
@@ -96,7 +86,7 @@ func _die() -> void:
 	lives -= 1
 	is_dead = true
 	velocity = Vector3.ZERO
-	knockback_velocity = Vector3.ZERO
+	momentum = Vector3.ZERO
 
 	# 隐藏角色
 	visible = false
@@ -116,8 +106,7 @@ func _respawn() -> void:
 	var spawn_point = GameConfig.respawn_points.pick_random()
 	global_position = spawn_point
 	velocity = Vector3.ZERO
-	knockback_velocity = Vector3.ZERO
-	knockback_resistance = 0.0
+	momentum = Vector3.ZERO
 
 	# 显示角色
 	visible = true

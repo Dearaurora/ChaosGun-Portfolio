@@ -1,8 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://cxab3qykk26e4"]
+[gd_scene format=3 uid="uid://cxab3qykk26e4"]
 
-[ext_resource type="Script" path="res://scripts/player/player_character.gd" id="1_x"]
-[ext_resource type="Script" path="res://scripts/weapons/weapon_manager.gd" id="2_wm"]
-[ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
+[ext_resource type="Script" uid="uid://csdhridnvu15o" path="res://scripts/player/player_character.gd" id="1_x"]
+[ext_resource type="Script" uid="uid://dpdixe31s6q6d" path="res://scripts/weapons/weapon_manager.gd" id="2_wm"]
+[ext_resource type="Script" uid="uid://cn64nu4b5smyp" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pl"]
 radius = 1.5
@@ -16,22 +16,22 @@ material = SubResource("StandardMaterial3D_pl")
 radius = 1.5
 height = 3.0
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" unique_id=893437653]
 script = ExtResource("1_x")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=464970717]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("CapsuleShape3D_pl")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=88693151]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 mesh = SubResource("CapsuleMesh_pl")
 
-[node name="WeaponPoint" type="Marker3D" parent="."]
+[node name="WeaponPoint" type="Marker3D" parent="." unique_id=1277651540]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)
 
-[node name="WeaponManager" type="Node" parent="."]
+[node name="WeaponManager" type="Node" parent="." unique_id=1794752214]
 script = ExtResource("2_wm")
 
-[node name="DebugHUD" type="CanvasLayer" parent="."]
+[node name="DebugHUD" type="CanvasLayer" parent="." unique_id=1741334821]
 script = ExtResource("3_hud")
