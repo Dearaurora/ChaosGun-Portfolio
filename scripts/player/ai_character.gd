@@ -24,8 +24,7 @@ var _fire_cooldown_ai: float = 0.0    # AI 自己的开火节奏控制
 
 func _ready() -> void:
 	_pick_patrol_dest()
-	if weapon_manager:
-		weapon_manager.stun_started.connect(func(_d): pass)  # AI 不受硬直影响（可选）
+
 
 func _process(delta: float) -> void:
 	super._base_process(delta)

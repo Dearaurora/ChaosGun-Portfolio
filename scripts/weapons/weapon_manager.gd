@@ -10,7 +10,7 @@ var _switch_timer: float = 0.0
 
 signal weapon_switched(weapon_data: WeaponData)
 signal weapon_dropped(drop_position: Vector3)
-signal stun_started(duration: float)
+
 
 func _ready() -> void:
 	# 初始化手枪
@@ -33,8 +33,6 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	if is_switching or not current_weapon:
 		return false
 	var did_fire = current_weapon.try_fire(fire_point, direction, shooter)
-	if did_fire and current_weapon.weapon_data.stun_duration > 0:
-		stun_started.emit(current_weapon.weapon_data.stun_duration)
 	return did_fire
 
 # ------------------------------------------------------------------

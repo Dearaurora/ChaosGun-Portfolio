@@ -11,7 +11,6 @@ class_name BaseCharacter
 
 @onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
 @onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
-@onready var _mesh: MeshInstance3D = get_node_or_null("MeshInstance3D")
 
 var momentum: Vector3 = Vector3.ZERO
 
@@ -39,11 +38,11 @@ func _base_process(delta: float) -> void:
 		_invincible_timer -= delta
 		if _invincible_timer <= 0.0:
 			is_invincible = false
-			if _mesh:
-				_mesh.visible = true
-		elif _mesh:
+			_set_all_meshes_visible(true)
+		else:
 			# 半透明闪烁：每 0.15 秒切换可见性
-			_mesh.visible = fmod(_invincible_timer, 0.3) > 0.15
+			var flicker = fmod(_invincible_timer, 0.3) > 0.15
+			_set_all_meshes_visible(flicker)
 
 func _apply_gravity(delta: float) -> void:
 	if not is_on_floor():
@@ -72,6 +71,11 @@ func apply_knockback(impulse: Vector3) -> void:
 	if is_invincible or is_dead:
 		return
 	momentum += impulse / mass
+
+func apply_hit(impulse: Vector3) -> void:
+	## 被敌人子弹击中时调用：既施加冲量又触发受击闪白
+	apply_knockback(impulse)
+	_flash_damage()
 
 func _is_near_edge(push_dir: Vector3) -> bool:
 	var space_state = get_world_3d().direct_space_state
@@ -115,3 +119,47 @@ func _respawn() -> void:
 	# 启动无敌盾
 	is_invincible = true
 	_invincible_timer = GameConfig.invincible_duration
+
+# ============================================================
+#  受击闪白
+# ============================================================
+var _original_colors: Array = []
+var _flash_tween: Tween = null
+
+func _flash_damage() -> void:
+	var meshes = _get_all_meshes()
+	if meshes.is_empty():
+		return
+	if _flash_tween and _flash_tween.is_running():
+		_flash_tween.kill()
+	else:
+		_original_colors.clear()
+		for m in meshes:
+			var mat = m.get_active_material(0)
+			if mat and mat is StandardMaterial3D:
+				_original_colors.append({"mat": mat, "color": mat.albedo_color, "emission": mat.emission})
+	# 闪白
+	for entry in _original_colors:
+		entry["mat"].albedo_color = Color.WHITE
+		entry["mat"].emission = Color.WHITE
+	_flash_tween = create_tween()
+	_flash_tween.tween_callback(func():
+		for entry in _original_colors:
+			entry["mat"].albedo_color = entry["color"]
+			entry["mat"].emission = entry["emission"]
+	).set_delay(0.1)
+
+# ============================================================
+#  Mesh 辅助
+# ============================================================
+func _get_all_meshes() -> Array[MeshInstance3D]:
+	var result: Array[MeshInstance3D] = []
+	for child in get_children():
+		if child is MeshInstance3D:
+			result.append(child)
+	return result
+
+func _set_all_meshes_visible(is_vis: bool) -> void:
+	for child in get_children():
+		if child is MeshInstance3D:
+			child.visible = is_vis

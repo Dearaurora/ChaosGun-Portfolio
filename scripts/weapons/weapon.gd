@@ -2,6 +2,8 @@ extends Node
 class_name Weapon
 ## 单把武器的运行时状态与射击逻辑
 
+const MuzzleFlashScene: PackedScene = preload("res://scenes/effects/muzzle_flash.tscn")
+
 var weapon_data: WeaponData
 var current_ammo: int = -1
 var current_spread: float = 0.0
@@ -35,11 +37,19 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	var proj = weapon_data.projectile_scene.instantiate() as Projectile
 	fire_point.get_tree().current_scene.add_child(proj)
 	proj.global_position = fire_point.global_position
+	proj.look_at(proj.global_position + final_dir)
 	proj.direction = final_dir
 	proj.speed = weapon_data.bullet_speed
 	proj.knockback_power = weapon_data.knockback_power
 	proj.lifetime = weapon_data.bullet_lifetime
 	proj.shooter = shooter
+
+	# 枪口焰
+	var flash = MuzzleFlashScene.instantiate()
+	fire_point.get_tree().current_scene.add_child(flash)
+	flash.global_position = fire_point.global_position
+	flash.scale = Vector3.ONE * randf_range(0.8, 1.3)
+	fire_point.get_tree().create_timer(0.06).timeout.connect(flash.queue_free)
 
 	# 射速冷却
 	fire_cooldown = 1.0 / weapon_data.fire_rate
@@ -54,10 +64,10 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	_time_since_last_shot = 0.0
 
 	# 后坐力反推（推射手后退）
-	if weapon_data.recoil_force > 0.0 and shooter.get("knockback_velocity") != null:
+	if weapon_data.recoil_force > 0.0 and shooter.has_method("apply_knockback"):
 		var recoil_dir = -final_dir  # 与弹道方向相反
 		recoil_dir.y = 0
-		shooter.knockback_velocity += recoil_dir * weapon_data.recoil_force
+		shooter.apply_knockback(recoil_dir * weapon_data.recoil_force)
 
 	fired.emit()
 

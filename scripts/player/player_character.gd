@@ -2,18 +2,15 @@ extends BaseCharacter
 class_name PlayerCharacter
 
 
-# 狙击硬直
-var _stun_timer: float = 0.0
+# 狙击硬直 (已移除)
+
 
 func _ready() -> void:
 	if weapon_manager:
-		weapon_manager.stun_started.connect(_on_stun_started)
 		weapon_manager.weapon_dropped.connect(_on_weapon_dropped)
 
 func _process(delta: float) -> void:
 	super._base_process(delta)
-	if _stun_timer > 0.0:
-		_stun_timer = max(0.0, _stun_timer - delta)
 
 func _physics_process(delta: float) -> void:
 	if is_dead or is_game_over:
@@ -29,16 +26,12 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction := Vector3(input_dir.x, 0, input_dir.y).normalized()
 
-	# 硬直期间不能移动/转向
-	if _stun_timer > 0.0:
-		direction = Vector3.ZERO
 
 	var target_vel = direction * speed
 
 	_apply_movement(target_vel, delta)
 
-	if _stun_timer <= 0.0:
-		_look_at_mouse()
+	_look_at_mouse()
 
 	# --- 射击输入 ---
 	_handle_fire_input()
@@ -54,7 +47,7 @@ func _physics_process(delta: float) -> void:
 #  射击输入处理
 # ------------------------------------------------------------------
 func _handle_fire_input() -> void:
-	if not weapon_manager or _stun_timer > 0.0:
+	if not weapon_manager:
 		return
 
 	var fire_dir = -transform.basis.z
@@ -108,11 +101,8 @@ func _look_at_mouse() -> void:
 		var target_basis = Basis.looking_at(look_dir, Vector3.UP)
 		transform.basis = transform.basis.slerp(target_basis, 0.4)
 
-# ------------------------------------------------------------------
-#  信号回调
-# ------------------------------------------------------------------
-func _on_stun_started(duration: float) -> void:
-	_stun_timer = duration
+# 信号回调 (已移除 _on_stun_started)
+
 
 func _on_weapon_dropped(drop_position: Vector3) -> void:
 	_spawn_drop_visual(drop_position)
