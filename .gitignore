@@ -1,0 +1,17 @@
+# Godot 4 .gitignore
+.godot/
+*.import
+export_presets.cfg
+*.translation
+*.uid
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

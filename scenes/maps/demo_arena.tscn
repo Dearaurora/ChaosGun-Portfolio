@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3 uid="uid://dma2j2p6lyxxy"]
+
+[ext_resource type="PackedScene" uid="uid://cxab3qykk26e4" path="res://scenes/characters/player.tscn" id="1_test_player"]
+[ext_resource type="PackedScene" path="res://scenes/characters/ai_character.tscn" id="2_ai"]
+[ext_resource type="Script" path="res://scripts/weapons/weapon_spawner.gd" id="3_spawner"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(100, 1, 100)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.533333, 0.811765, 0.52549, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(100, 1, 100)
+
+[node name="DemoArena" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 10, 0)
+shadow_enabled = true
+
+[node name="GlobalCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 50, 30)
+projection = 1
+size = 120.0
+current = true
+
+[node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("BoxMesh_floor")
+
+[node name="Player" parent="." groups=["player"] instance=ExtResource("1_test_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="AI_1" parent="." instance=ExtResource("2_ai")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0.5, -15)
+
+[node name="WeaponSpawner" type="Node" parent="."]
+script = ExtResource("3_spawner")
