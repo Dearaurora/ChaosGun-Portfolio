@@ -37,8 +37,6 @@ func _physics_process(delta: float) -> void:
 	_check_fall()
 	if is_dead: return
 
-	_apply_gravity(delta)
-
 	# --- 寻找目标 ---
 	_find_target()
 
@@ -57,9 +55,9 @@ func _physics_process(delta: float) -> void:
 		State.FLEE_EDGE:
 			move_dir = _do_flee_edge(delta)
 
-	# --- 应用移动（与 PlayerCharacter 相同的物理） ---
-	_apply_movement(move_dir, delta)
-	move_and_slide()
+	# --- 应用移动 ---
+	if move_dir.length() > 0.1:
+		apply_central_force(move_dir.normalized() * speed)
 
 # ============================================================
 #  FSM 状态切换

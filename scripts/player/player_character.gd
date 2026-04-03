@@ -20,16 +20,12 @@ func _physics_process(delta: float) -> void:
 	_check_fall()
 	if is_dead: return
 
-	_apply_gravity(delta)
-
 	# --- 移动输入 ---
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction := Vector3(input_dir.x, 0, input_dir.y).normalized()
 
-
-	var target_vel = direction * speed
-
-	_apply_movement(target_vel, delta)
+	if direction.length() > 0.1:
+		apply_central_force(direction * speed)
 
 	_look_at_mouse()
 
@@ -38,8 +34,6 @@ func _physics_process(delta: float) -> void:
 
 	# --- 武器切换输入 ---
 	_handle_weapon_input()
-
-	move_and_slide()
 
 
 

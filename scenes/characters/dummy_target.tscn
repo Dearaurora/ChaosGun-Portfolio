@@ -14,7 +14,12 @@ material = SubResource("StandardMaterial3D_dmmy")
 radius = 1.5
 height = 3.0
 
-[node name="DummyTarget" type="CharacterBody3D"]
+[node name="DummyTarget" type="RigidBody3D"]
+axis_lock_angular_x = true
+axis_lock_angular_y = true
+axis_lock_angular_z = true
+contact_monitor = true
+max_contacts_reported = 4
 script = ExtResource("1_test")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

@@ -1,18 +1,11 @@
-extends CharacterBody3D
+extends RigidBody3D
 class_name BaseCharacter
 
-@export var speed: float = 24.0
-@export var acceleration: float = 12.0
-@export var friction: float = 6.0
-@export var gravity: float = 20.0
-
-@export var mass: float = 1.0
-@export var knockback_drag: float = 35.0
+@export var speed: float = 180.0             # 水平推力
+@export var horizontal_damp: float = 5.0     # 水平阻尼系数（只影响水平X/Z，保留自由坠落Y）
 
 @onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
 @onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
-
-var momentum: Vector3 = Vector3.ZERO
 
 # ============================================================
 #  生命与复活系统
@@ -44,33 +37,24 @@ func _base_process(delta: float) -> void:
 			var flicker = fmod(_invincible_timer, 0.3) > 0.15
 			_set_all_meshes_visible(flicker)
 
-func _apply_gravity(delta: float) -> void:
-	if not is_on_floor():
-		velocity.y -= gravity * delta
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	# 模拟全局阻尼，但仅作用于水平面（X/Z）
+	if horizontal_damp > 0.0:
+		var current_vel = state.linear_velocity
+		var h_vel = Vector3(current_vel.x, 0, current_vel.z)
+		# 阻力反向于运动方向，与其速度和阻尼系数成正比
+		var damping_force = -h_vel * horizontal_damp * mass
+		apply_central_force(damping_force)
 
 func _check_fall() -> void:
 	if global_position.y < GameConfig.fall_threshold:
 		_die()
 
-func _apply_movement(desired_vel: Vector3, delta: float) -> void:
-	momentum = momentum.move_toward(Vector3.ZERO, knockback_drag * delta)
-
-	var current_move_vel = velocity - momentum
-	current_move_vel.y = 0
-
-	if desired_vel.length() > 0.1:
-		current_move_vel = current_move_vel.lerp(desired_vel, acceleration * delta)
-	else:
-		current_move_vel = current_move_vel.lerp(Vector3.ZERO, friction * delta)
-
-	velocity.x = current_move_vel.x + momentum.x
-	velocity.z = current_move_vel.z + momentum.z
-
 func apply_knockback(impulse: Vector3) -> void:
 	# 无敌期间免疫击退
 	if is_invincible or is_dead:
 		return
-	momentum += impulse / mass
+	apply_central_impulse(impulse)
 
 func apply_hit(impulse: Vector3) -> void:
 	## 被敌人子弹击中时调用：既施加冲量又触发受击闪白
@@ -89,13 +73,14 @@ func _die() -> void:
 		return
 	lives -= 1
 	is_dead = true
-	velocity = Vector3.ZERO
-	momentum = Vector3.ZERO
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 
 	# 隐藏角色
 	visible = false
 	# 关闭碰撞
 	set_physics_process(false)
+	freeze = true
 
 	if lives <= 0:
 		is_game_over = true
@@ -109,11 +94,12 @@ func _respawn() -> void:
 	# 随机复活点
 	var spawn_point = GameConfig.respawn_points.pick_random()
 	global_position = spawn_point
-	velocity = Vector3.ZERO
-	momentum = Vector3.ZERO
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 
 	# 显示角色
 	visible = true
+	freeze = false
 	set_physics_process(true)
 
 	# 启动无敌盾
