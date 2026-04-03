@@ -1,84 +1,28 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/ai_character.gd" id="1_ai"]
 [ext_resource type="Script" path="res://scripts/weapons/weapon_manager.gd" id="2_wm"]
+[ext_resource type="Script" path="res://scripts/player/character_visual.gd" id="3_vis"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_ai"]
-radius = 1.2
-height = 2.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
-albedo_color = Color(0.2, 0.8, 0.3, 1)
-emission_enabled = true
-emission = Color(0.2, 0.8, 0.3, 1)
-emission_energy_multiplier = 0.3
-rim_enabled = true
-rim = 0.4
-rim_tint = 0.3
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
-material = SubResource("StandardMaterial3D_body")
-radius = 1.2
-height = 2.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_head"]
-albedo_color = Color(0.4, 0.9, 0.5, 1)
-emission_enabled = true
-emission = Color(0.4, 0.9, 0.5, 1)
-emission_energy_multiplier = 0.4
-
-[sub_resource type="SphereMesh" id="SphereMesh_head"]
-material = SubResource("StandardMaterial3D_head")
-radius = 0.8
-height = 1.6
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gun"]
-albedo_color = Color(0.3, 0.3, 0.35, 1)
-emission_enabled = true
-emission = Color(0.5, 0.5, 0.6, 1)
-emission_energy_multiplier = 0.2
-
-[sub_resource type="BoxMesh" id="BoxMesh_gun"]
-material = SubResource("StandardMaterial3D_gun")
-size = Vector3(0.3, 0.3, 1.8)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_arrow"]
-albedo_color = Color(0.2, 1.0, 0.3, 1)
-emission_enabled = true
-emission = Color(0.2, 1.0, 0.3, 1)
-emission_energy_multiplier = 1.0
-
-[sub_resource type="PrismMesh" id="PrismMesh_arrow"]
-material = SubResource("StandardMaterial3D_arrow")
-size = Vector3(1.0, 0.1, 1.2)
+[sub_resource type="SphereShape3D" id="SphereShape3D_ai"]
+radius = 1.4
 
 [node name="AICharacter" type="RigidBody3D" groups=["ai"]]
-axis_lock_angular_x = true
-axis_lock_angular_y = true
-axis_lock_angular_z = true
+script = ExtResource("1_ai")
+mass = 10.0
+gravity_scale = 3.0
+lock_rotation = true
+continuous_cd = true
 contact_monitor = true
 max_contacts_reported = 4
-script = ExtResource("1_ai")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
-shape = SubResource("CapsuleShape3D_ai")
+shape = SubResource("SphereShape3D_ai")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
-mesh = SubResource("CapsuleMesh_body")
-
-[node name="Head" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
-mesh = SubResource("SphereMesh_head")
-
-[node name="GunBarrel" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)
-mesh = SubResource("BoxMesh_gun")
-
-[node name="DirectionArrow" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -1.0)
-mesh = SubResource("PrismMesh_arrow")
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("3_vis")
+body_color = Color(0.2, 0.8, 0.3, 1)
 
 [node name="WeaponPoint" type="Marker3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)

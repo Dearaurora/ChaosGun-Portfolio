@@ -24,10 +24,16 @@ var _fire_cooldown_ai: float = 0.0    # AI 自己的开火节奏控制
 
 func _ready() -> void:
 	_pick_patrol_dest()
-
+	if weapon_manager:
+		weapon_manager.weapon_switched.connect(_on_weapon_switched)
 
 func _process(delta: float) -> void:
 	super._base_process(delta)
+	# 弹跳动画
+	var visual = get_visual()
+	if visual and not is_dead:
+		var is_moving = linear_velocity.length() > 1.0
+		visual.animate_movement(is_moving, delta)
 
 func _physics_process(delta: float) -> void:
 	if is_dead or is_game_over:
@@ -212,4 +218,7 @@ func _is_self_near_edge() -> bool:
 	var z_edge = abs(global_position.z) > GameConfig.map_half_size - EDGE_SAFE_DIST
 	return x_edge or z_edge
 
-
+func _on_weapon_switched(weapon_data: WeaponData) -> void:
+	var visual = get_visual()
+	if visual:
+		visual.set_weapon_visual(weapon_data.weapon_id)

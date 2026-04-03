@@ -8,9 +8,15 @@ class_name PlayerCharacter
 func _ready() -> void:
 	if weapon_manager:
 		weapon_manager.weapon_dropped.connect(_on_weapon_dropped)
+		weapon_manager.weapon_switched.connect(_on_weapon_switched)
 
 func _process(delta: float) -> void:
 	super._base_process(delta)
+	# 弹跳动画
+	var visual = get_visual()
+	if visual and not is_dead:
+		var is_moving = linear_velocity.length() > 1.0
+		visual.animate_movement(is_moving, delta)
 
 func _physics_process(delta: float) -> void:
 	if is_dead or is_game_over:
@@ -100,6 +106,11 @@ func _look_at_mouse() -> void:
 
 func _on_weapon_dropped(drop_position: Vector3) -> void:
 	_spawn_drop_visual(drop_position)
+
+func _on_weapon_switched(weapon_data: WeaponData) -> void:
+	var visual = get_visual()
+	if visual:
+		visual.set_weapon_visual(weapon_data.weapon_id)
 
 func _spawn_drop_visual(pos: Vector3) -> void:
 	var drop = MeshInstance3D.new()

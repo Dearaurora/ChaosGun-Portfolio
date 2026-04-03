@@ -140,12 +140,24 @@ func _flash_damage() -> void:
 # ============================================================
 func _get_all_meshes() -> Array[MeshInstance3D]:
 	var result: Array[MeshInstance3D] = []
-	for child in get_children():
-		if child is MeshInstance3D:
-			result.append(child)
+	_collect_meshes(self, result)
 	return result
 
-func _set_all_meshes_visible(is_vis: bool) -> void:
-	for child in get_children():
+func _collect_meshes(node: Node, result: Array[MeshInstance3D]) -> void:
+	for child in node.get_children():
 		if child is MeshInstance3D:
-			child.visible = is_vis
+			result.append(child)
+		_collect_meshes(child, result)
+
+func _set_all_meshes_visible(is_vis: bool) -> void:
+	var visual = get_node_or_null("Visual")
+	if visual:
+		visual.visible = is_vis
+	else:
+		for child in get_children():
+			if child is MeshInstance3D:
+				child.visible = is_vis
+
+## 获取 CharacterVisual 节点（如果存在）
+func get_visual() -> CharacterVisual:
+	return get_node_or_null("Visual") as CharacterVisual
