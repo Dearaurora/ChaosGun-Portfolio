@@ -39,8 +39,8 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	proj.global_position = fire_point.global_position
 	proj.look_at(proj.global_position + final_dir)
 	proj.direction = final_dir
-	proj.speed = weapon_data.bullet_speed
-	proj.knockback_power = weapon_data.knockback_power
+	proj.speed = weapon_data.bullet_speed * GameConfig.bullet_speed_multiplier
+	proj.knockback_power = weapon_data.knockback_power * GameConfig.knockback_multiplier
 	proj.lifetime = weapon_data.bullet_lifetime
 	proj.shooter = shooter
 
