@@ -24,8 +24,13 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction := Vector3(input_dir.x, 0, input_dir.y).normalized()
 
+	var current_speed = speed if is_on_floor() else speed * air_control_multiplier
+
 	if direction.length() > 0.1:
-		apply_central_force(direction * speed)
+		apply_central_force(direction * current_speed)
+		
+	if Input.is_action_just_pressed("jump"):
+		jump()
 
 	_look_at_mouse()
 
@@ -117,4 +122,3 @@ func _spawn_drop_visual(pos: Vector3) -> void:
 	tween.tween_property(drop, "global_position", end_pos, 0.3).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(drop, "global_position:y", 0.0, 0.3).set_ease(Tween.EASE_IN)
 	tween.tween_callback(drop.queue_free)
-

@@ -211,5 +211,3 @@ func _is_self_near_edge() -> bool:
 	var x_edge = abs(global_position.x) > GameConfig.map_half_size - EDGE_SAFE_DIST
 	var z_edge = abs(global_position.z) > GameConfig.map_half_size - EDGE_SAFE_DIST
 	return x_edge or z_edge
-
-

@@ -43,16 +43,6 @@ emission_energy_multiplier = 0.2
 material = SubResource("StandardMaterial3D_gun")
 size = Vector3(0.3, 0.3, 1.8)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_arrow"]
-albedo_color = Color(1, 1, 0.3, 1)
-emission_enabled = true
-emission = Color(1, 1, 0, 1)
-emission_energy_multiplier = 1.0
-
-[sub_resource type="PrismMesh" id="PrismMesh_arrow"]
-material = SubResource("StandardMaterial3D_arrow")
-size = Vector3(1.0, 0.1, 1.2)
-
 [node name="Player" type="RigidBody3D" unique_id=893437653]
 axis_lock_angular_x = true
 axis_lock_angular_y = true
@@ -69,17 +59,13 @@ shape = SubResource("CapsuleShape3D_pl")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
 mesh = SubResource("CapsuleMesh_body")
 
-[node name="Head" type="MeshInstance3D" parent="."]
+[node name="Head" type="MeshInstance3D" parent="." unique_id=1572710871]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
 mesh = SubResource("SphereMesh_head")
 
-[node name="GunBarrel" type="MeshInstance3D" parent="."]
+[node name="GunBarrel" type="MeshInstance3D" parent="." unique_id=2111024924]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)
 mesh = SubResource("BoxMesh_gun")
-
-[node name="DirectionArrow" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -1.0)
-mesh = SubResource("PrismMesh_arrow")
 
 [node name="WeaponPoint" type="Marker3D" parent="." unique_id=1277651540]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)

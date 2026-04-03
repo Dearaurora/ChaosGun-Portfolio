@@ -1,7 +1,7 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene format=3 uid="uid://bfs0o836ofdtd"]
 
-[ext_resource type="Script" path="res://scripts/player/ai_character.gd" id="1_ai"]
-[ext_resource type="Script" path="res://scripts/weapons/weapon_manager.gd" id="2_wm"]
+[ext_resource type="Script" uid="uid://ce2rueaw2pxf3" path="res://scripts/player/ai_character.gd" id="1_ai"]
+[ext_resource type="Script" uid="uid://dpdixe31s6q6d" path="res://scripts/weapons/weapon_manager.gd" id="2_wm"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_ai"]
 radius = 1.2
@@ -42,17 +42,7 @@ emission_energy_multiplier = 0.2
 material = SubResource("StandardMaterial3D_gun")
 size = Vector3(0.3, 0.3, 1.8)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_arrow"]
-albedo_color = Color(0.2, 1.0, 0.3, 1)
-emission_enabled = true
-emission = Color(0.2, 1.0, 0.3, 1)
-emission_energy_multiplier = 1.0
-
-[sub_resource type="PrismMesh" id="PrismMesh_arrow"]
-material = SubResource("StandardMaterial3D_arrow")
-size = Vector3(1.0, 0.1, 1.2)
-
-[node name="AICharacter" type="RigidBody3D" groups=["ai"]]
+[node name="AICharacter" type="RigidBody3D" unique_id=1211842864 groups=["ai"]]
 axis_lock_angular_x = true
 axis_lock_angular_y = true
 axis_lock_angular_z = true
@@ -60,28 +50,24 @@ contact_monitor = true
 max_contacts_reported = 4
 script = ExtResource("1_ai")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=253748167]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("CapsuleShape3D_ai")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=706244546]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
 mesh = SubResource("CapsuleMesh_body")
 
-[node name="Head" type="MeshInstance3D" parent="."]
+[node name="Head" type="MeshInstance3D" parent="." unique_id=13244812]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
 mesh = SubResource("SphereMesh_head")
 
-[node name="GunBarrel" type="MeshInstance3D" parent="."]
+[node name="GunBarrel" type="MeshInstance3D" parent="." unique_id=1169387829]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)
 mesh = SubResource("BoxMesh_gun")
 
-[node name="DirectionArrow" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -1.0)
-mesh = SubResource("PrismMesh_arrow")
-
-[node name="WeaponPoint" type="Marker3D" parent="."]
+[node name="WeaponPoint" type="Marker3D" parent="." unique_id=1206187138]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)
 
-[node name="WeaponManager" type="Node" parent="."]
+[node name="WeaponManager" type="Node" parent="." unique_id=328050879]
 script = ExtResource("2_wm")
