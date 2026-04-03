@@ -2,11 +2,11 @@ extends Node
 class_name WeaponSpawner
 ## 全局武器刷新循环：开局 20s → 刷新 → 保留 30s → 冷却 10s → 循环
 
-@export var initial_delay: float = 5.0  ## TODO: 测试完毕后改回 20.0
-@export var stay_duration: float = 30.0
-@export var respawn_cooldown: float = 10.0
-@export var spawn_margin: float = 10.0
-@export var map_half_size: float = 50.0
+@export var initial_delay: float = GameConfig.weapon_initial_delay
+@export var stay_duration: float = GameConfig.weapon_stay_duration
+@export var respawn_cooldown: float = GameConfig.weapon_respawn_cooldown
+@export var spawn_margin: float = GameConfig.weapon_spawn_margin
+@export var map_half_size: float = GameConfig.map_half_size
 
 var _current_pickup: Node3D = null
 var _pickup_scene: PackedScene

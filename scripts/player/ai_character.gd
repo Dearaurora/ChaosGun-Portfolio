@@ -14,7 +14,6 @@ const EDGE_SAFE_DIST: float = 8.0
 const AIM_OFFSET_DEG: float = 5.0     # 瞄准偏移（±度）
 const REACTION_TIME: float = 0.3
 const PICKUP_RANGE: float = 15.0
-const MAP_HALF: float = 50.0
 
 enum State { PATROL, CHASE, SHOOT, FLEE_EDGE }
 var _state: State = State.PATROL
@@ -204,7 +203,7 @@ func _find_nearby_pickup() -> WeaponPickup:
 
 func _pick_patrol_dest() -> void:
 	# 随机选择地图中心区域的一个点
-	var range_val = MAP_HALF * 0.5  # 在地图中心 50% 区域巡逻
+	var range_val = GameConfig.map_half_size * 0.5  # 在地图中心 50% 区域巡逻
 	_patrol_dest = Vector3(
 		randf_range(-range_val, range_val),
 		0.5,
@@ -212,8 +211,8 @@ func _pick_patrol_dest() -> void:
 	)
 
 func _is_self_near_edge() -> bool:
-	var x_edge = abs(global_position.x) > MAP_HALF - EDGE_SAFE_DIST
-	var z_edge = abs(global_position.z) > MAP_HALF - EDGE_SAFE_DIST
+	var x_edge = abs(global_position.x) > GameConfig.map_half_size - EDGE_SAFE_DIST
+	var z_edge = abs(global_position.z) > GameConfig.map_half_size - EDGE_SAFE_DIST
 	return x_edge or z_edge
 
 

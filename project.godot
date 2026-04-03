@@ -27,3 +27,7 @@ project/assembly_name="ChaosGun"
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+
+[autoload]
+
+GameConfig="*res://scripts/globals/game_config.gd"

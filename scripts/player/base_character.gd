@@ -16,15 +16,8 @@ var knockback_resistance: float = 0.0
 # ============================================================
 #  生命与复活系统
 # ============================================================
-const FALL_THRESHOLD: float = -10.0
-const RESPAWN_DELAY: float = 3.0
-const INVINCIBLE_DURATION: float = 3.0
-const RESPAWN_POINTS: Array[Vector3] = [
-	Vector3(25, 0.5, 25), Vector3(-25, 0.5, 25),
-	Vector3(25, 0.5, -25), Vector3(-25, 0.5, -25),
-]
 
-var lives: int = 10
+var lives: int = GameConfig.default_lives
 var is_dead: bool = false
 var is_invincible: bool = false
 var is_game_over: bool = false
@@ -58,7 +51,7 @@ func _apply_gravity(delta: float) -> void:
 		velocity.y -= gravity * delta
 
 func _check_fall() -> void:
-	if global_position.y < FALL_THRESHOLD:
+	if global_position.y < GameConfig.fall_threshold:
 		_die()
 
 func _apply_movement(desired_vel: Vector3, delta: float) -> void:
@@ -114,13 +107,13 @@ func _die() -> void:
 		is_game_over = true
 		return
 
-	_respawn_timer = RESPAWN_DELAY
+	_respawn_timer = GameConfig.respawn_delay
 
 func _respawn() -> void:
 	is_dead = false
 
 	# 随机复活点
-	var spawn_point = RESPAWN_POINTS.pick_random()
+	var spawn_point = GameConfig.respawn_points.pick_random()
 	global_position = spawn_point
 	velocity = Vector3.ZERO
 	knockback_velocity = Vector3.ZERO
@@ -132,4 +125,4 @@ func _respawn() -> void:
 
 	# 启动无敌盾
 	is_invincible = true
-	_invincible_timer = INVINCIBLE_DURATION
+	_invincible_timer = GameConfig.invincible_duration
