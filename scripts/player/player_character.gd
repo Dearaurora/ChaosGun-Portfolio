@@ -91,7 +91,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- 击退衰减 ---
 	if knockback_velocity.length_squared() > 0.1:
-		knockback_velocity = knockback_velocity.lerp(Vector3.ZERO, friction * 0.8 * delta)
+		knockback_velocity = knockback_velocity.lerp(Vector3.ZERO, friction * 0.4 * delta)
 	else:
 		knockback_velocity = Vector3.ZERO
 
@@ -104,8 +104,8 @@ func _physics_process(delta: float) -> void:
 
 	var target_vel = direction * speed
 	var control_factor = 1.0
-	if knockback_velocity.length() > speed * 0.5:
-		control_factor = 0.2
+	if knockback_velocity.length() > speed * 0.3:
+		control_factor = 0.05
 
 	if direction:
 		current_move_vel = current_move_vel.lerp(target_vel, acceleration * control_factor * delta)
@@ -211,14 +211,9 @@ func apply_knockback(force: Vector3) -> void:
 	# 无敌期间免疫击退
 	if is_invincible or is_dead:
 		return
-	var push_dir = force.normalized()
-	var edge_damping = 1.0
-	if _is_near_edge(push_dir):
-		edge_damping = 0.4
-
-	var actual_force = force * edge_damping * max(0.2, (1.0 - knockback_resistance))
+	var actual_force = force * max(0.2, (1.0 - knockback_resistance))
 	knockback_velocity += actual_force
-	knockback_resistance = min(0.75, knockback_resistance + 0.3)
+	knockback_resistance = min(0.4, knockback_resistance + 0.1)
 
 func _is_near_edge(push_dir: Vector3) -> bool:
 	var space_state = get_world_3d().direct_space_state

@@ -218,7 +218,7 @@ func _do_flee_edge(_delta: float) -> Vector3:
 func _apply_movement(desired_vel: Vector3, delta: float) -> void:
 	# 击退衰减
 	if knockback_velocity.length_squared() > 0.1:
-		knockback_velocity = knockback_velocity.lerp(Vector3.ZERO, friction * 0.8 * delta)
+		knockback_velocity = knockback_velocity.lerp(Vector3.ZERO, friction * 0.4 * delta)
 	else:
 		knockback_velocity = Vector3.ZERO
 
@@ -226,8 +226,8 @@ func _apply_movement(desired_vel: Vector3, delta: float) -> void:
 	current_move_vel.y = 0
 
 	var control_factor = 1.0
-	if knockback_velocity.length() > speed * 0.5:
-		control_factor = 0.2
+	if knockback_velocity.length() > speed * 0.3:
+		control_factor = 0.05
 
 	if desired_vel.length() > 0.1:
 		current_move_vel = current_move_vel.lerp(desired_vel, acceleration * control_factor * delta)
@@ -243,13 +243,9 @@ func _apply_movement(desired_vel: Vector3, delta: float) -> void:
 func apply_knockback(force: Vector3) -> void:
 	if is_invincible or is_dead:
 		return
-	var push_dir = force.normalized()
-	var edge_damping = 1.0
-	if _is_near_edge(push_dir):
-		edge_damping = 0.4
-	var actual_force = force * edge_damping * max(0.2, (1.0 - knockback_resistance))
+	var actual_force = force * max(0.2, (1.0 - knockback_resistance))
 	knockback_velocity += actual_force
-	knockback_resistance = min(0.75, knockback_resistance + 0.3)
+	knockback_resistance = min(0.4, knockback_resistance + 0.1)
 
 func _die() -> void:
 	if is_dead: return
