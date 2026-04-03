@@ -7,12 +7,12 @@ extends Node
 # 地图参数
 @export_group("地图")
 @export var map_half_size: float = 50.0
-@export var fall_threshold: float = -60.0
+@export var fall_threshold: float = -120.0
 
 # 生命与复活系统
 @export_group("生命与复活")
 @export var default_lives: int = 10
-@export var respawn_delay: float = 1.0
+@export var respawn_delay: float = 0.0
 @export var invincible_duration: float = 3.0
 @export var respawn_points: Array[Vector3] = [
 	Vector3(25, 0.5, 25),
@@ -36,3 +36,8 @@ extends Node
 @export var character_gravity_scale: float = 8
 @export var character_jump_impulse: float = 20.0
 @export var character_air_control_multiplier: float = 0.2
+
+# 战斗数值倍数
+@export_group("战斗调整")
+@export var bullet_speed_multiplier: float = 5.0
+@export var knockback_multiplier: float = 1.0
