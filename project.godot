@@ -21,7 +21,7 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]
 
-GameConfig="*res://scripts/globals/game_config.gd"
+GameConfig="*res://scenes/globals/game_config.tscn"
 
 [dotnet]
 

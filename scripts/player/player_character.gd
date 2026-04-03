@@ -6,6 +6,7 @@ class_name PlayerCharacter
 
 
 func _ready() -> void:
+	super._ready()
 	if weapon_manager:
 		weapon_manager.weapon_dropped.connect(_on_weapon_dropped)
 
@@ -24,7 +25,7 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction := Vector3(input_dir.x, 0, input_dir.y).normalized()
 
-	var current_speed = speed if is_on_floor() else speed * air_control_multiplier
+	var current_speed = GameConfig.character_speed if is_on_floor() else GameConfig.character_speed * GameConfig.character_air_control_multiplier
 
 	if direction.length() > 0.1:
 		apply_central_force(direction * current_speed)

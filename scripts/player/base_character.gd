@@ -1,13 +1,6 @@
 extends RigidBody3D
 class_name BaseCharacter
 
-@export var speed: float = 180.0             # 水平推力
-@export var horizontal_damp: float = 5.0     # 水平阻尼系数（只影响水平X/Z，保留自由坠落Y）
-@export var air_horizontal_damp: float = 1.0 # 空中水平阻尼（比地面小，保持前冲动量）
-@export var fall_gravity_scale: float = 1000.0  # 增加默认重力倍数，使得掉落更迅速干脆
-@export var jump_impulse: float = 14.0       # 配合高重力增加的跳跃冲量
-@export var air_control_multiplier: float = 0.2 # 空中移动推力系数
-
 @onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
 @onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
 
@@ -24,7 +17,12 @@ var _invincible_timer: float = 0.0
 var _jump_cooldown: float = 0.0
 
 func _ready() -> void:
-	gravity_scale = fall_gravity_scale
+	gravity_scale = GameConfig.character_gravity_scale
+	# 禁用接触摩擦，水平减速完全由 horizontal_damp 控制，
+	# 避免高重力下法向力过大导致角色走不动。
+	var mat = PhysicsMaterial.new()
+	mat.friction = 0.0
+	physics_material_override = mat
 
 func _base_process(delta: float) -> void:
 	# 复活倒计时
@@ -50,12 +48,12 @@ func _base_process(delta: float) -> void:
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	# 模拟全局阻尼，但仅作用于水平面（X/Z）
-	var current_damp = horizontal_damp if is_on_floor() else air_horizontal_damp
+	var current_damp = GameConfig.character_horizontal_damp if is_on_floor() else GameConfig.character_air_horizontal_damp
 	if current_damp > 0.0:
 		var current_vel = state.linear_velocity
 		var h_vel = Vector3(current_vel.x, 0, current_vel.z)
 		# 阻力反向于运动方向，与其速度和阻尼系数成正比
-		var damping_force = -h_vel * current_damp * mass
+		var damping_force = - h_vel * current_damp * mass
 		apply_central_force(damping_force)
 
 func is_on_floor() -> bool:
@@ -68,13 +66,13 @@ func is_on_floor() -> bool:
 	query.shape = shape
 	# 角色原点在脚底，将球体放置在上方 0.9 处，那么它下探的最低点可以到达脚底 0.1 处，深入地面
 	query.transform = Transform3D(Basis(), global_position + Vector3.UP * 0.9)
-	query.exclude = [self.get_rid()]
+	query.exclude = [ self.get_rid()]
 	var result = space_state.intersect_shape(query, 1)
 	return result.size() > 0
 
 func jump() -> void:
 	if is_on_floor():
-		apply_central_impulse(Vector3.UP * jump_impulse)
+		apply_central_impulse(Vector3.UP * GameConfig.character_jump_impulse)
 		_jump_cooldown = 0.2
 
 func _check_fall() -> void:

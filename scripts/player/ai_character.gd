@@ -23,6 +23,7 @@ var _reaction_timer: float = 0.0
 var _fire_cooldown_ai: float = 0.0    # AI 自己的开火节奏控制
 
 func _ready() -> void:
+	super._ready()
 	_pick_patrol_dest()
 
 
@@ -57,7 +58,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- 应用移动 ---
 	if move_dir.length() > 0.1:
-		apply_central_force(move_dir.normalized() * speed)
+		apply_central_force(move_dir.normalized() * GameConfig.character_speed)
 
 # ============================================================
 #  FSM 状态切换
@@ -121,7 +122,7 @@ func _do_chase(_delta: float) -> Vector3:
 	var to_target = _target.global_position - global_position
 	to_target.y = 0
 	_face_direction(to_target.normalized())
-	return to_target.normalized() * speed
+	return to_target.normalized() * GameConfig.character_speed
 
 func _do_shoot(delta: float) -> Vector3:
 	if not _target or not is_instance_valid(_target):
@@ -152,7 +153,7 @@ func _do_flee_edge(_delta: float) -> Vector3:
 	var to_center = -global_position
 	to_center.y = 0
 	_face_direction(to_center.normalized())
-	return to_center.normalized() * speed
+	return to_center.normalized() * GameConfig.character_speed
 
 func _respawn() -> void:
 	super._respawn()
@@ -162,10 +163,18 @@ func _respawn() -> void:
 # ============================================================
 #  辅助方法
 # ============================================================
+var _ai_target_look_basis: Basis
+
 func _face_direction(dir: Vector3) -> void:
 	if dir.length_squared() < 0.01: return
-	var target_basis = Basis.looking_at(dir, Vector3.UP)
-	transform.basis = transform.basis.slerp(target_basis, 0.3)
+	_ai_target_look_basis = Basis.looking_at(dir, Vector3.UP)
+
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	super._integrate_forces(state)
+	if _ai_target_look_basis != Basis():
+		var t = state.transform
+		t.basis = t.basis.slerp(_ai_target_look_basis, 0.3).orthonormalized()
+		state.transform = t
 
 func _find_target() -> void:
 	# 如果当前目标是拾取物且已被捡走，重新找玩家
