@@ -1,17 +1,5 @@
-extends CharacterBody3D
+extends BaseCharacter
 class_name PlayerCharacter
-
-@export var speed: float = 24.0
-@export var acceleration: float = 12.0
-@export var friction: float = 6.0
-@export var gravity: float = 20.0
-
-@onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
-@onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
-@onready var _mesh: MeshInstance3D = get_node_or_null("MeshInstance3D")
-
-var knockback_velocity: Vector3 = Vector3.ZERO
-var knockback_resistance: float = 0.0
 
 # 射击输入追踪
 var _prev_fire_pressed: bool = false
@@ -19,66 +7,25 @@ var _prev_fire_pressed: bool = false
 # 狙击硬直
 var _stun_timer: float = 0.0
 
-# ============================================================
-#  生命与复活系统
-# ============================================================
-const FALL_THRESHOLD: float = -10.0
-const RESPAWN_DELAY: float = 3.0
-const INVINCIBLE_DURATION: float = 3.0
-const RESPAWN_POINTS: Array[Vector3] = [
-	Vector3(25, 0.5, 25),
-	Vector3(-25, 0.5, 25),
-	Vector3(25, 0.5, -25),
-	Vector3(-25, 0.5, -25),
-]
-
-var lives: int = 10
-var is_dead: bool = false
-var is_invincible: bool = false
-var is_game_over: bool = false
-var _respawn_timer: float = 0.0
-var _invincible_timer: float = 0.0
-
 func _ready() -> void:
 	if weapon_manager:
 		weapon_manager.stun_started.connect(_on_stun_started)
 		weapon_manager.weapon_dropped.connect(_on_weapon_dropped)
 
 func _process(delta: float) -> void:
-	if knockback_resistance > 0.0:
-		knockback_resistance = max(0.0, knockback_resistance - delta * 0.5)
+	super._base_process(delta)
 	if _stun_timer > 0.0:
 		_stun_timer = max(0.0, _stun_timer - delta)
-
-	# 复活倒计时
-	if is_dead:
-		_respawn_timer -= delta
-		if _respawn_timer <= 0.0:
-			_respawn()
-		return
-
-	# 无敌盾倒计时 + 闪烁效果
-	if is_invincible:
-		_invincible_timer -= delta
-		if _invincible_timer <= 0.0:
-			is_invincible = false
-			if _mesh:
-				_mesh.visible = true
-		elif _mesh:
-			# 半透明闪烁：每 0.15 秒切换可见性
-			_mesh.visible = fmod(_invincible_timer, 0.3) > 0.15
 
 func _physics_process(delta: float) -> void:
 	if is_dead or is_game_over:
 		return
 
 	# --- 坠落检测 ---
-	if global_position.y < FALL_THRESHOLD:
-		_die()
-		return
+	_check_fall()
+	if is_dead: return
 
-	if not is_on_floor():
-		velocity.y -= gravity * delta
+	_apply_gravity(delta)
 
 	# --- 移动输入 ---
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
@@ -89,31 +36,13 @@ func _physics_process(delta: float) -> void:
 
 	var direction := Vector3(input_dir.x, 0, input_dir.y).normalized()
 
-	# --- 击退衰减 ---
-	if knockback_velocity.length_squared() > 0.1:
-		knockback_velocity = knockback_velocity.lerp(Vector3.ZERO, friction * 0.4 * delta)
-	else:
-		knockback_velocity = Vector3.ZERO
-
-	var current_move_vel = velocity - knockback_velocity
-	current_move_vel.y = 0
-
 	# 硬直期间不能移动/转向
 	if _stun_timer > 0.0:
 		direction = Vector3.ZERO
 
 	var target_vel = direction * speed
-	var control_factor = 1.0
-	if knockback_velocity.length() > speed * 0.3:
-		control_factor = 0.05
 
-	if direction:
-		current_move_vel = current_move_vel.lerp(target_vel, acceleration * control_factor * delta)
-	else:
-		current_move_vel = current_move_vel.lerp(Vector3.ZERO, friction * delta)
-
-	velocity.x = current_move_vel.x + knockback_velocity.x
-	velocity.z = current_move_vel.z + knockback_velocity.z
+	_apply_movement(target_vel, delta)
 
 	if _stun_timer <= 0.0:
 		_look_at_mouse()
@@ -126,45 +55,7 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-# ------------------------------------------------------------------
-#  生命系统
-# ------------------------------------------------------------------
-func _die() -> void:
-	if is_dead:
-		return
-	lives -= 1
-	is_dead = true
-	velocity = Vector3.ZERO
-	knockback_velocity = Vector3.ZERO
 
-	# 隐藏角色
-	visible = false
-	# 关闭碰撞
-	set_physics_process(false)
-
-	if lives <= 0:
-		is_game_over = true
-		return
-
-	_respawn_timer = RESPAWN_DELAY
-
-func _respawn() -> void:
-	is_dead = false
-
-	# 随机复活点
-	var spawn_point = RESPAWN_POINTS.pick_random()
-	global_position = spawn_point
-	velocity = Vector3.ZERO
-	knockback_velocity = Vector3.ZERO
-	knockback_resistance = 0.0
-
-	# 显示角色
-	visible = true
-	set_physics_process(true)
-
-	# 启动无敌盾
-	is_invincible = true
-	_invincible_timer = INVINCIBLE_DURATION
 
 # ------------------------------------------------------------------
 #  射击输入处理
@@ -204,23 +95,7 @@ func _handle_weapon_input() -> void:
 	if Input.is_action_just_pressed("ui_focus_next"):
 		weapon_manager.cycle_weapon()
 
-# ------------------------------------------------------------------
-#  击退
-# ------------------------------------------------------------------
-func apply_knockback(force: Vector3) -> void:
-	# 无敌期间免疫击退
-	if is_invincible or is_dead:
-		return
-	var actual_force = force * max(0.2, (1.0 - knockback_resistance))
-	knockback_velocity += actual_force
-	knockback_resistance = min(0.4, knockback_resistance + 0.1)
 
-func _is_near_edge(push_dir: Vector3) -> bool:
-	var space_state = get_world_3d().direct_space_state
-	var check_pos = global_position + push_dir * 4.0 + Vector3.UP * 0.5
-	var query = PhysicsRayQueryParameters3D.create(check_pos, check_pos + Vector3.DOWN * 2.0)
-	var result = space_state.intersect_ray(query)
-	return result.is_empty()
 
 # ------------------------------------------------------------------
 #  鼠标瞄准
