@@ -83,7 +83,11 @@ func apply_knockback(impulse: Vector3) -> void:
 	# 无敌期间免疫击退
 	if is_invincible or is_dead:
 		return
-	apply_central_impulse(impulse)
+	# Gun Mayhem 风格：击退带向上发射，让角色飞起抛物线
+	var h_impulse = Vector3(impulse.x, 0, impulse.z)
+	var lift = h_impulse.length() * GameConfig.knockback_lift_ratio
+	var final_impulse = h_impulse + Vector3.UP * lift
+	apply_central_impulse(final_impulse)
 
 func apply_hit(impulse: Vector3) -> void:
 	## 被敌人子弹击中时调用：既施加冲量又触发受击闪白

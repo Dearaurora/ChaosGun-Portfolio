@@ -2,7 +2,7 @@ extends BaseCharacter
 class_name AICharacter
 ## AI 对手 —— FSM 状态机驱动，复用武器系统与击退/生命系统
 
-@export var patrol_speed: float = 12.0
+@export var patrol_speed: float = 250.0
 
 # ============================================================
 #  AI 参数
@@ -63,7 +63,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- 应用移动 ---
 	if move_dir.length() > 0.1:
-		apply_central_force(move_dir.normalized() * speed)
+		apply_central_force(move_dir.normalized() * GameConfig.character_speed)
 
 # ============================================================
 #  FSM 状态切换
@@ -127,7 +127,7 @@ func _do_chase(_delta: float) -> Vector3:
 	var to_target = _target.global_position - global_position
 	to_target.y = 0
 	_face_direction(to_target.normalized())
-	return to_target.normalized() * speed
+	return to_target.normalized() * GameConfig.character_speed
 
 func _do_shoot(delta: float) -> Vector3:
 	if not _target or not is_instance_valid(_target):
@@ -158,7 +158,7 @@ func _do_flee_edge(_delta: float) -> Vector3:
 	var to_center = -global_position
 	to_center.y = 0
 	_face_direction(to_center.normalized())
-	return to_center.normalized() * speed
+	return to_center.normalized() * GameConfig.character_speed
 
 func _respawn() -> void:
 	super._respawn()

@@ -43,7 +43,7 @@ static func create_pistol() -> WeaponData:
 	d.bullet_radius = 0.4
 	d.bullet_lifetime = 2.0
 	d.stun_duration = 0.0
-	d.recoil_force = 16.0
+	d.recoil_force = 25.0
 	d.projectile_scene = load("res://scenes/weapons/pistol_projectile.tscn")
 	d.has_infinite_ammo = true
 	return d
@@ -65,7 +65,7 @@ static func create_smg() -> WeaponData:
 	d.bullet_radius = 0.3
 	d.bullet_lifetime = 1.5
 	d.stun_duration = 0.0
-	d.recoil_force = 4.0
+	d.recoil_force = 8.0
 	d.projectile_scene = load("res://scenes/weapons/smg_projectile.tscn")
 	d.has_infinite_ammo = false
 	return d
@@ -87,7 +87,7 @@ static func create_ak_rifle() -> WeaponData:
 	d.bullet_radius = 0.5
 	d.bullet_lifetime = 2.5
 	d.stun_duration = 0.0
-	d.recoil_force = 10.0
+	d.recoil_force = 20.0
 	d.projectile_scene = load("res://scenes/weapons/ak_projectile.tscn")
 	d.has_infinite_ammo = false
 	return d
@@ -109,7 +109,7 @@ static func create_sniper() -> WeaponData:
 	d.bullet_radius = 0.3
 	d.bullet_lifetime = 3.0
 	d.stun_duration = 0.3
-	d.recoil_force = 30.0
+	d.recoil_force = 55.0
 	d.projectile_scene = load("res://scenes/weapons/sniper_projectile.tscn")
 	d.has_infinite_ammo = false
 	return d

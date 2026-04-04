@@ -30,8 +30,8 @@ extends Node
 
 # 角色物理参数
 @export_group("角色物理")
-@export var character_speed: float = 180.0
-@export var character_horizontal_damp: float = 5.0
+@export var character_speed: float = 400.0
+@export var character_horizontal_damp: float = 3.0
 @export var character_air_horizontal_damp: float = 1.0
 @export var character_gravity_scale: float = 8
 @export var character_jump_impulse: float = 20.0
@@ -40,4 +40,5 @@ extends Node
 # 战斗数值倍数
 @export_group("战斗调整")
 @export var bullet_speed_multiplier: float = 5.0
-@export var knockback_multiplier: float = 1.0
+@export var knockback_multiplier: float = 1.8
+@export var knockback_lift_ratio: float = 0.35  ## 击退力中转为向上冲量的比例（0~1）
