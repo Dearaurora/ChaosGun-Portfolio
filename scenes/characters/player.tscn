@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/player/player_character.gd" id="1_x"]
 [ext_resource type="Script" path="res://scripts/weapons/weapon_manager.gd" id="2_wm"]
-[ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
+[ext_resource type="Script" path="res://scripts/ui/game_hud.gd" id="3_hud"]
 [ext_resource type="Script" path="res://scripts/player/character_visual.gd" id="4_vis"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_pl"]
@@ -31,5 +31,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -1.8)
 [node name="WeaponManager" type="Node" parent="."]
 script = ExtResource("2_wm")
 
-[node name="DebugHUD" type="CanvasLayer" parent="."]
+[node name="GameHUD" type="CanvasLayer" parent="."]
 script = ExtResource("3_hud")

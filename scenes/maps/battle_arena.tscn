@@ -1,9 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://dma2j2p6lyxxy"]
+[gd_scene load_steps=6 format=3]
 
-[ext_resource type="PackedScene" uid="uid://cxab3qykk26e4" path="res://scenes/characters/player.tscn" id="1_test_player"]
-[ext_resource type="PackedScene" uid="uid://bfs0o836ofdtd" path="res://scenes/characters/ai_character.tscn" id="2_ai"]
-[ext_resource type="Script" uid="uid://dwlowsr7w2nod" path="res://scripts/weapons/weapon_spawner.gd" id="3_spawner"]
-[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="4_pause"]
+[ext_resource type="Script" path="res://scripts/maps/battle_arena.gd" id="1_battle"]
+[ext_resource type="Script" uid="uid://dwlowsr7w2nod" path="res://scripts/weapons/weapon_spawner.gd" id="2_spawner"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="3_pause"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(100, 1, 100)
@@ -15,7 +14,8 @@ albedo_color = Color(0.533333, 0.811765, 0.52549, 1)
 material = SubResource("StandardMaterial3D_floor")
 size = Vector3(100, 1, 100)
 
-[node name="DemoArena" type="Node3D"]
+[node name="BattleArena" type="Node3D"]
+script = ExtResource("1_battle")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.8660254, -0.43301272, 0.24999999, 0, 0.49999997, 0.86602545, -0.5, -0.75, 0.43301266, 0, 100, 0)
@@ -36,14 +36,8 @@ shape = SubResource("BoxShape3D_floor")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
 mesh = SubResource("BoxMesh_floor")
 
-[node name="Player" parent="." groups=["player"] instance=ExtResource("1_test_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-
-[node name="AI_1" parent="." instance=ExtResource("2_ai")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0.5, -15)
-
 [node name="WeaponSpawner" type="Node" parent="."]
-script = ExtResource("3_spawner")
+script = ExtResource("2_spawner")
 
 [node name="PauseMenu" type="CanvasLayer" parent="."]
-script = ExtResource("4_pause")
+script = ExtResource("3_pause")

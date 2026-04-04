@@ -41,6 +41,14 @@ func _build_body() -> void:
 	_body_mesh.position = Vector3(0, 1.5, 0)
 	add_child(_body_mesh)
 
+## 运行时动态修改角色颜色
+func set_body_color(color: Color) -> void:
+	body_color = color
+	if _body_mesh and _body_mesh.mesh:
+		var mat = _body_mesh.mesh.material as StandardMaterial3D
+		if mat:
+			mat.albedo_color = color
+
 # ============================================================
 #  眼睛 — 白底黑瞳 + 愤怒角度
 # ============================================================
