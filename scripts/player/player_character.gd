@@ -85,7 +85,7 @@ func _handle_fire_input() -> void:
 # ------------------------------------------------------------------
 func _get_aim_assisted_dir(base_dir: Vector3) -> Vector3:
 	var best_dot: float = cos(deg_to_rad(AIM_ASSIST_CONE_DEG))
-	var best_dir: Vector3 = base_dir
+	var best_target: BaseCharacter = null
 
 	for node in get_tree().current_scene.get_children():
 		if node == self: continue
@@ -100,8 +100,14 @@ func _get_aim_assisted_dir(base_dir: Vector3) -> Vector3:
 		var dot = base_dir.dot(dir_to)
 		if dot > best_dot:
 			best_dot = dot
-			best_dir = dir_to
-	return best_dir
+			best_target = target
+			
+	if best_target:
+		var target_aim_pos = best_target.global_position + Vector3(0, 1.0, 0)
+		var fire_origin = weapon_point.global_position if weapon_point else global_position
+		return (target_aim_pos - fire_origin).normalized()
+
+	return base_dir
 
 # ------------------------------------------------------------------
 func _handle_weapon_input() -> void:

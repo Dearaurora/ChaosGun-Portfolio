@@ -134,9 +134,9 @@ func _do_shoot(delta: float) -> Vector3:
 		_state = State.PATROL
 		return Vector3.ZERO
 
-	var to_target = _target.global_position - global_position
-	to_target.y = 0
-	_face_direction(to_target.normalized())
+	var to_target_flat = _target.global_position - global_position
+	to_target_flat.y = 0
+	_face_direction(to_target_flat.normalized())
 
 	# 反应时间
 	if _reaction_timer > 0.0:
@@ -145,7 +145,9 @@ func _do_shoot(delta: float) -> Vector3:
 
 	# 射击
 	if weapon_manager and weapon_point:
-		var aim_dir = to_target.normalized()
+		var target_aim_pos = _target.global_position + Vector3(0, 1.0, 0)
+		var fire_origin = weapon_point.global_position if weapon_point else global_position
+		var aim_dir = (target_aim_pos - fire_origin).normalized()
 		# 瞄准偏移
 		var offset_rad = deg_to_rad(randf_range(-AIM_OFFSET_DEG, AIM_OFFSET_DEG))
 		aim_dir = aim_dir.rotated(Vector3.UP, offset_rad)

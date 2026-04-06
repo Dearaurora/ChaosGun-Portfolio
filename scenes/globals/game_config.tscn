@@ -4,3 +4,6 @@
 
 [node name="GameConfig" type="Node" unique_id=1657733542]
 script = ExtResource("1_cfg")
+character_gravity_scale = 20.0
+character_jump_impulse = 400.0
+bullet_speed_multiplier = 10.0
