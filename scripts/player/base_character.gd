@@ -6,6 +6,13 @@ class_name BaseCharacter
 
 signal eliminated(character: BaseCharacter)
 
+# 音效
+var _sfx_hit_light: AudioStream = preload("res://assets/audio/sfx/hit_light.ogg")
+var _sfx_hit_light2: AudioStream = preload("res://assets/audio/sfx/hit_light2.ogg")
+var _sfx_hit_heavy: AudioStream = preload("res://assets/audio/sfx/hit_heavy.ogg")
+var _sfx_fall: AudioStream = preload("res://assets/audio/sfx/fall_death.ogg")
+var _sfx_shield: AudioStream = preload("res://assets/audio/sfx/shield_up.ogg")
+
 # ============================================================
 #  生命与复活系统
 # ============================================================
@@ -99,6 +106,11 @@ func apply_hit(impulse: Vector3, damage: float = 0.0) -> void:
 		return
 	apply_knockback(impulse)
 	_flash_damage()
+	# 受击音效
+	if damage >= 50.0:
+		_play_sfx(_sfx_hit_heavy, -3.0)
+	else:
+		_play_sfx([_sfx_hit_light, _sfx_hit_light2].pick_random(), -8.0)
 	if damage > 0.0:
 		current_hp -= damage
 		if current_hp <= 0.0:
@@ -122,6 +134,8 @@ func _die() -> void:
 
 	# 隐藏角色
 	visible = false
+	# 坠落音效
+	_play_sfx(_sfx_fall, 0.0)
 	# 关闭碰撞
 	set_physics_process(false)
 	freeze = true
@@ -153,6 +167,7 @@ func _respawn() -> void:
 	# 启动无敌盾
 	is_invincible = true
 	_invincible_timer = GameConfig.invincible_duration
+	_play_sfx(_sfx_shield, -4.0)
 
 # ============================================================
 #  受击闪白
@@ -209,3 +224,18 @@ func _set_all_meshes_visible(is_vis: bool) -> void:
 ## 获取 CharacterVisual 节点（如果存在）
 func get_visual() -> CharacterVisual:
 	return get_node_or_null("Visual") as CharacterVisual
+
+# ============================================================
+#  音效辅助
+# ============================================================
+func _play_sfx(stream: AudioStream, volume_db: float = -6.0) -> void:
+	if not stream or not is_inside_tree():
+		return
+	var sfx = AudioStreamPlayer3D.new()
+	sfx.stream = stream
+	sfx.volume_db = volume_db
+	sfx.pitch_scale = randf_range(0.92, 1.08)
+	get_tree().current_scene.add_child(sfx)
+	sfx.global_position = global_position
+	sfx.play()
+	sfx.finished.connect(sfx.queue_free)

@@ -21,6 +21,7 @@ enum FireMode {SEMI_AUTO, FULL_AUTO, BOLT_ACTION}
 @export var recoil_force: float = 0.0 ## 后坐力（射击时推自己后退）
 @export var damage: float = 10.0 ## 每发子弹伤害
 @export var projectile_scene: PackedScene
+@export var shoot_sound: AudioStream = null
 @export var has_infinite_ammo: bool = true
 
 # ============================================================
@@ -47,6 +48,7 @@ static func create_pistol() -> WeaponData:
 	d.recoil_force = 25.0
 	d.damage = 25.0
 	d.projectile_scene = load("res://scenes/weapons/pistol_projectile.tscn")
+	d.shoot_sound = load("res://assets/audio/sfx/shoot_pistol.ogg")
 	d.has_infinite_ammo = true
 	return d
 
@@ -70,6 +72,7 @@ static func create_smg() -> WeaponData:
 	d.recoil_force = 8.0
 	d.damage = 12.0
 	d.projectile_scene = load("res://scenes/weapons/smg_projectile.tscn")
+	d.shoot_sound = load("res://assets/audio/sfx/shoot_smg.ogg")
 	d.has_infinite_ammo = false
 	return d
 
@@ -93,6 +96,7 @@ static func create_ak_rifle() -> WeaponData:
 	d.recoil_force = 20.0
 	d.damage = 20.0
 	d.projectile_scene = load("res://scenes/weapons/ak_projectile.tscn")
+	d.shoot_sound = load("res://assets/audio/sfx/shoot_ak.ogg")
 	d.has_infinite_ammo = false
 	return d
 
@@ -116,6 +120,7 @@ static func create_sniper() -> WeaponData:
 	d.recoil_force = 55.0
 	d.damage = 80.0
 	d.projectile_scene = load("res://scenes/weapons/sniper_projectile.tscn")
+	d.shoot_sound = load("res://assets/audio/sfx/shoot_sniper.ogg")
 	d.has_infinite_ammo = false
 	return d
 

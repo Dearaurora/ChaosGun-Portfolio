@@ -52,6 +52,18 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	flash.scale = Vector3.ONE * randf_range(0.8, 1.3)
 	fire_point.get_tree().create_timer(0.06).timeout.connect(flash.queue_free)
 
+	# 射击音效
+	if weapon_data.shoot_sound:
+		var sfx = AudioStreamPlayer3D.new()
+		sfx.stream = weapon_data.shoot_sound
+		sfx.volume_db = -6.0
+		sfx.max_db = 3.0
+		sfx.pitch_scale = randf_range(0.95, 1.05)
+		fire_point.get_tree().current_scene.add_child(sfx)
+		sfx.global_position = fire_point.global_position
+		sfx.play()
+		sfx.finished.connect(sfx.queue_free)
+
 	# 射速冷却
 	fire_cooldown = 1.0 / weapon_data.fire_rate
 
