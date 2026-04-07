@@ -4,11 +4,15 @@ class_name BaseCharacter
 @onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
 @onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
 
+signal eliminated(character: BaseCharacter)
+
 # ============================================================
 #  生命与复活系统
 # ============================================================
 
 var lives: int = GameConfig.default_lives
+var max_hp: float = 3000.0
+var current_hp: float = 3000.0
 var is_dead: bool = false
 var is_invincible: bool = false
 var is_game_over: bool = false
@@ -89,10 +93,17 @@ func apply_knockback(impulse: Vector3) -> void:
 	var final_impulse = h_impulse + Vector3.UP * lift
 	apply_central_impulse(final_impulse)
 
-func apply_hit(impulse: Vector3) -> void:
-	## 被敌人子弹击中时调用：既施加冲量又触发受击闪白
+func apply_hit(impulse: Vector3, damage: float = 0.0) -> void:
+	## 被敌人子弹击中时调用：施加冲量 + 扣血 + 受击闪白
+	if is_invincible or is_dead:
+		return
 	apply_knockback(impulse)
 	_flash_damage()
+	if damage > 0.0:
+		current_hp -= damage
+		if current_hp <= 0.0:
+			current_hp = 0.0
+			_die()
 
 func _is_near_edge(push_dir: Vector3) -> bool:
 	var space_state = get_world_3d().direct_space_state
@@ -117,6 +128,7 @@ func _die() -> void:
 
 	if lives <= 0:
 		is_game_over = true
+		eliminated.emit(self)
 		return
 
 	_respawn_timer = GameConfig.respawn_delay
@@ -134,6 +146,9 @@ func _respawn() -> void:
 	visible = true
 	freeze = false
 	set_physics_process(true)
+
+	# 回满血量
+	current_hp = max_hp
 
 	# 启动无敌盾
 	is_invincible = true

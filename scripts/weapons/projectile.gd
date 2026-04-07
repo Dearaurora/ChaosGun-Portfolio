@@ -6,6 +6,7 @@ const HitEffectScene: PackedScene = preload("res://scenes/effects/hit_effect.tsc
 ## 由 Weapon 在发射时注入，不再硬编码
 var speed: float = 60.0
 var knockback_power: float = 18.0
+var damage: float = 0.0
 var direction: Vector3 = Vector3.FORWARD
 var shooter: Node3D = null
 var lifetime: float = 2.0
@@ -60,7 +61,7 @@ func _handle_hit(body: Node3D) -> void:
 		return
 	_hit = true
 	if body.has_method("apply_hit"):
-		body.apply_hit(direction * knockback_power)
+		body.apply_hit(direction * knockback_power, damage)
 	elif body.has_method("apply_knockback"):
 		body.apply_knockback(direction * knockback_power)
 	# 击中特效
