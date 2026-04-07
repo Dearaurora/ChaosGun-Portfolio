@@ -96,7 +96,6 @@ func _on_character_eliminated(character: BaseCharacter) -> void:
 			var winner_name: String = winner.name
 			var slot_index := _characters.find(winner)
 			var winner_color: Color = MatchConfig.PLAYER_COLORS[slot_index] if slot_index < MatchConfig.PLAYER_COLORS.size() else Color.WHITE
-			_victory_screen.show_victory(winner_name, winner_color)
+			_victory_screen.show_victory(winner_name, winner_color, _characters)
 		else:
-			# 全灭（理论上不会发生）
-			_victory_screen.show_victory("DRAW", Color.WHITE)
+			_victory_screen.show_victory("DRAW", Color.WHITE, _characters)

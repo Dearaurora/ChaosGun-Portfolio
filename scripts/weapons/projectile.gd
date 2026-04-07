@@ -61,7 +61,7 @@ func _handle_hit(body: Node3D) -> void:
 		return
 	_hit = true
 	if body.has_method("apply_hit"):
-		body.apply_hit(direction * knockback_power, damage)
+		body.apply_hit(direction * knockback_power, damage, shooter)
 	elif body.has_method("apply_knockback"):
 		body.apply_knockback(direction * knockback_power)
 	# 击中特效

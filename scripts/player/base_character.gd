@@ -23,6 +23,9 @@ var current_hp: float = 3000.0
 var is_dead: bool = false
 var is_invincible: bool = false
 var is_game_over: bool = false
+var kills: int = 0
+var deaths: int = 0
+var last_hit_by: BaseCharacter = null
 var _respawn_timer: float = 0.0
 var _invincible_timer: float = 0.0
 var _jump_cooldown: float = 0.0
@@ -100,10 +103,12 @@ func apply_knockback(impulse: Vector3) -> void:
 	var final_impulse = h_impulse + Vector3.UP * lift
 	apply_central_impulse(final_impulse)
 
-func apply_hit(impulse: Vector3, damage: float = 0.0) -> void:
+func apply_hit(impulse: Vector3, damage: float = 0.0, attacker: Node3D = null) -> void:
 	## 被敌人子弹击中时调用：施加冲量 + 扣血 + 受击闪白
 	if is_invincible or is_dead:
 		return
+	if attacker is BaseCharacter:
+		last_hit_by = attacker
 	apply_knockback(impulse)
 	_flash_damage()
 	# 受击音效
@@ -127,6 +132,11 @@ func _is_near_edge(push_dir: Vector3) -> bool:
 func _die() -> void:
 	if is_dead:
 		return
+	deaths += 1
+	# 归属击杀
+	if last_hit_by and is_instance_valid(last_hit_by):
+		last_hit_by.kills += 1
+	last_hit_by = null
 	lives -= 1
 	is_dead = true
 	linear_velocity = Vector3.ZERO
