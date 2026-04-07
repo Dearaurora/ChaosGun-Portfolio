@@ -23,6 +23,7 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 
 GameConfig="*res://scenes/globals/game_config.tscn"
 MatchConfig="*res://scripts/globals/match_config.gd"
+GameFeel="*res://scripts/globals/game_feel.gd"
 
 [dotnet]
 

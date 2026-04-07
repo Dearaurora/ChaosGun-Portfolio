@@ -206,8 +206,31 @@ func _build_gun_parts(mat: StandardMaterial3D, parts: Array) -> void:
 		_weapon_holder.add_child(mesh_inst)
 
 # ============================================================
-#  动画：弹跳移动 + 受击闪红
+#  动画：弹跳移动 + 压扁拉伸 (Squash & Stretch)
 # ============================================================
+
+var _deform_tween: Tween = null
+
+## 垂直压扁（高度减小，水平变宽）
+func animate_squash(y_scale: float = 0.6, xz_scale: float = 1.3, duration: float = 0.15) -> void:
+	_play_deform(Vector3(xz_scale, y_scale, xz_scale), duration)
+
+## 垂直拉伸（高度增加，水平变窄）
+func animate_stretch(y_scale: float = 1.3, xz_scale: float = 0.7, duration: float = 0.15) -> void:
+	_play_deform(Vector3(xz_scale, y_scale, xz_scale), duration)
+
+func _play_deform(target_scale: Vector3, duration: float) -> void:
+	if _body_mesh == null:
+		return
+	if _deform_tween and _deform_tween.is_running():
+		_deform_tween.kill()
+	
+	_deform_tween = create_tween().set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
+	# 瞬间变形成目标比例
+	_body_mesh.scale = target_scale
+	# 弹性恢复到正常
+	_deform_tween.tween_property(_body_mesh, "scale", Vector3.ONE, duration)
+
 func animate_movement(is_moving: bool, delta: float) -> void:
 	if is_moving:
 		_bounce_time += delta * 12.0

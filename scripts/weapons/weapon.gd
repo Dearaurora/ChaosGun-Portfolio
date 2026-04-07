@@ -82,6 +82,10 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 		recoil_dir.y = 0
 		shooter.apply_knockback(recoil_dir * weapon_data.recoil_force)
 
+	# 射击屏幕震动（武器越重越强）
+	var shake_strength = weapon_data.recoil_force * 0.008
+	GameFeel.screen_shake(clampf(shake_strength, 0.1, 0.6), 0.08)
+
 	fired.emit()
 
 	if current_ammo == 0:

@@ -29,6 +29,7 @@ var last_hit_by: BaseCharacter = null
 var _respawn_timer: float = 0.0
 var _invincible_timer: float = 0.0
 var _jump_cooldown: float = 0.0
+var _was_on_floor: bool = true
 
 func _ready() -> void:
 	gravity_scale = GameConfig.character_gravity_scale
@@ -48,6 +49,14 @@ func _base_process(delta: float) -> void:
 
 	if _jump_cooldown > 0.0:
 		_jump_cooldown -= delta
+		
+	# 落地压扁检测
+	var current_on_floor = is_on_floor()
+	if current_on_floor and not _was_on_floor and linear_velocity.y < -1.0:
+		var visual = get_visual()
+		if visual:
+			visual.animate_squash(0.6, 1.25, 0.2)
+	_was_on_floor = current_on_floor
 
 	# 无敌盾倒计时 + 闪烁效果
 	if is_invincible:
@@ -88,6 +97,10 @@ func jump() -> void:
 	if is_on_floor():
 		apply_central_impulse(Vector3.UP * GameConfig.character_jump_impulse)
 		_jump_cooldown = 0.2
+		# 跳起拉伸
+		var visual = get_visual()
+		if visual:
+			visual.animate_stretch(1.4, 0.7)
 
 func _check_fall() -> void:
 	if global_position.y < GameConfig.fall_threshold:
@@ -97,25 +110,41 @@ func apply_knockback(impulse: Vector3) -> void:
 	# 无敌期间免疫击退
 	if is_invincible or is_dead:
 		return
+		
+	# 击退累积缩放 (Damage Scaling)：HP越低，击退越强（大乱斗机制）
+	var damage_percent = maxf(0.0, max_hp - current_hp) / max_hp # 0.0 ~ 1.0
+	var scaling_multiplier = 1.0 + (damage_percent * 2.0) # 满血1.0x，空血3.0x
+	var final_raw_impulse = impulse * scaling_multiplier
+	
 	# Gun Mayhem 风格：击退带向上发射，让角色飞起抛物线
-	var h_impulse = Vector3(impulse.x, 0, impulse.z)
+	var h_impulse = Vector3(final_raw_impulse.x, 0, final_raw_impulse.z)
 	var lift = h_impulse.length() * GameConfig.knockback_lift_ratio
 	var final_impulse = h_impulse + Vector3.UP * lift
 	apply_central_impulse(final_impulse)
+	
+	# 受击根据受力方向压扁
+	var visual = get_visual()
+	if visual:
+		visual.animate_squash(0.7, 1.3)
 
 func apply_hit(impulse: Vector3, damage: float = 0.0, attacker: Node3D = null) -> void:
-	## 被敌人子弹击中时调用：施加冲量 + 扣血 + 受击闪白
+	## 被敌人子弹击中时调用：施加冲量 + 扣血 + 受击闪白 + 顿帧/震屏
 	if is_invincible or is_dead:
 		return
 	if attacker is BaseCharacter:
 		last_hit_by = attacker
 	apply_knockback(impulse)
 	_flash_damage()
-	# 受击音效
-	if damage >= 50.0:
+	
+	# 受击音效与震屏/顿帧 (Hitstop & Screenshake)
+	if damage >= 50.0:  # 狙击枪重击
 		_play_sfx(_sfx_hit_heavy, -3.0)
+		GameFeel.hitstop(0.08)
+		GameFeel.screen_shake(0.35, 0.15)
 	else:
 		_play_sfx([_sfx_hit_light, _sfx_hit_light2].pick_random(), -8.0)
+		GameFeel.hitstop(0.03)
+		GameFeel.screen_shake(0.15, 0.08)
 	if damage > 0.0:
 		current_hp -= damage
 		if current_hp <= 0.0:
@@ -132,6 +161,11 @@ func _is_near_edge(push_dir: Vector3) -> bool:
 func _die() -> void:
 	if is_dead:
 		return
+		
+	# 击杀慢动作 (Kill slowmo) + 强震屏
+	GameFeel.kill_slowmo(0.3)
+	GameFeel.screen_shake(0.5, 0.25)
+	
 	deaths += 1
 	# 归属击杀
 	if last_hit_by and is_instance_valid(last_hit_by):
