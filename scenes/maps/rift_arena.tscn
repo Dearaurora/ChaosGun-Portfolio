@@ -5,16 +5,16 @@
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="3_pause"]
 
 [sub_resource type="StandardMaterial3D" id="mat_grass"]
-albedo_color = Color(0.45, 0.72, 0.42, 1)
+albedo_color = Color(0.52, 0.78, 0.48, 1)
 roughness = 0.9
 
-[sub_resource type="StandardMaterial3D" id="mat_stone"]
-albedo_color = Color(0.55, 0.53, 0.50, 1)
+[sub_resource type="StandardMaterial3D" id="mat_cliff"]
+albedo_color = Color(0.58, 0.55, 0.68, 1)
 roughness = 0.95
 
-[sub_resource type="StandardMaterial3D" id="mat_path"]
-albedo_color = Color(0.58, 0.56, 0.50, 1)
-roughness = 0.88
+[sub_resource type="StandardMaterial3D" id="mat_stone"]
+albedo_color = Color(0.45, 0.43, 0.54, 1)
+roughness = 0.95
 
 [node name="BattleArena" type="Node3D"]
 script = ExtResource("1_battle")
@@ -27,191 +27,202 @@ shadow_enabled = true
 transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 80, 80)
 projection = 1
 current = true
-size = 115.0
-
-;; ================================================================
-;;  地图布局（俯视）—— 不规则大陆 + 裂隙切入
-;;
-;;  参考图分析：一整块有机形状的大陆地，被几条裂隙从边缘切入，
-;;  形成蜿蜒的走廊和开阔的战斗区域。不是对称的，不是离散岛屿。
-;;
-;;  设计原则：用大块重叠平台拼接，走廊部分较窄（12-18单位），
-;;  战斗区域宽阔（40-50单位），裂隙是"没有几何体的空白区域"。
-;;
-;;     ┌─────── 北区 ────────────┐
-;;     │                          ├─ NE区
-;;     │         ┌裂隙┐          │
-;;     ├走廊┤ ╳  ├走廊┤
-;;   西区   │         │        东区
-;;     │    └裂隙┘    │          │
-;;     ├走廊┤    ├走廊┤
-;;     │         ╳裂隙╳          │
-;;   SW区   │     南区     │  SE区
-;;     └────┴─────────────┴─────┘
-;;
-;;  ╳ = 裂隙交叉点（无地面，可坠落）
-;; ================================================================
+size = 120.0
 
 [node name="Terrain" type="Node3D" parent="."]
 
-;; ==================== 主要区域 ====================
+;; ================================================================
+;;  参考图复刻 v3 — 一整块大陆被裂隙切割
+;;
+;;  核心理念：4块大面积平台重叠形成连贯的 L/C 形主大陆
+;;  NE/SW/SE 通过窄桥连接
+;;
+;;  俯视示意：
+;;       TTTTTTTTTTTTTTTT
+;;  LLLL TTTTTTTTTTTTTTTT
+;;  LLLL    CCCCCCCCCCCCCCCCCC
+;;  LLLL    CCCCCCCCCCCCCCCCCC    NNNNNNNN
+;;  LLLL    CCCCCCCCCCCCCCCCCC====NNNNNNNN
+;;  LLLL====CCCCCCCCCCCCCCCCCC    NNNNNNNN
+;;          CCCCCCCCCCCCCCCCCC
+;;          CCCCCCCCCCCCCCCCCC
+;;              ||        ||
+;;           SSSSSSS   EEEEEEE
+;;           SSSSSSS   EEEEEEE
+;;           SSSSSSS   EEEEEEE
+;;
+;;  L=左臂  T=顶臂  C=中央  N=NE岛  S=SW岛  E=SE岛
+;;  ==宽连接  ||窄桥
+;; ================================================================
 
-;; 北区 —— 大型作战平台（偏左）
-[node name="Area_North" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, -0.5, -45)
+;; ==================== 主大陆：NW 顶部横杆（参考图上方主平台） ====================
+[node name="NW_Bar_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, -2, -42)
 use_collision = true
-size = Vector3(90, 1, 45)
+size = Vector3(46, 4, 18)
+material = SubResource("mat_cliff")
+
+[node name="NW_Bar_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0.1, -42)
+use_collision = true
+size = Vector3(46, 0.2, 18)
 material = SubResource("mat_grass")
 
-;; 东北区 —— 中型平台
-[node name="Area_NE" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55, -0.5, -30)
+;; ==================== 左端帐篷扩展区（参考图左上角更宽的部分） ====================
+[node name="NW_TentArea_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, -2, -36)
 use_collision = true
-size = Vector3(45, 1, 40)
+size = Vector3(14, 4, 14)
+material = SubResource("mat_cliff")
+
+[node name="NW_TentArea_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 0.1, -36)
+use_collision = true
+size = Vector3(14, 0.2, 14)
 material = SubResource("mat_grass")
 
-;; 东北高台
-[node name="Area_NE_HighGround" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0.5, -35)
+;; ==================== 窄颈瓶颈（NW → Center 通道，~12单位宽） ====================
+[node name="Neck_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, -2, -24)
 use_collision = true
-size = Vector3(16, 2, 16)
+size = Vector3(12, 4, 22)
+material = SubResource("mat_cliff")
+
+[node name="Neck_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.1, -24)
+use_collision = true
+size = Vector3(12, 0.2, 22)
+material = SubResource("mat_grass")
+
+;; ==================== 主大陆：中央核心平台（最大区域） ====================
+[node name="Center_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2, 2)
+use_collision = true
+size = Vector3(40, 4, 40)
+material = SubResource("mat_cliff")
+
+[node name="Center_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 2)
+use_collision = true
+size = Vector3(40, 0.2, 40)
+material = SubResource("mat_grass")
+
+;; ==================== 中央神殿（鸟居门） ====================
+[node name="Shrine_PillarL" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 2.5, 2)
+use_collision = true
+size = Vector3(2, 5, 2)
 material = SubResource("mat_stone")
 
-;; 中央区 —— 核心交战区
-[node name="Area_Center" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+[node name="Shrine_PillarR" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 2.5, 2)
 use_collision = true
-size = Vector3(45, 1, 40)
-material = SubResource("mat_grass")
-
-;; 中央塔台
-[node name="Area_Center_Tower" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-use_collision = true
-size = Vector3(14, 3, 14)
+size = Vector3(2, 5, 2)
 material = SubResource("mat_stone")
 
-;; 西区 —— 狭长的西侧通道
-[node name="Area_West" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, -0.5, 0)
+[node name="Shrine_Beam" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 2)
 use_collision = true
-size = Vector3(35, 1, 35)
-material = SubResource("mat_grass")
-
-;; 东区 —— 东侧开阔区
-[node name="Area_East" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55, -0.5, 14)
-use_collision = true
-size = Vector3(40, 1, 44)
-material = SubResource("mat_grass")
-
-;; 东区台阶
-[node name="Area_East_Step" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 65, 0, 25)
-use_collision = true
-size = Vector3(14, 1, 14)
+size = Vector3(11, 1.5, 3)
 material = SubResource("mat_stone")
 
-;; 西南区
-[node name="Area_SW" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, -0.5, 40)
+;; ==================== NE岛（右上独立岛） ====================
+[node name="NE_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48, -2, -14)
 use_collision = true
-size = Vector3(40, 1, 30)
+size = Vector3(22, 4, 22)
+material = SubResource("mat_cliff")
+
+[node name="NE_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48, 0.1, -14)
+use_collision = true
+size = Vector3(22, 0.2, 22)
 material = SubResource("mat_grass")
 
-;; 南区 —— 南侧大平台
-[node name="Area_South" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 50)
+;; NE岛石墙
+[node name="NE_Wall" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53, 2, -18)
 use_collision = true
-size = Vector3(75, 1, 35)
-material = SubResource("mat_grass")
-
-;; 东南区
-[node name="Area_SE" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, -0.5, 50)
-use_collision = true
-size = Vector3(40, 1, 30)
-material = SubResource("mat_grass")
-
-;; SE高台
-[node name="Area_SE_HighGround" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 58, 0.5, 52)
-use_collision = true
-size = Vector3(14, 2, 12)
+size = Vector3(3, 4, 10)
 material = SubResource("mat_stone")
 
-;; ==================== 走廊（连接区域，确保无断点） ====================
-;; 每条走廊两端都与相邻区域重叠至少5单位
-
-;; C1: 北区 → 中央（裂隙两侧的通道）
-[node name="Corridor_North_to_Center" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, -0.5, -17)
+;; ==================== 桥：Center → NE ====================
+[node name="Bridge_NE_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, -2, -10)
 use_collision = true
-size = Vector3(20, 1, 18)
-material = SubResource("mat_path")
+size = Vector3(24, 4, 5)
+material = SubResource("mat_cliff")
 
-;; C2: 北区 → 东北
-[node name="Corridor_North_to_NE" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, -0.5, -38)
+[node name="Bridge_NE_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28, 0.1, -10)
 use_collision = true
-size = Vector3(16, 1, 20)
-material = SubResource("mat_path")
+size = Vector3(24, 0.2, 5)
+material = SubResource("mat_grass")
 
-;; C3: 中央 → 西区
-[node name="Corridor_Center_to_West" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31, -0.5, 0)
+;; ==================== SW岛（左下独立岛） ====================
+[node name="SW_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, -2, 42)
 use_collision = true
-size = Vector3(20, 1, 14)
-material = SubResource("mat_path")
+size = Vector3(26, 4, 22)
+material = SubResource("mat_cliff")
 
-;; C4: 中央 → 东区
-[node name="Corridor_Center_to_East" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, -0.5, 5)
+[node name="SW_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0.1, 42)
 use_collision = true
-size = Vector3(18, 1, 14)
-material = SubResource("mat_path")
+size = Vector3(26, 0.2, 22)
+material = SubResource("mat_grass")
 
-;; C5: 中央 → 南区 / 西南区（偏左通道）
-[node name="Corridor_Center_to_South" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, -0.5, 27)
+;; ==================== 桥：Center → SW ====================
+[node name="Bridge_SW_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, -2, 28)
 use_collision = true
-size = Vector3(16, 1, 20)
-material = SubResource("mat_path")
+size = Vector3(5, 4, 14)
+material = SubResource("mat_cliff")
 
-;; C6: 西区 → 西南区
-[node name="Corridor_West_to_SW" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, -0.5, 21)
+[node name="Bridge_SW_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.1, 28)
 use_collision = true
-size = Vector3(14, 1, 16)
-material = SubResource("mat_path")
+size = Vector3(5, 0.2, 14)
+material = SubResource("mat_grass")
 
-;; C7: 东区 → 南区/东南
-[node name="Corridor_East_to_South" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, -0.5, 34)
+;; ==================== SE岛（右下独立岛） ====================
+[node name="SE_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, -2, 42)
 use_collision = true
-size = Vector3(14, 1, 14)
-material = SubResource("mat_path")
+size = Vector3(22, 4, 22)
+material = SubResource("mat_cliff")
 
-;; C8: 东北 → 东区
-[node name="Corridor_NE_to_East" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55, -0.5, -6)
+[node name="SE_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.1, 42)
 use_collision = true
-size = Vector3(14, 1, 12)
-material = SubResource("mat_path")
+size = Vector3(22, 0.2, 22)
+material = SubResource("mat_grass")
 
-;; C9: 西南 → 南区
-[node name="Corridor_SW_to_South" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, -0.5, 43)
+;; ==================== 桥：Center → SE ====================
+[node name="Bridge_SE_Base" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, -2, 28)
 use_collision = true
-size = Vector3(14, 1, 14)
-material = SubResource("mat_path")
+size = Vector3(5, 4, 14)
+material = SubResource("mat_cliff")
 
-;; C10: 北区 → 西区（西北通道）
-[node name="Corridor_North_to_West" type="CSGBox3D" parent="Terrain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, -0.5, -17)
+[node name="Bridge_SE_Grass" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.1, 28)
 use_collision = true
-size = Vector3(14, 1, 22)
-material = SubResource("mat_path")
+size = Vector3(5, 0.2, 14)
+material = SubResource("mat_grass")
+
+;; ==================== NW帐篷装饰 ====================
+[node name="NW_Tent_Pole" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 2, -36)
+use_collision = true
+size = Vector3(3, 4, 3)
+material = SubResource("mat_stone")
+
+[node name="NW_Tent_Roof" type="CSGBox3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46, 4.5, -36)
+use_collision = false
+size = Vector3(8, 0.5, 8)
+material = SubResource("mat_stone")
 
 [node name="WeaponSpawner" type="Node" parent="."]
 script = ExtResource("2_spawner")

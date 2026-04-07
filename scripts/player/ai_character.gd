@@ -118,11 +118,12 @@ func _do_patrol(_delta: float) -> Vector3:
 	to_dest.y = 0
 	if to_dest.length() < 3.0:
 		_pick_patrol_dest()
-	# 前方悬崖检测：如果前进方向没有地面，换目的地
-	if not _has_ground_ahead(to_dest.normalized(), 5.0):
+	var dir = to_dest.normalized()
+	# 前方悬崖检测 / 障碍物检测
+	if not _has_ground_ahead(dir, 5.0) or _has_wall_ahead(dir, 3.0):
 		_pick_patrol_dest()
 		return Vector3.ZERO
-	return to_dest.normalized() * patrol_speed
+	return dir * patrol_speed
 
 func _do_chase(_delta: float) -> Vector3:
 	if not _target or not is_instance_valid(_target):
@@ -130,16 +131,17 @@ func _do_chase(_delta: float) -> Vector3:
 		return Vector3.ZERO
 	var to_target = _target.global_position - global_position
 	to_target.y = 0
-	# 追击时检测前方是否有地面，没有就停下来射击或巡逻
-	if not _has_ground_ahead(to_target.normalized(), 5.0):
+	var chase_dir = to_target.normalized()
+	# 前方悬崖 / 障碍物检测
+	if not _has_ground_ahead(chase_dir, 5.0) or _has_wall_ahead(chase_dir, 3.0):
 		if _target is BaseCharacter:
-			_state = State.SHOOT  # 对面在裂隙另一边，站着打
+			_state = State.SHOOT  # 有障碍挡着，站着打
 		else:
 			_state = State.PATROL
 			_pick_patrol_dest()
 		return Vector3.ZERO
-	_face_direction(to_target.normalized())
-	return to_target.normalized() * GameConfig.character_speed
+	_face_direction(chase_dir)
+	return chase_dir * GameConfig.character_speed
 
 func _do_shoot(delta: float) -> Vector3:
 	if not _target or not is_instance_valid(_target):
@@ -205,7 +207,7 @@ func _find_target() -> void:
 	if _target and _target is WeaponPickup:
 		# 拾取物还在就继续追
 		return
-	# 寻找最近的玩家
+	# 寻找最近的活着的对手
 	var players = get_tree().get_nodes_in_group("player")
 	if players.is_empty():
 		_target = null
@@ -214,6 +216,7 @@ func _find_target() -> void:
 	var closest_dist := INF
 	for p in players:
 		if p == self: continue
+		if p is BaseCharacter and (p as BaseCharacter).is_dead: continue
 		var d = global_position.distance_to(p.global_position)
 		if d < closest_dist:
 			closest_dist = d
@@ -236,7 +239,7 @@ func _pick_patrol_dest() -> void:
 		_patrol_dest = global_position
 		return
 	# 尝试几次，优先选离自己有一定距离的点
-	var best_point := points.pick_random()
+	var best_point: Vector3 = points.pick_random()
 	for _i in range(3):
 		var candidate: Vector3 = points.pick_random()
 		var d = global_position.distance_to(candidate)
@@ -258,6 +261,16 @@ func _has_ground_ahead(dir: Vector3, dist: float) -> bool:
 	var space_state = get_world_3d().direct_space_state
 	var check_pos = global_position + dir * dist + Vector3.UP * 2.0
 	var query = PhysicsRayQueryParameters3D.create(check_pos, check_pos + Vector3.DOWN * 10.0)
+	query.exclude = [get_rid()]
+	var result = space_state.intersect_ray(query)
+	return not result.is_empty()
+
+## 检测指定方向 dist 距离内是否有墙壁/障碍物（水平射线）
+func _has_wall_ahead(dir: Vector3, dist: float) -> bool:
+	var space_state = get_world_3d().direct_space_state
+	var origin = global_position + Vector3.UP * 1.0  # 从角色腰部高度发射
+	var end = origin + dir * dist
+	var query = PhysicsRayQueryParameters3D.create(origin, end)
 	query.exclude = [get_rid()]
 	var result = space_state.intersect_ray(query)
 	return not result.is_empty()

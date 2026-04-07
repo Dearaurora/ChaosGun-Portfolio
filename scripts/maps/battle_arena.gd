@@ -6,12 +6,12 @@ extends Node3D
 const PLAYER_SCENE = preload("res://scenes/characters/player.tscn")
 const AI_SCENE = preload("res://scenes/characters/ai_character.tscn")
 
-## 出生点（最多 4 个）
+## 出生点
 var SPAWN_POINTS := [
-	Vector3(-20, 0.5, -45),    # 北区
-	Vector3(55, 0.5, -30),     # 东北区
-	Vector3(-55, 0.5, 40),     # 西南区
-	Vector3(50, 0.5, 50),      # 东南区
+	Vector3(0, 0.5, 2),          # 中央
+	Vector3(-48, 0.5, -24),      # NW左臂
+	Vector3(48, 0.5, -14),       # NE岛
+	Vector3(-24, 0.5, 42),       # SW岛
 ]
 
 var _characters: Array = []
@@ -47,6 +47,12 @@ func _spawn_characters() -> void:
 		character.name = _get_character_name(i, slot)
 
 		add_child(character)
+		# 确保加入正确的 group，AI 靠 get_nodes_in_group("player") 寻敌
+		if slot == MatchConfig.SlotType.HUMAN:
+			character.add_to_group("player")
+		else:
+			character.add_to_group("player")  # AI 也加入 player group 以便互相发现
+			character.add_to_group("ai")
 		# 连接淘汰信号
 		character.eliminated.connect(_on_character_eliminated)
 		_apply_color(character, i)
