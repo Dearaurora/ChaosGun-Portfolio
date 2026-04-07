@@ -18,6 +18,18 @@ var PLAYER_COLORS: Array = [
 ## P1/P2 的输入前缀映射
 var INPUT_PREFIXES: Array = ["p1_", "p2_", "", ""]
 
+## 可选地图列表 [显示名, 场景路径]
+var MAPS: Array = [
+	["Rift Arena", "res://scenes/maps/rift_arena.tscn"],
+	["Demo Arena", "res://scenes/maps/battle_arena.tscn"],
+]
+
+## 当前选择的地图索引
+var selected_map_index: int = 0
+
+func get_selected_map_path() -> String:
+	return MAPS[selected_map_index][1]
+
 ## 获取活跃槽位数量
 func get_active_count() -> int:
 	var count := 0

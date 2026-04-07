@@ -8,10 +8,10 @@ const AI_SCENE = preload("res://scenes/characters/ai_character.tscn")
 
 ## 出生点（最多 4 个）
 var SPAWN_POINTS := [
-	Vector3(-15, 0.5, -10),
-	Vector3(15, 0.5, -10),
-	Vector3(-15, 0.5, 10),
-	Vector3(15, 0.5, 10),
+	Vector3(-20, 0.5, -45),    # 北区
+	Vector3(55, 0.5, -30),     # 东北区
+	Vector3(-55, 0.5, 40),     # 西南区
+	Vector3(50, 0.5, 50),      # 东南区
 ]
 
 var _characters: Array = []

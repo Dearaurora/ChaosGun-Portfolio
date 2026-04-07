@@ -21,6 +21,7 @@ const PLAYER_COLORS := [
 
 # 每个槽位的状态
 var _slots: Array = []
+var _map_label: Label = null
 
 func _ready() -> void:
 	# 初始化时从 MatchConfig 读取
@@ -73,6 +74,28 @@ func _build_ui() -> void:
 	var back_btn = _create_btn("← BACK", COL_HEART, 32, bottom_y, 140, 56)
 	back_btn.pressed.connect(_on_back)
 	add_child(back_btn)
+
+	# 地图选择器（居中）
+	var map_center_x: float = vp.x / 2.0
+	var map_btn_w := 40.0
+
+	var map_prev = _create_btn("◀", COL_TEXT, map_center_x - 140, bottom_y + 8, map_btn_w, map_btn_w)
+	map_prev.pressed.connect(_on_map_prev)
+	add_child(map_prev)
+
+	_map_label = Label.new()
+	_map_label.text = MatchConfig.MAPS[MatchConfig.selected_map_index][0]
+	_map_label.position = Vector2(map_center_x - 90, bottom_y)
+	_map_label.size = Vector2(180, 56)
+	_map_label.add_theme_font_size_override("font_size", 16)
+	_map_label.add_theme_color_override("font_color", COL_PRIMARY)
+	_map_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_map_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	add_child(_map_label)
+
+	var map_next = _create_btn("▶", COL_TEXT, map_center_x + 100, bottom_y + 8, map_btn_w, map_btn_w)
+	map_next.pressed.connect(_on_map_next)
+	add_child(map_next)
 
 	# START 按钮
 	var start_btn = _create_btn("START!", COL_PRIMARY, vp.x - 200 - 32, bottom_y, 200, 56)
@@ -266,4 +289,12 @@ func _on_start() -> void:
 
 	# 写入全局配置
 	MatchConfig.slots = _slots.duplicate()
-	get_tree().change_scene_to_file("res://scenes/maps/battle_arena.tscn")
+	get_tree().change_scene_to_file(MatchConfig.get_selected_map_path())
+
+func _on_map_prev() -> void:
+	MatchConfig.selected_map_index = (MatchConfig.selected_map_index - 1 + MatchConfig.MAPS.size()) % MatchConfig.MAPS.size()
+	_map_label.text = MatchConfig.MAPS[MatchConfig.selected_map_index][0]
+
+func _on_map_next() -> void:
+	MatchConfig.selected_map_index = (MatchConfig.selected_map_index + 1) % MatchConfig.MAPS.size()
+	_map_label.text = MatchConfig.MAPS[MatchConfig.selected_map_index][0]

@@ -118,6 +118,10 @@ func _do_patrol(_delta: float) -> Vector3:
 	to_dest.y = 0
 	if to_dest.length() < 3.0:
 		_pick_patrol_dest()
+	# 前方悬崖检测：如果前进方向没有地面，换目的地
+	if not _has_ground_ahead(to_dest.normalized(), 5.0):
+		_pick_patrol_dest()
+		return Vector3.ZERO
 	return to_dest.normalized() * patrol_speed
 
 func _do_chase(_delta: float) -> Vector3:
@@ -126,6 +130,14 @@ func _do_chase(_delta: float) -> Vector3:
 		return Vector3.ZERO
 	var to_target = _target.global_position - global_position
 	to_target.y = 0
+	# 追击时检测前方是否有地面，没有就停下来射击或巡逻
+	if not _has_ground_ahead(to_target.normalized(), 5.0):
+		if _target is BaseCharacter:
+			_state = State.SHOOT  # 对面在裂隙另一边，站着打
+		else:
+			_state = State.PATROL
+			_pick_patrol_dest()
+		return Vector3.ZERO
 	_face_direction(to_target.normalized())
 	return to_target.normalized() * GameConfig.character_speed
 
@@ -156,11 +168,22 @@ func _do_shoot(delta: float) -> Vector3:
 	return Vector3.ZERO  # 射击时站定
 
 func _do_flee_edge(_delta: float) -> Vector3:
-	# 向地图中心跑
-	var to_center = -global_position
-	to_center.y = 0
-	_face_direction(to_center.normalized())
-	return to_center.normalized() * GameConfig.character_speed
+	# 寻找有地面的安全方向后退，而不是盲目跑向原点
+	var best_dir := Vector3.ZERO
+	var best_dist := 0.0
+	# 测试 8 个方向，选择地面最远的方向
+	for i in range(8):
+		var angle = i * (PI / 4.0)
+		var test_dir = Vector3(cos(angle), 0, sin(angle))
+		var check_dist = _get_ground_distance(test_dir)
+		if check_dist > best_dist:
+			best_dist = check_dist
+			best_dir = test_dir
+	if best_dir.length() < 0.1:
+		# 四面楚歌，站着不动
+		return Vector3.ZERO
+	_face_direction(best_dir)
+	return best_dir * GameConfig.character_speed
 
 func _respawn() -> void:
 	super._respawn()
@@ -207,18 +230,47 @@ func _find_nearby_pickup() -> WeaponPickup:
 	return null
 
 func _pick_patrol_dest() -> void:
-	# 随机选择地图中心区域的一个点
-	var range_val = GameConfig.map_half_size * 0.5  # 在地图中心 50% 区域巡逻
-	_patrol_dest = Vector3(
-		randf_range(-range_val, range_val),
-		0.5,
-		randf_range(-range_val, range_val)
-	)
+	# 从重生点列表中随机选一个作为巡逻目的地（保证目的地有地面）
+	var points = GameConfig.respawn_points
+	if points.is_empty():
+		_patrol_dest = global_position
+		return
+	# 尝试几次，优先选离自己有一定距离的点
+	var best_point := points.pick_random()
+	for _i in range(3):
+		var candidate: Vector3 = points.pick_random()
+		var d = global_position.distance_to(candidate)
+		if d > 20.0:
+			best_point = candidate
+			break
+	_patrol_dest = best_point
 
 func _is_self_near_edge() -> bool:
-	var x_edge = abs(global_position.x) > GameConfig.map_half_size - EDGE_SAFE_DIST
-	var z_edge = abs(global_position.z) > GameConfig.map_half_size - EDGE_SAFE_DIST
-	return x_edge or z_edge
+	# 用射线检测：检查四个方向，任一方向 EDGE_SAFE_DIST 内没有地面即为边缘
+	var directions = [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT]
+	for dir in directions:
+		if not _has_ground_ahead(dir, EDGE_SAFE_DIST):
+			return true
+	return false
+
+## 检测指定方向 dist 距离处是否有地面
+func _has_ground_ahead(dir: Vector3, dist: float) -> bool:
+	var space_state = get_world_3d().direct_space_state
+	var check_pos = global_position + dir * dist + Vector3.UP * 2.0
+	var query = PhysicsRayQueryParameters3D.create(check_pos, check_pos + Vector3.DOWN * 10.0)
+	query.exclude = [get_rid()]
+	var result = space_state.intersect_ray(query)
+	return not result.is_empty()
+
+## 获取指定方向上连续有地面的最远距离
+func _get_ground_distance(dir: Vector3) -> float:
+	var max_dist := 0.0
+	for step in [4.0, 8.0, 12.0, 20.0, 30.0]:
+		if _has_ground_ahead(dir, step):
+			max_dist = step
+		else:
+			break
+	return max_dist
 
 func _on_weapon_switched(weapon_data: WeaponData) -> void:
 	var visual = get_visual()

@@ -15,10 +15,14 @@ extends Node
 @export var respawn_delay: float = 0.0
 @export var invincible_duration: float = 3.0
 @export var respawn_points: Array[Vector3] = [
-	Vector3(25, 0.5, 25),
-	Vector3(-25, 0.5, 25),
-	Vector3(25, 0.5, -25),
-	Vector3(-25, 0.5, -25),
+	Vector3(-20, 0.5, -45),
+	Vector3(55, 0.5, -30),
+	Vector3(0, 0.5, 0),
+	Vector3(-55, 0.5, 0),
+	Vector3(55, 0.5, 14),
+	Vector3(-55, 0.5, 40),
+	Vector3(0, 0.5, 50),
+	Vector3(50, 0.5, 50),
 ]
 
 # 武器刷新控制
