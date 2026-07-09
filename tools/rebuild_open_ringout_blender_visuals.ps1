@@ -23,7 +23,7 @@ if (-not (Test-Path -LiteralPath $builderPath)) {
 }
 
 Write-Output "Building Open Ring-Out Blender visual layer..."
-& $BlenderPath --background --python $builderPath
+& $BlenderPath --background --python-exit-code 1 --python $builderPath
 
 if ($LASTEXITCODE -ne 0) {
     throw "Open Ring-Out Blender visual build failed with exit code $LASTEXITCODE"

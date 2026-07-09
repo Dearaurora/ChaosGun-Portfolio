@@ -469,7 +469,7 @@ if (-not (Test-Path -LiteralPath $builderPath)) {
 }
 
 Write-Output "Building Open Ring-Out Blender visual layer..."
-& $BlenderPath --background --python $builderPath
+& $BlenderPath --background --python-exit-code 1 --python $builderPath
 
 if ($LASTEXITCODE -ne 0) {
     throw "Open Ring-Out Blender visual build failed with exit code $LASTEXITCODE"
@@ -567,7 +567,7 @@ def a1_title(spec):
 Run:
 
 ```powershell
-& "C:\Program Files\Blender Foundation\Blender 5.1\blender.exe" --background --python tools/build_open_ringout_blender_visuals.py
+& "C:\Program Files\Blender Foundation\Blender 5.1\blender.exe" --background --python-exit-code 1 --python tools/build_open_ringout_blender_visuals.py
 ```
 
 Expected: exit code `0`; stdout ends with `Exported assets\models\generated\open_ringout_slice\open_ringout_visuals.glb` or `Exported assets/models/generated/open_ringout_slice/open_ringout_visuals.glb`.
