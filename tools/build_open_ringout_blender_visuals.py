@@ -82,14 +82,20 @@ MAT_DISTANCE_CLIFF = mat("open_ringout_distance_cliff", srgb("#4d426b", 0.86), 0
 MAT_DISTANCE_GRASS = mat("open_ringout_distance_grass", srgb("#536f58", 0.70), 0.92, True)
 MAT_ABYSS_GLOW_BLUE = emissive_mat("open_ringout_abyss_glow_blue", srgb("#9fdcff", 0.72), srgb("#9fdcff"), 1.6, True)
 MAT_ABYSS_GLOW_WARM = emissive_mat("open_ringout_abyss_glow_warm", srgb("#ffd36a", 0.68), srgb("#ffd36a"), 1.35, True)
-MAT_A1_EDGE_BEACON = emissive_mat("a1_edge_beacon_warm", srgb("#ffb347", 0.86), srgb("#ff8a2a"), 1.55, True)
-MAT_A1_RIM_BLUE = emissive_mat("a1_abyss_rim_blue", srgb("#82ccff", 0.62), srgb("#82ccff"), 1.25, True)
-MAT_A1_PANEL_SHADE = mat("a1_surface_panel_shade", srgb("#aa8a68", 0.42), 0.93, True)
-MAT_A1_PANEL_HIGHLIGHT = mat("a1_surface_panel_highlight", srgb("#f2d5a2", 0.52), 0.86, True)
+MAT_A1_EDGE_BEACON = emissive_mat("a1_edge_beacon_warm", srgb("#ffb347", 0.90), srgb("#ff8a2a"), 1.70, True)
+MAT_A1_RIM_BLUE = emissive_mat("a1_abyss_rim_blue", srgb("#82ccff", 0.74), srgb("#82ccff"), 1.45, True)
+MAT_A1_PANEL_SHADE = mat("a1_surface_panel_shade", srgb("#906656", 0.72), 0.93, True)
+MAT_A1_PANEL_HIGHLIGHT = mat("a1_surface_panel_highlight", srgb("#ffe0a5", 0.70), 0.86, True)
+MAT_A1_PANEL_COOL = mat("a1_surface_panel_cool_blue", srgb("#5189a5", 0.62), 0.88, True)
+MAT_A1_PANEL_TERRA = mat("a1_surface_panel_terra", srgb("#c96f4c", 0.64), 0.88, True)
+MAT_A1_CENTER_HALO_BLUE = emissive_mat("a1_center_halo_blue", srgb("#78ddff", 0.74), srgb("#78ddff"), 2.05, True)
+MAT_A1_CENTER_HALO_GOLD = emissive_mat("a1_center_halo_gold", srgb("#ffd36c", 0.90), srgb("#ffad37"), 2.35, True)
+MAT_A1_SPARK_COOL = emissive_mat("a1_spark_cool_blue", srgb("#bcf6ff", 0.88), srgb("#8ff2ff"), 2.20, True)
 MAT_A1_CANDY_BLUE = mat("a1_toy_candy_blue", srgb("#35a7d6"), 0.62)
 MAT_A1_CANDY_GREEN = mat("a1_toy_candy_green", srgb("#77b96a"), 0.70)
 MAT_A1_CANDY_PURPLE = mat("a1_toy_candy_purple", srgb("#8f72d6"), 0.72)
-MAT_A1_SOFT_SHADOW = mat("a1_soft_contact_shadow", srgb("#3b3150", 0.22), 0.98, True)
+MAT_A1_SOFT_SHADOW = mat("a1_soft_contact_shadow", srgb("#332a4d", 0.46), 0.98, True)
+MAT_A1_COOL_SHADOW_BAND = mat("a1_cool_shadow_band", srgb("#25213e", 0.82), 0.98, True)
 MAT_A1_FLAG_RED = mat("a1_toy_flag_red", srgb("#e34e47"), 0.68)
 MAT_A1_FLAG_WHITE = mat("a1_toy_flag_white", srgb("#ffe9bd"), 0.74)
 
@@ -467,13 +473,33 @@ def add_center_pickup_pad():
 
 
 def add_a1_center_pickup_hero():
-    add_cylinder("A1CenterPickupRuneOuter", (0, 1.92, 0), 3.25, 0.08, MAT_A1_RIM_BLUE, 40)
-    add_cylinder("A1CenterPickupRuneInner", (0, 2.02, 0), 1.28, 0.10, MAT_A1_EDGE_BEACON, 32)
-    for i, yaw in enumerate([0, 60, 120, 180, 240, 300]):
+    add_cylinder("A1CenterPickupHaloCool", (0, 1.86, 0), 4.45, 0.05, MAT_A1_CENTER_HALO_BLUE, 56)
+    add_cylinder("A1CenterPickupHaloWarm", (0, 1.98, 0), 2.72, 0.06, MAT_A1_CENTER_HALO_GOLD, 44)
+    add_cylinder("A1CenterPickupRuneOuter", (0, 2.08, 0), 3.45, 0.08, MAT_A1_RIM_BLUE, 48)
+    add_cylinder("A1CenterPickupRuneInner", (0, 2.18, 0), 1.36, 0.10, MAT_A1_EDGE_BEACON, 36)
+    for i, yaw in enumerate([0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]):
         angle = math.radians(yaw)
-        x = math.cos(angle) * 2.45
-        z = math.sin(angle) * 2.45
-        add_cube(f"A1CenterPickupTick_{i}", (x, 2.08, z), (0.22, 0.08, 0.78), MAT_A1_PANEL_HIGHLIGHT, bevel=0.06, yaw_deg=yaw)
+        x = math.cos(angle) * 3.16
+        z = math.sin(angle) * 3.16
+        material = MAT_A1_CENTER_HALO_GOLD if i % 2 == 0 else MAT_A1_SPARK_COOL
+        add_cube(f"A1CenterPickupTick_{i}", (x, 2.28, z), (0.26, 0.09, 0.92), material, bevel=0.06, yaw_deg=yaw)
+
+    for i, (x, z, yaw, material) in enumerate([
+        (-3.9, -1.2, -24, MAT_A1_CENTER_HALO_GOLD),
+        (-2.7, 2.8, 34, MAT_A1_SPARK_COOL),
+        (0.6, -4.0, 72, MAT_A1_CENTER_HALO_GOLD),
+        (3.7, -0.8, -12, MAT_A1_SPARK_COOL),
+        (2.6, 3.0, 26, MAT_A1_CENTER_HALO_GOLD),
+        (-0.9, 4.1, 78, MAT_A1_SPARK_COOL),
+    ]):
+        add_cube(f"A1CenterPickupSpark_{i}", (x, 2.52, z), (0.30, 0.10, 0.82), material, bevel=0.07, yaw_deg=yaw)
+
+    for i, yaw in enumerate([18, 72, 126, 198, 252, 306]):
+        angle = math.radians(yaw)
+        x = math.cos(angle) * 4.62
+        z = math.sin(angle) * 4.62
+        material = MAT_A1_CENTER_HALO_GOLD if i % 2 == 0 else MAT_A1_SPARK_COOL
+        add_cube(f"A1CenterPickupBurstTick_{i}", (x, 2.62, z), (0.28, 0.11, 1.18), material, bevel=0.08, yaw_deg=yaw)
 
 
 def add_props():
@@ -626,10 +652,16 @@ def add_a1_platform_shell(spec):
     add_cube(f"A1{title}OuterSkirtSouth", (x, skirt_y, z + sz * 0.56), (sx * 0.86, 2.2, 1.10), spec["side"], bevel=0.35)
     add_cube(f"A1{title}OuterSkirtWest", (x - sx * 0.56, skirt_y, z), (1.10, 2.2, sz * 0.78), spec["side"], bevel=0.35)
     add_cube(f"A1{title}OuterSkirtEast", (x + sx * 0.56, skirt_y, z), (1.10, 2.2, sz * 0.78), spec["side"], bevel=0.35)
+    add_cube(f"A1{title}CoolShadowBandNorth", (x, y - 1.02, z - sz * 0.565), (sx * 0.78, 0.58, 0.46), MAT_A1_COOL_SHADOW_BAND, bevel=0.18)
+    add_cube(f"A1{title}CoolShadowBandSouth", (x, y - 1.02, z + sz * 0.565), (sx * 0.78, 0.58, 0.46), MAT_A1_COOL_SHADOW_BAND, bevel=0.18)
+    add_cube(f"A1{title}CoolShadowBandWest", (x - sx * 0.565, y - 1.02, z), (0.46, 0.58, sz * 0.70), MAT_A1_COOL_SHADOW_BAND, bevel=0.18)
+    add_cube(f"A1{title}CoolShadowBandEast", (x + sx * 0.565, y - 1.02, z), (0.46, 0.58, sz * 0.70), MAT_A1_COOL_SHADOW_BAND, bevel=0.18)
     add_cube(f"A1{title}HeroCrown", (x, crown_y, z), (sx * 0.78, 0.10, sz * 0.72), MAT_A1_PANEL_HIGHLIGHT, bevel=0.42)
 
-    add_cube(f"A1{title}SoftShadowNorth", (x, y - 0.10, z - sz * 0.48), (sx * 0.66, 0.035, 0.70), MAT_A1_SOFT_SHADOW, bevel=0.20)
-    add_cube(f"A1{title}SoftShadowSouth", (x, y - 0.10, z + sz * 0.48), (sx * 0.66, 0.035, 0.70), MAT_A1_SOFT_SHADOW, bevel=0.20)
+    add_cube(f"A1{title}SoftShadowNorth", (x, y + 1.38, z - sz * 0.46), (sx * 0.62, 0.035, 0.86), MAT_A1_SOFT_SHADOW, bevel=0.20)
+    add_cube(f"A1{title}SoftShadowSouth", (x, y + 1.38, z + sz * 0.46), (sx * 0.62, 0.035, 0.86), MAT_A1_SOFT_SHADOW, bevel=0.20)
+    add_cube(f"A1{title}SoftShadowWest", (x - sx * 0.46, y + 1.39, z), (0.86, 0.035, sz * 0.54), MAT_A1_SOFT_SHADOW, bevel=0.20)
+    add_cube(f"A1{title}SoftShadowEast", (x + sx * 0.46, y + 1.39, z), (0.86, 0.035, sz * 0.54), MAT_A1_SOFT_SHADOW, bevel=0.20)
 
 
 def add_a1_bridge_shell(spec):
@@ -666,15 +698,15 @@ def add_a1_edge_beacons():
 
 def add_a1_surface_panels():
     panels = [
-        ("A1SurfacePanel_MainNW", (-14, 1.47, -8), (8.0, 0.035, 3.0), -8, MAT_A1_PANEL_SHADE),
-        ("A1SurfacePanel_MainNE", (13, 1.48, -7), (8.4, 0.035, 2.8), 7, MAT_A1_PANEL_HIGHLIGHT),
-        ("A1SurfacePanel_MainSW", (-13, 1.48, 9), (9.0, 0.035, 2.6), 5, MAT_A1_PANEL_HIGHLIGHT),
-        ("A1SurfacePanel_MainSE", (13, 1.47, 9), (8.8, 0.035, 2.7), -5, MAT_A1_PANEL_SHADE),
-        ("A1SurfacePanel_WestLipA", (-22, 1.47, 5), (5.8, 0.035, 2.4), 2, MAT_A1_PANEL_SHADE),
-        ("A1SurfacePanel_WestLipB", (-18, 1.48, 13), (5.2, 0.035, 2.2), -9, MAT_A1_PANEL_HIGHLIGHT),
-        ("A1SurfacePanel_EastLipA", (21, 1.47, -8), (5.8, 0.035, 2.4), -4, MAT_A1_PANEL_SHADE),
-        ("A1SurfacePanel_EastLipB", (24, 1.48, 5), (5.2, 0.035, 2.2), 8, MAT_A1_PANEL_HIGHLIGHT),
-        ("A1SurfacePanel_NorthA", (0, 1.47, -30), (5.2, 0.035, 2.2), 0, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_MainNW", (-14, 1.49, -8), (9.0, 0.045, 3.6), -8, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_MainNE", (13, 1.50, -7), (9.4, 0.045, 3.4), 7, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_MainSW", (-13, 1.50, 9), (9.8, 0.045, 3.2), 5, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_MainSE", (13, 1.49, 9), (9.6, 0.045, 3.3), -5, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_WestLipA", (-22, 1.49, 5), (6.4, 0.045, 2.7), 2, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_WestLipB", (-18, 1.50, 13), (5.8, 0.045, 2.5), -9, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_EastLipA", (21, 1.49, -8), (6.4, 0.045, 2.7), -4, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_EastLipB", (24, 1.50, 5), (5.8, 0.045, 2.5), 8, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_NorthA", (0, 1.49, -30), (5.8, 0.045, 2.4), 0, MAT_A1_PANEL_SHADE),
         ("A1SurfacePanel_NorthB", (9, 1.48, -30), (5.2, 0.035, 2.2), 0, MAT_A1_PANEL_HIGHLIGHT),
         ("A1SurfacePanel_EastA", (38, 1.47, -1), (5.2, 0.035, 2.2), 90, MAT_A1_PANEL_SHADE),
         ("A1SurfacePanel_EastB", (38, 1.48, 7), (5.2, 0.035, 2.2), 90, MAT_A1_PANEL_HIGHLIGHT),
@@ -691,6 +723,38 @@ def add_a1_surface_panels():
     ]
     for name, pos, size, yaw, material in panels:
         add_cube(name, pos, size, material, bevel=0.12, yaw_deg=yaw)
+
+    extra_panels = [
+        ("A1SurfacePanel_MainCoolWest", (-19.5, 1.54, -1.5), (6.2, 0.04, 1.18), 9, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_MainCoolEast", (18.8, 1.54, -0.5), (6.8, 0.04, 1.18), -8, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_MainTerraNorth", (-2.8, 1.55, -12.4), (6.4, 0.04, 1.30), -5, MAT_A1_PANEL_TERRA),
+        ("A1SurfacePanel_MainTerraSouth", (4.8, 1.55, 12.6), (7.2, 0.04, 1.30), 6, MAT_A1_PANEL_TERRA),
+        ("A1SurfacePanel_MainCenterCoolA", (-7.8, 1.56, -2.0), (3.7, 0.04, 0.72), 0, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_MainCenterCoolB", (8.2, 1.56, 3.4), (3.9, 0.04, 0.72), 0, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_NorthCoolL", (-5.2, 1.54, -33.0), (4.2, 0.04, 1.05), 4, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_NorthTerraR", (10.8, 1.55, -27.2), (4.5, 0.04, 1.00), -5, MAT_A1_PANEL_TERRA),
+        ("A1SurfacePanel_EastCoolTop", (36.0, 1.54, -4.8), (4.4, 0.04, 1.05), 90, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_EastTerraLow", (41.0, 1.55, 8.6), (4.5, 0.04, 1.00), 90, MAT_A1_PANEL_TERRA),
+        ("A1SurfacePanel_SouthCoolL", (3.8, 1.54, 26.8), (4.8, 0.04, 1.05), -3, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_SouthTerraR", (16.6, 1.55, 33.0), (4.6, 0.04, 1.00), 6, MAT_A1_PANEL_TERRA),
+        ("A1SurfacePanel_WestCoolTop", (-41.4, 1.54, -5.0), (4.4, 0.04, 1.05), 90, MAT_A1_PANEL_COOL),
+        ("A1SurfacePanel_WestTerraLow", (-36.8, 1.55, 10.2), (4.5, 0.04, 1.00), 90, MAT_A1_PANEL_TERRA),
+    ]
+    for name, pos, size, yaw, material in extra_panels:
+        add_cube(name, pos, size, material, bevel=0.10, yaw_deg=yaw)
+
+    chip_specs = [
+        (-23.0, -9.6, 0, MAT_A1_PANEL_TERRA), (-17.4, 14.8, -12, MAT_A1_PANEL_COOL),
+        (-9.2, -14.8, 8, MAT_A1_PANEL_HIGHLIGHT), (-2.6, 8.8, -6, MAT_A1_PANEL_SHADE),
+        (6.8, -9.8, 13, MAT_A1_PANEL_COOL), (15.4, 14.2, -8, MAT_A1_PANEL_TERRA),
+        (24.4, -0.3, 7, MAT_A1_PANEL_HIGHLIGHT), (1.5, -29.8, 0, MAT_A1_PANEL_COOL),
+        (9.0, -32.8, 0, MAT_A1_PANEL_TERRA), (37.8, -1.4, 90, MAT_A1_PANEL_COOL),
+        (39.9, 6.8, 90, MAT_A1_PANEL_TERRA), (7.2, 29.0, 0, MAT_A1_PANEL_COOL),
+        (16.4, 30.8, 0, MAT_A1_PANEL_TERRA), (-39.4, -2.2, 90, MAT_A1_PANEL_COOL),
+        (-38.8, 7.8, 90, MAT_A1_PANEL_TERRA),
+    ]
+    for i, (x, z, yaw, material) in enumerate(chip_specs):
+        add_cube(f"A1SurfaceChip_{i:02d}", (x, 1.58, z), (1.18, 0.045, 0.36), material, bevel=0.06, yaw_deg=yaw)
 
 
 def add_a1_prop_framing():
