@@ -941,6 +941,8 @@ git commit -m "test: lock open ringout a1 visual anchors"
 
 - [ ] **Step 1: Capture the staged showcase screenshot**
 
+Prerequisite: this screenshot gate assumes the Open Ring-Out scene/demo baseline and generated visuals from prior tasks are present in the current workspace.
+
 Run:
 
 ```powershell
@@ -1007,6 +1009,8 @@ powershell -ExecutionPolicy Bypass -File scripts/tests/run_open_ringout_blender_
 powershell -ExecutionPolicy Bypass -File scripts/tests/run_open_ringout_slice_verifier.ps1 -GodotPath "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
 & "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --audio-driver Dummy --path . -s res://scripts/tests/capture_open_ringout_screenshot.gd
 ```
+
+The screenshot command assumes the Open Ring-Out scene/demo baseline and generated visuals from prior tasks are present in the current workspace.
 
 Expected:
 

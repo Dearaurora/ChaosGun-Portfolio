@@ -19,7 +19,8 @@ func _initialize() -> void:
 		push_error("Could not load %s" % SCENE_PATH)
 		quit(1)
 		return
-	_configure_showcase_roster()
+	if not _configure_showcase_roster():
+		return
 
 	var arena = scene.instantiate()
 	root.add_child(arena)
@@ -55,12 +56,11 @@ func _fail(message: String) -> void:
 	push_error(message)
 	quit(1)
 
-func _configure_showcase_roster() -> void:
+func _configure_showcase_roster() -> bool:
 	var match_config = root.get_node_or_null("MatchConfig")
 	if match_config == null:
-		push_error("MatchConfig autoload missing")
-		quit(1)
-		return
+		_fail("MatchConfig autoload missing")
+		return false
 	match_config.slots = [
 		match_config.SlotType.HUMAN,
 		match_config.SlotType.AI,
@@ -73,6 +73,7 @@ func _configure_showcase_roster() -> void:
 		Color("#24a9e8"),
 		Color("#f2bf27"),
 	]
+	return true
 
 func _stage_showcase_shots(arena: Node) -> void:
 	var chars = arena.get("_characters") as Array
@@ -140,7 +141,6 @@ func _fire_forward(shooter: BaseCharacter) -> void:
 	shooter.weapon_manager.is_switching = false
 	if shooter.weapon_manager.current_weapon:
 		shooter.weapon_manager.current_weapon.fire_cooldown = 0.0
-	var origin = shooter.weapon_point.global_position
 	var dir = -shooter.global_transform.basis.z.normalized()
 	dir.y = 0.02
 	dir = dir.normalized()
