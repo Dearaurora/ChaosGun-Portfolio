@@ -188,13 +188,7 @@ func _collect_material_names(node: Node, material_names: Dictionary) -> void:
 				if material == null:
 					material = mesh.surface_get_material(surface)
 				if material:
-					var material_key := ""
-					if material.resource_path != "":
-						material_key = material.resource_path
-					elif material.resource_name != "":
-						material_key = material.resource_name
-					else:
-						material_key = str(material.get_instance_id())
+					var material_key := _material_identity_key(material, surface)
 					material_names[material_key] = true
 	for child in node.get_children():
 		_collect_material_names(child, material_names)
@@ -222,7 +216,7 @@ func _count_descendants_with_prefix(node: Node, prefix: String) -> int:
 	return count
 
 func _has_collision_descendant(node: Node) -> bool:
-	if node is StaticBody3D or node is CollisionShape3D or node is Area3D:
+	if node is CollisionObject3D or node is CollisionShape3D or node is CollisionPolygon3D:
 		return true
 	for child in node.get_children():
 		if _has_collision_descendant(child):
@@ -241,9 +235,60 @@ func _find_mesh_instance_by_name(node: Node, target_name: String) -> MeshInstanc
 func _mesh_visual_size(mesh: MeshInstance3D) -> Vector3:
 	if mesh.mesh == null:
 		return Vector3.ZERO
-	var local_size := mesh.mesh.get_aabb().size
-	var scale := mesh.global_transform.basis.get_scale()
-	return Vector3(absf(local_size.x * scale.x), absf(local_size.y * scale.y), absf(local_size.z * scale.z))
+	var local_aabb := mesh.mesh.get_aabb()
+	var min_point := Vector3(INF, INF, INF)
+	var max_point := Vector3(-INF, -INF, -INF)
+	var origin := local_aabb.position
+	var size := local_aabb.size
+	var corners := [
+		origin,
+		origin + Vector3(size.x, 0.0, 0.0),
+		origin + Vector3(0.0, size.y, 0.0),
+		origin + Vector3(0.0, 0.0, size.z),
+		origin + Vector3(size.x, size.y, 0.0),
+		origin + Vector3(size.x, 0.0, size.z),
+		origin + Vector3(0.0, size.y, size.z),
+		origin + size,
+	]
+	for corner in corners:
+		var world_corner: Vector3 = mesh.global_transform * corner
+		min_point = Vector3(
+			minf(min_point.x, world_corner.x),
+			minf(min_point.y, world_corner.y),
+			minf(min_point.z, world_corner.z)
+		)
+		max_point = Vector3(
+			maxf(max_point.x, world_corner.x),
+			maxf(max_point.y, world_corner.y),
+			maxf(max_point.z, world_corner.z)
+		)
+	return max_point - min_point
+
+func _material_identity_key(material: Material, surface_index: int) -> String:
+	if material.resource_path != "":
+		return material.resource_path
+	if material.resource_name != "":
+		return material.resource_name
+	if material is BaseMaterial3D:
+		var base_material := material as BaseMaterial3D
+		return "%s|%s|%s|%s|%s|%s" % [
+			base_material.get_class(),
+			str(base_material.albedo_color),
+			str(base_material.emission),
+			str(base_material.emission_enabled),
+			str(base_material.metallic),
+			str(base_material.roughness),
+		]
+	if material is ShaderMaterial:
+		var shader_material := material as ShaderMaterial
+		var shader := shader_material.shader
+		if shader:
+			if shader.resource_path != "":
+				return "%s|%s" % [shader_material.get_class(), shader.resource_path]
+			if shader.resource_name != "":
+				return "%s|%s" % [shader_material.get_class(), shader.resource_name]
+		return shader_material.get_class()
+	return "surface_%d" % surface_index
 
 func _fail(message: String) -> void:
 	_failures.append(message)
