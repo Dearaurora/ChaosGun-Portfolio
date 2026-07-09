@@ -466,6 +466,16 @@ def add_center_pickup_pad():
     add_cube("center_pickup_gun_barrel", (1.02, 2.05, 0), (0.66, 0.16, 0.24), MAT_WHITE, bevel=0.05)
 
 
+def add_a1_center_pickup_hero():
+    add_cylinder("A1CenterPickupRuneOuter", (0, 1.92, 0), 3.25, 0.08, MAT_A1_RIM_BLUE, 40)
+    add_cylinder("A1CenterPickupRuneInner", (0, 2.02, 0), 1.28, 0.10, MAT_A1_EDGE_BEACON, 32)
+    for i, yaw in enumerate([0, 60, 120, 180, 240, 300]):
+        angle = math.radians(yaw)
+        x = math.cos(angle) * 2.45
+        z = math.sin(angle) * 2.45
+        add_cube(f"A1CenterPickupTick_{i}", (x, 2.08, z), (0.22, 0.08, 0.78), MAT_A1_PANEL_HIGHLIGHT, bevel=0.06, yaw_deg=yaw)
+
+
 def add_props():
     for name, pos, length, radius, material, yaw in [
         ("bumper_north", (-13, 1.75, -16.8), 9.0, 0.92, MAT_RED, 0),
@@ -643,6 +653,46 @@ def add_a1_bridge_shell(spec):
         add_cube(f"A1BridgeMouthMarker{title}B", (x, rail_y + 0.10, z + sz * 0.48), (sx * 0.82, 0.46, 0.50), MAT_A1_EDGE_BEACON, bevel=0.16)
 
 
+def add_a1_edge_beacons():
+    beacon_specs = [
+        (-23, 1.56, -17), (-12, 1.56, -19), (0, 1.56, -19), (13, 1.56, -18), (24, 1.56, -14),
+        (27, 1.56, -4), (29, 1.56, 8), (21, 1.56, 17), (9, 1.56, 20), (-4, 1.56, 18),
+        (-17, 1.56, 17), (-25, 1.56, 9), (-28, 1.56, -3), (-21, 1.56, -12),
+        (4, 1.56, -32), (39, 1.56, 3), (9, 1.56, 32), (-39, 1.56, 2),
+    ]
+    for i, pos in enumerate(beacon_specs):
+        add_cylinder(f"A1EdgeBeacon_{i:02d}", pos, 0.34, 0.22, MAT_A1_EDGE_BEACON, 18)
+
+
+def add_a1_surface_panels():
+    panels = [
+        ("A1SurfacePanel_MainNW", (-14, 1.47, -8), (8.0, 0.035, 3.0), -8, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_MainNE", (13, 1.48, -7), (8.4, 0.035, 2.8), 7, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_MainSW", (-13, 1.48, 9), (9.0, 0.035, 2.6), 5, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_MainSE", (13, 1.47, 9), (8.8, 0.035, 2.7), -5, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_WestLipA", (-22, 1.47, 5), (5.8, 0.035, 2.4), 2, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_WestLipB", (-18, 1.48, 13), (5.2, 0.035, 2.2), -9, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_EastLipA", (21, 1.47, -8), (5.8, 0.035, 2.4), -4, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_EastLipB", (24, 1.48, 5), (5.2, 0.035, 2.2), 8, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_NorthA", (0, 1.47, -30), (5.2, 0.035, 2.2), 0, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_NorthB", (9, 1.48, -30), (5.2, 0.035, 2.2), 0, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_EastA", (38, 1.47, -1), (5.2, 0.035, 2.2), 90, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_EastB", (38, 1.48, 7), (5.2, 0.035, 2.2), 90, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_SouthA", (4, 1.47, 30), (5.2, 0.035, 2.2), 0, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_SouthB", (14, 1.48, 30), (5.2, 0.035, 2.2), 0, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_WestA", (-39, 1.47, -3), (5.2, 0.035, 2.2), 90, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_WestB", (-39, 1.48, 7), (5.2, 0.035, 2.2), 90, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_BridgeN", (4, 1.51, -20.2), (6.8, 0.035, 1.0), 0, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_BridgeE", (31.8, 1.51, 2), (1.0, 0.035, 5.8), 0, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_BridgeS", (7, 1.51, 20.0), (6.8, 0.035, 1.0), 0, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_BridgeW", (-31.8, 1.51, 2), (1.0, 0.035, 6.2), 0, MAT_A1_PANEL_HIGHLIGHT),
+        ("A1SurfacePanel_CenterRingA", (-3.0, 1.52, 0), (2.0, 0.035, 0.50), 0, MAT_A1_PANEL_SHADE),
+        ("A1SurfacePanel_CenterRingB", (3.0, 1.52, 0), (2.0, 0.035, 0.50), 0, MAT_A1_PANEL_SHADE),
+    ]
+    for name, pos, size, yaw, material in panels:
+        add_cube(name, pos, size, material, bevel=0.12, yaw_deg=yaw)
+
+
 def build_scene():
     for spec in A1_PLATFORM_SPECS:
         add_a1_platform_shell(spec)
@@ -651,8 +701,11 @@ def build_scene():
         add_a1_bridge_shell(spec)
 
     add_concept_outer_edge_glows()
+    add_a1_edge_beacons()
     add_tile_lines()
+    add_a1_surface_panels()
     add_center_pickup_pad()
+    add_a1_center_pickup_hero()
     add_props()
     add_chunky_cover_clusters()
     add_background_depth()
