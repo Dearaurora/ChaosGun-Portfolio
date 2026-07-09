@@ -74,6 +74,10 @@ func _initialize() -> void:
 	if not ResourceLoader.exists(VISUAL_SCENE_PATH):
 		_fail("Blender visual GLB is not imported or loadable: %s" % VISUAL_SCENE_PATH)
 
+	var visual_scene_resource = load(VISUAL_SCENE_PATH) as PackedScene
+	if visual_scene_resource == null:
+		_fail("Blender visual GLB is not loadable as a PackedScene: %s" % VISUAL_SCENE_PATH)
+
 	var scene = load(SCENE_PATH) as PackedScene
 	if scene == null:
 		_fail("Could not load %s" % SCENE_PATH)
@@ -81,13 +85,17 @@ func _initialize() -> void:
 		return
 
 	var match_config = root.get_node_or_null("MatchConfig")
-	if match_config:
-		match_config.slots = [
-			match_config.SlotType.EMPTY,
-			match_config.SlotType.EMPTY,
-			match_config.SlotType.EMPTY,
-			match_config.SlotType.EMPTY,
-		]
+	if match_config == null:
+		_fail("Missing MatchConfig autoload; cannot force empty player slots")
+		await _finish()
+		return
+
+	match_config.slots = [
+		match_config.SlotType.EMPTY,
+		match_config.SlotType.EMPTY,
+		match_config.SlotType.EMPTY,
+		match_config.SlotType.EMPTY,
+	]
 
 	_host = Node.new()
 	root.add_child(_host)
@@ -180,7 +188,14 @@ func _collect_material_names(node: Node, material_names: Dictionary) -> void:
 				if material == null:
 					material = mesh.surface_get_material(surface)
 				if material:
-					material_names[String(material.resource_name)] = true
+					var material_key := ""
+					if material.resource_path != "":
+						material_key = material.resource_path
+					elif material.resource_name != "":
+						material_key = material.resource_name
+					else:
+						material_key = str(material.get_instance_id())
+					material_names[material_key] = true
 	for child in node.get_children():
 		_collect_material_names(child, material_names)
 
