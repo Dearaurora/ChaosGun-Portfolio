@@ -944,7 +944,7 @@ git commit -m "test: lock open ringout a1 visual anchors"
 Run:
 
 ```powershell
-& "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --headless --path . -s res://scripts/tests/capture_open_ringout_screenshot.gd
+& "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --audio-driver Dummy --path . -s res://scripts/tests/capture_open_ringout_screenshot.gd
 ```
 
 Expected: exit code `0`; stdout includes `Saved screenshot:` and the resolved path to `reports/open_ringout_slice_screenshot.png`.
@@ -1005,7 +1005,7 @@ Run:
 powershell -ExecutionPolicy Bypass -File tools/rebuild_open_ringout_blender_visuals.ps1 -GodotPath "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
 powershell -ExecutionPolicy Bypass -File scripts/tests/run_open_ringout_blender_visual_verifier.ps1 -GodotPath "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
 powershell -ExecutionPolicy Bypass -File scripts/tests/run_open_ringout_slice_verifier.ps1 -GodotPath "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
-& "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --headless --path . -s res://scripts/tests/capture_open_ringout_screenshot.gd
+& "E:\AITools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --audio-driver Dummy --path . -s res://scripts/tests/capture_open_ringout_screenshot.gd
 ```
 
 Expected:
