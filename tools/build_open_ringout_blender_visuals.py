@@ -603,28 +603,56 @@ def a1_title(spec):
     return spec["title"]
 
 
-def build_scene():
-    for spec in [
-        ("main_deck", (0, -1, 0), (52, 2, 36), MAT_DECK, MAT_SIDE, False),
-        ("main_west_lip", (-20, -0.98, 9), (18, 2, 20), MAT_DECK, MAT_SIDE, False),
-        ("main_east_lip", (21, -0.98, -3), (18, 2, 23), MAT_DECK, MAT_SIDE, False),
-        ("north_deck", (4, -1, -30), (22, 2, 15), MAT_DECK_LIGHT, MAT_SIDE_DARK),
-        ("east_deck", (38, -1, 3), (20, 2, 18), MAT_DECK_LIGHT, MAT_SIDE_DARK),
-        ("south_deck", (9, -1, 30), (24, 2, 16), MAT_DECK_LIGHT, MAT_SIDE_DARK),
-        ("west_deck", (-39, -1, 2), (18, 2, 20), MAT_DECK_LIGHT, MAT_SIDE_DARK),
-    ]:
-        add_platform(*spec)
+def add_a1_platform_shell(spec):
+    name = spec["name"]
+    title = a1_title(spec)
+    x, y, z = spec["pos"]
+    sx, sy, sz = spec["size"]
+    add_platform(name, spec["pos"], spec["size"], spec["top"], spec["side"], spec["inset"])
 
-    for spec in [
-        ("north_bridge", (4, -0.65, -20.2), (11, 1.3, 5.2), MAT_BRIDGE, MAT_SIDE),
-        ("east_bridge", (31.8, -0.65, 2), (7.0, 1.3, 8.0), MAT_BRIDGE, MAT_SIDE),
-        ("south_bridge", (7, -0.65, 20.0), (11, 1.3, 5.0), MAT_BRIDGE, MAT_SIDE),
-        ("west_bridge", (-31.8, -0.65, 2), (6.6, 1.3, 9.0), MAT_BRIDGE, MAT_SIDE),
-    ]:
-        add_bridge_platform(*spec)
+    skirt_y = y - 2.10
+    crown_y = y + 1.28
+    add_cube(f"A1{title}OuterSkirtNorth", (x, skirt_y, z - sz * 0.56), (sx * 0.86, 2.2, 1.10), spec["side"], bevel=0.35)
+    add_cube(f"A1{title}OuterSkirtSouth", (x, skirt_y, z + sz * 0.56), (sx * 0.86, 2.2, 1.10), spec["side"], bevel=0.35)
+    add_cube(f"A1{title}OuterSkirtWest", (x - sx * 0.56, skirt_y, z), (1.10, 2.2, sz * 0.78), spec["side"], bevel=0.35)
+    add_cube(f"A1{title}OuterSkirtEast", (x + sx * 0.56, skirt_y, z), (1.10, 2.2, sz * 0.78), spec["side"], bevel=0.35)
+    add_cube(f"A1{title}HeroCrown", (x, crown_y, z), (sx * 0.78, 0.10, sz * 0.72), MAT_A1_PANEL_HIGHLIGHT, bevel=0.42)
+
+    add_cube(f"A1{title}SoftShadowNorth", (x, y - 0.10, z - sz * 0.48), (sx * 0.66, 0.035, 0.70), MAT_A1_SOFT_SHADOW, bevel=0.20)
+    add_cube(f"A1{title}SoftShadowSouth", (x, y - 0.10, z + sz * 0.48), (sx * 0.66, 0.035, 0.70), MAT_A1_SOFT_SHADOW, bevel=0.20)
+
+
+def add_a1_bridge_shell(spec):
+    name = spec["name"]
+    title = a1_title(spec)
+    x, y, z = spec["pos"]
+    sx, sy, sz = spec["size"]
+    axis = spec["axis"]
+    add_bridge_platform(name, spec["pos"], spec["size"], MAT_BRIDGE, MAT_SIDE)
+
+    rail_y = 0.58
+    if axis == "x":
+        add_cube(f"A1{title}RouteRailL", (x, rail_y, z - sz * 0.52), (sx * 0.86, 0.28, 0.34), MAT_A1_RIM_BLUE, bevel=0.12)
+        add_cube(f"A1{title}RouteRailR", (x, rail_y, z + sz * 0.52), (sx * 0.86, 0.28, 0.34), MAT_A1_RIM_BLUE, bevel=0.12)
+        add_cube(f"A1BridgeMouthMarker{title}A", (x - sx * 0.48, rail_y + 0.10, z), (0.50, 0.46, sz * 0.82), MAT_A1_EDGE_BEACON, bevel=0.16)
+        add_cube(f"A1BridgeMouthMarker{title}B", (x + sx * 0.48, rail_y + 0.10, z), (0.50, 0.46, sz * 0.82), MAT_A1_EDGE_BEACON, bevel=0.16)
+    else:
+        add_cube(f"A1{title}RouteRailL", (x - sx * 0.52, rail_y, z), (0.34, 0.28, sz * 0.86), MAT_A1_RIM_BLUE, bevel=0.12)
+        add_cube(f"A1{title}RouteRailR", (x + sx * 0.52, rail_y, z), (0.34, 0.28, sz * 0.86), MAT_A1_RIM_BLUE, bevel=0.12)
+        add_cube(f"A1BridgeMouthMarker{title}A", (x, rail_y + 0.10, z - sz * 0.48), (sx * 0.82, 0.46, 0.50), MAT_A1_EDGE_BEACON, bevel=0.16)
+        add_cube(f"A1BridgeMouthMarker{title}B", (x, rail_y + 0.10, z + sz * 0.48), (sx * 0.82, 0.46, 0.50), MAT_A1_EDGE_BEACON, bevel=0.16)
+
+
+def build_scene():
+    for spec in A1_PLATFORM_SPECS:
+        add_a1_platform_shell(spec)
+
+    for spec in A1_BRIDGE_SPECS:
+        add_a1_bridge_shell(spec)
 
     add_concept_outer_edge_glows()
     add_tile_lines()
+    add_center_pickup_pad()
     add_props()
     add_chunky_cover_clusters()
     add_background_depth()
