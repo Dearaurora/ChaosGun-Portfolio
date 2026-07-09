@@ -1,139 +1,139 @@
-# Open Ring-Out A1 Art Upgrade Design
+# Open Ring-Out A1 美术升级设计
 
-Date: 2026-07-09
+日期：2026-07-09
 
-## Goal
+## 目标
 
-Upgrade the default `Open Ring-Out Slice` stage into the first high-quality showcase art slice for ChaosGun.
+将默认主舞台 `Open Ring-Out Slice` 升级为 ChaosGun 第一张高质量展示级美术切片。
 
-The approved art identity is **A1: premium toy sky-island arena**: warm rounded toy-board platforms, readable bridges, glowing hazard edges, soft purple-blue abyss depth, distant floating islands, and playful peripheral toy props. The target quality bar is a commercial party-game screenshot, in the broad family of Overcooked and Boomerang Fu, without copying either game.
+已确认的美术身份是 **A1：高级玩具天空岛竞技场**。核心观感包括：温暖、圆润的玩具棋盘式平台；清晰可读的桥梁；发光的危险边缘；柔和的紫蓝色深渊层次；远景浮岛；以及外围有趣但不干扰战斗的玩具道具。质量目标是达到商业派对游戏截图级别，整体气质可参考《胡闹厨房》和 Boomerang Fu 这类顶级派对游戏的大方向，但不复制任何具体游戏。
 
-## Confirmed Scope
+## 已确认范围
 
-- Keep the current gameplay layout: collision, bridge positions, spawn points, weapon points, and core camera composition stay stable.
-- Allow a medium visual rebuild: island silhouettes, visible bridge shells, cliff massing, edge light language, sky/abyss depth, surface detail, and prop framing can be rebuilt.
-- Use the existing Blender Python -> GLB -> Godot layer as the main production path.
-- Rebuild `assets/models/generated/open_ringout_slice/open_ringout_visuals.glb` as the hero visual asset.
-- Keep Godot runtime logic responsible for collision, spawning, weapons, HUD, character runtime behavior, and validation.
+- 保持当前玩法布局稳定：碰撞、桥位置、出生点、武器点和核心相机构图不变。
+- 允许中度视觉重构：岛体轮廓、可见桥梁外壳、崖壁体块、边缘发光语言、天空/深渊层次、地表细节和道具框景都可以重做。
+- 继续使用现有的 Blender Python -> GLB -> Godot 视觉层作为主生产路径。
+- 将 `assets/models/generated/open_ringout_slice/open_ringout_visuals.glb` 重做为英雄主视觉资产。
+- Godot 运行时逻辑继续负责碰撞、出生、武器、HUD、角色行为和验证。
 
-## Non-Goals
+## 非目标
 
-- Do not redesign combat topology in this pass.
-- Do not change knockback tuning, weapon behavior, AI behavior, or scoring.
-- Do not move the project into a hand-authored `.blend` workflow yet.
-- Do not build a general-purpose art kit before the first showcase stage looks complete.
-- Do not make menu, character, weapon, or HUD overhaul part of this pass unless required to preserve stage readability.
+- 本轮不重新设计战斗拓扑。
+- 本轮不修改击退调校、武器行为、AI 行为或计分逻辑。
+- 暂时不把项目迁移到手工维护 `.blend` 文件的工作流。
+- 在第一张展示舞台完成前，不先做通用大而全的美术资产库。
+- 菜单、角色、武器、HUD 的大改不纳入本轮，除非它们是保持主舞台阅读性所必需的改动。
 
-## Scene Architecture
+## 场景架构
 
-The stage keeps the existing split between invisible/low-level gameplay structure and authored visual presentation.
+舞台继续保持现有的分层方式：底层是不可见或低可见度的玩法结构，上层是作者化的视觉表现。
 
-Godot keeps:
+Godot 保留：
 
-- `OpenRingoutPlayable` collision and runtime platform nodes.
-- Existing spawn, weapon pickup, AI, player, and HUD systems.
-- Runtime lighting and environment configuration in `scripts/maps/open_ringout_slice.gd`.
-- The `OpenRingoutBlenderVisuals` hook that instances the generated GLB.
-- Verification scripts for node presence, collision stability, camera framing, and gameplay readability.
+- `OpenRingoutPlayable` 碰撞和运行时平台节点。
+- 现有出生点、武器拾取点、AI、玩家和 HUD 系统。
+- `scripts/maps/open_ringout_slice.gd` 中的运行时灯光和环境配置。
+- 用于实例化生成 GLB 的 `OpenRingoutBlenderVisuals` 挂载点。
+- 用于检查节点存在、碰撞稳定性、相机构图和玩法阅读性的验证脚本。
 
-Blender GLB owns the primary visible scene:
+Blender GLB 负责主要可见场景：
 
-- platform shells
-- visible bridges
-- cliff skirts
-- edge light strips
-- surface panels and grooves
-- pickup pad treatment
-- distant floating islands
-- cloud/abyss depth
-- non-colliding toy prop framing
+- 平台可见外壳
+- 可见桥梁
+- 崖壁裙边
+- 边缘发光条
+- 地表面板和沟槽
+- 武器拾取台视觉处理
+- 远景浮岛
+- 云海/深渊层次
+- 无碰撞玩具道具框景
 
-The result should make the generated Blender layer feel like the real stage, while the Godot primitives remain the trusted gameplay layer.
+最终效果应该让生成的 Blender 视觉层看起来像真正的舞台主体，而 Godot 原始节点只作为可信玩法层保留。
 
-## Asset Groups
+## 资产组
 
-### 1. Playable Shells
+### 1. 可玩区外壳
 
-Central island, side islands, and bridge visual shells should become rounded, thick, toy-like sky-island forms. They must align with current gameplay collision closely enough that players never see themselves standing in empty air or blocked by invisible art.
+中央岛、副岛和桥梁的视觉外壳需要变成更圆润、更厚实、更玩具化的天空岛形体。它们必须与当前玩法碰撞足够对齐，避免玩家看起来站在空中，或被不可见美术阻挡。
 
-### 2. Edge Language
+### 2. 边缘语言
 
-Use glowing strips, rim pieces, bridge-mouth warnings, and small marker lights to make lethal edges clearer than the current build. Edge treatment should be beautiful but also function as hazard communication.
+使用发光条、边缘件、桥口警示物和小型标记灯，让致命边缘比当前版本更清楚。边缘处理既要好看，也要承担危险提示功能。
 
-### 3. Surface Treatment
+### 3. 地表处理
 
-Add controlled surface detail: panel seams, subtle tile grooves, gentle wear, center pickup pad treatment, and readable route markings. Surface detail must stay low-noise so bullets, characters, pickups, and bridge exits remain legible.
+加入受控的地表细节：面板缝、轻微 tile grooves、柔和磨损、中心武器拾取台处理和可读路线标记。地表细节必须保持低噪声，不能干扰子弹、角色、拾取物和桥出口的辨识。
 
-### 4. Bridge Set
+### 4. 桥梁组
 
-Rebuild bridges with stronger thickness, end caps, attachment hardware, small lights, and a tactile toy-board construction. Bridges must read as safe walkable connectors, not decorative planks or ambiguous scenery.
+重做桥梁厚度、端部结构、连接件、小灯和玩具棋盘式结构感。桥必须明确读成安全可走的连接件，而不是装饰性木板或含糊的场景物。
 
-### 5. Depth Set
+### 5. 深度组
 
-Add soft cloud banks, distant toy islands, below-stage shadows, glow motes, and atmospheric layers. These assets should deepen the screenshot without competing with playable shapes.
+加入柔和云层、远景玩具浮岛、舞台下方阴影、发光微粒和空气层次。这些资产负责提升截图空间感，但不能与可玩形状争夺注意力。
 
-### 6. Prop Framing
+### 6. 道具框景
 
-Use windmills, flags, life rings, toy crates, soft rails, rubber posts, barrels, and small scenic toys only around the periphery or safe dead zones. Props should frame the board and create memory points without suggesting new cover or blocking routes.
+风车、小旗、救生圈、玩具箱、软护栏、橡胶柱、桶和小型景观玩具只放在外围或安全死区。道具要负责框住棋盘并制造记忆点，不能暗示新的掩体或阻挡路线。
 
-## Visual Bar
+## 视觉门槛
 
-Score the pass on eight categories, each from 1 to 5.
+本轮用 8 个维度评分，每项 1 到 5 分。
 
-The pass is accepted only if:
+通过条件：
 
-- Total score is at least 34 out of 40.
-- No category is below 3.
-- Composition, Geometry Language, Gameplay Readability, and Screenshot Appeal are each at least 4.
+- 总分至少 34/40。
+- 没有任何单项低于 3 分。
+- Composition、Geometry Language、Gameplay Readability、Screenshot Appeal 每项至少 4 分。
 
-Categories:
+评分项：
 
-1. **A1 Reference Fidelity**: reads immediately as a premium toy sky-island arena.
-2. **Composition**: has clear focal structure, edge framing, rhythm, and depth.
-3. **Geometry Language**: islands, cliffs, bridges, props, and edges share rounded toy construction.
-4. **Color And Lighting**: warm orange platforms, purple-blue abyss, glow accents, and character colors work together.
-5. **Surface Detail**: panels, grooves, wear, pickup pads, and markings add polish without noise.
-6. **Depth And Backdrop**: cloud sea, distant islands, bottom shadows, and glow motes add real spatial depth.
-7. **Gameplay Readability**: routes, bridge mouths, ledges, cover, pickups, characters, weapons, and projectile paths are clearer because of art.
-8. **Screenshot Appeal**: the captured stage can serve as a primary demo/Steam/itch promotional screenshot candidate.
+1. **A1 Reference Fidelity**：是否一眼读成高级玩具天空岛竞技场。
+2. **Composition**：是否有明确焦点、边缘框景、节奏和空间深度。
+3. **Geometry Language**：岛、崖壁、桥、道具和边缘是否共享圆润玩具化结构语言。
+4. **Color And Lighting**：暖橙平台、紫蓝深渊、发光点缀和角色颜色是否协调且清楚。
+5. **Surface Detail**：面板、沟槽、磨损、拾取台和标记是否增加精致度且不制造噪声。
+6. **Depth And Backdrop**：云海、远景浮岛、底部阴影和发光微粒是否提供真实空间深度。
+7. **Gameplay Readability**：路线、桥口、边缘、掩体、拾取物、角色、武器和弹道是否因为美术变得更清楚。
+8. **Screenshot Appeal**：采集到的舞台截图是否可以作为 Demo、Steam 或 itch 宣传主视觉候选。
 
-## Pipeline
+## 管线
 
-1. Update `tools/build_open_ringout_blender_visuals.py` to generate the A1 hero visual layer.
-2. Export to `assets/models/generated/open_ringout_slice/open_ringout_visuals.glb`.
-3. Import the GLB through Godot.
-4. Run the Open Ring-Out verifier.
-5. Capture `reports/open_ringout_slice_screenshot.png`.
-6. Record a before/after art review against the 40-point bar.
-7. Run a short AI smoke check if any visual change could affect gameplay readability.
+1. 更新 `tools/build_open_ringout_blender_visuals.py`，生成 A1 英雄视觉层。
+2. 导出到 `assets/models/generated/open_ringout_slice/open_ringout_visuals.glb`。
+3. 通过 Godot 导入 GLB。
+4. 运行 Open Ring-Out verifier。
+5. 采集 `reports/open_ringout_slice_screenshot.png`。
+6. 按 40 分视觉门槛记录 before/after 美术评审。
+7. 如果视觉变化可能影响玩法阅读性，运行一轮短 AI smoke 检查。
 
-## Validation Requirements
+## 验证要求
 
-Automated checks should prove the minimum floor:
+自动化检查证明最低底线：
 
-- The GLB is loadable and instanced under `OpenRingoutBlenderVisuals`.
-- Existing playable collision nodes remain present.
-- Spawn points and weapon pickup points remain stable.
-- The fixed camera framing remains stable.
-- Bridge connector readability checks still pass.
-- Open edge and ring-out checks still pass.
-- HUD remains readable over the upgraded scene.
+- GLB 可加载，并能实例化到 `OpenRingoutBlenderVisuals` 下。
+- 现有可玩碰撞节点仍然存在。
+- 出生点和武器拾取点保持稳定。
+- 固定相机构图保持稳定。
+- 桥梁连接阅读性检查仍然通过。
+- 开放边缘和 ring-out 检查仍然通过。
+- HUD 在升级后的场景上仍然可读。
 
-Manual screenshot review proves the quality bar:
+人工截图评审证明质量门槛：
 
-- Compare the new screenshot to the current `reports/open_ringout_slice_screenshot.png`.
-- Assign all eight category scores.
-- Record the three biggest remaining visual gaps.
-- Mark the pass accepted only if it meets the score thresholds above.
+- 将新截图与当前 `reports/open_ringout_slice_screenshot.png` 对比。
+- 为 8 个评分项逐项打分。
+- 记录最大的 3 个剩余视觉缺口。
+- 只有满足上面的分数阈值，才标记本轮通过。
 
-## Risks And Handling
+## 风险与处理
 
-- **Visual/collision mismatch**: keep gameplay collision unchanged and validate with bridge and edge checks before screenshot review.
-- **Overdecorated routes**: keep props out of active lanes and bridge mouths unless they are explicit readable markers.
-- **Too much glow/noise**: edge glow must communicate danger without hiding bullets, pickups, or character silhouettes.
-- **Generated-asset drift**: use named helper functions and asset groups in the Blender script so future passes can adjust individual systems without rewriting the whole scene.
-- **Performance or import cost**: keep meshes low-poly, reuse materials, and avoid excessive alpha layers in the main GLB.
+- **视觉/碰撞不匹配**：保持玩法碰撞不变，并在截图评审前用桥梁和边缘检查验证。
+- **路线装饰过度**：除非是明确的可读标记，否则道具不进入活跃路线和桥口。
+- **发光/噪声过多**：边缘发光必须传达危险，不能遮蔽子弹、拾取物或角色轮廓。
+- **生成资产漂移**：Blender 脚本使用命名 helper 和资产组，让后续可以局部调整，而不是每次重写整场景。
+- **性能或导入成本**：保持低多边形，复用材质，避免在主 GLB 中堆过多 alpha 层。
 
-## Decision
+## 决策
 
-Proceed with **Blender hero visual asset rebuild** for `Open Ring-Out Slice`, using A1 premium toy sky-island as the approved direction and medium visual reconstruction as the approved scope.
+继续推进 `Open Ring-Out Slice` 的 **Blender 英雄主视觉资产重做**。批准方向为 A1 高级玩具天空岛，批准范围为中度视觉重构。
