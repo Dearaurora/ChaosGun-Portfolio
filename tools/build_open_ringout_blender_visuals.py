@@ -693,6 +693,52 @@ def add_a1_surface_panels():
         add_cube(name, pos, size, material, bevel=0.12, yaw_deg=yaw)
 
 
+def add_a1_prop_framing():
+    add_vertical_cylinder("A1SkyIslandToyWindmillNE_pole", (61, -5.5, -42), 0.34, 4.2, MAT_A1_CANDY_BLUE, 18)
+    add_cube("A1SkyIslandToyWindmillNE_hub", (61, -3.12, -42), (0.80, 0.80, 0.80), MAT_A1_FLAG_WHITE, bevel=0.18)
+    add_cube("A1SkyIslandToyWindmillNE_blade_a", (61, -3.12, -42), (0.28, 0.18, 4.60), MAT_A1_FLAG_RED, bevel=0.08, yaw_deg=0)
+    add_cube("A1SkyIslandToyWindmillNE_blade_b", (61, -3.12, -42), (4.60, 0.18, 0.28), MAT_A1_FLAG_RED, bevel=0.08, yaw_deg=0)
+
+    add_vertical_cylinder("A1SkyIslandFlagSW_pole", (-58, -5.0, 45), 0.22, 3.6, MAT_A1_FLAG_WHITE, 14)
+    add_cube("A1SkyIslandFlagSW_banner", (-56.9, -3.55, 45), (2.6, 1.10, 0.16), MAT_A1_FLAG_RED, bevel=0.10)
+
+    for i, (x, z, material) in enumerate([
+        (-52, -28, MAT_A1_CANDY_GREEN),
+        (-46, 34, MAT_A1_CANDY_PURPLE),
+        (49, -32, MAT_A1_CANDY_BLUE),
+        (54, 31, MAT_A1_CANDY_GREEN),
+        (-12, -49, MAT_A1_CANDY_PURPLE),
+        (18, 52, MAT_A1_CANDY_BLUE),
+    ]):
+        add_cube(f"A1PerimeterToyBlock_{i}", (x, -5.95, z), (3.2, 2.1, 3.2), material, bevel=0.42, yaw_deg=i * 11)
+
+
+def add_a1_depth_ribbons():
+    add_ellipsoid("A1DepthCloudRibbonNorth", (0, -10.55, -70), (72, 1.25, 9.0), MAT_CLOUD_CREAM, 36, 12, -2)
+    add_ellipsoid("A1DepthCloudRibbonSouth", (3, -10.58, 70), (74, 1.25, 9.5), MAT_CLOUD_PINK, 36, 12, 2)
+    add_cube("A1DepthIslandClusterNW_cliff", (-88, -10.6, -42), (16, 5.6, 10), MAT_DISTANCE_CLIFF, bevel=1.25, yaw_deg=-12)
+    add_cube("A1DepthIslandClusterNW_grass", (-88, -7.62, -42), (12.5, 0.38, 7.8), MAT_DISTANCE_GRASS, bevel=0.84, yaw_deg=-12)
+    add_cube("A1DepthIslandClusterSE_cliff", (88, -10.7, 48), (17, 5.8, 10), MAT_DISTANCE_CLIFF, bevel=1.25, yaw_deg=10)
+    add_cube("A1DepthIslandClusterSE_grass", (88, -7.62, 48), (13.2, 0.38, 7.8), MAT_DISTANCE_GRASS, bevel=0.84, yaw_deg=10)
+    for i, (x, y, z, material) in enumerate([
+        (-67, -9.1, -23, MAT_ABYSS_GLOW_BLUE),
+        (-54, -8.9, 17, MAT_ABYSS_GLOW_WARM),
+        (-38, -9.2, -52, MAT_ABYSS_GLOW_BLUE),
+        (-20, -8.8, 54, MAT_ABYSS_GLOW_WARM),
+        (-3, -9.0, -61, MAT_ABYSS_GLOW_BLUE),
+        (14, -8.9, 59, MAT_ABYSS_GLOW_WARM),
+        (31, -9.1, -54, MAT_ABYSS_GLOW_BLUE),
+        (45, -8.9, 48, MAT_ABYSS_GLOW_WARM),
+        (58, -9.2, -25, MAT_ABYSS_GLOW_BLUE),
+        (68, -8.8, 12, MAT_ABYSS_GLOW_WARM),
+        (-74, -9.0, 5, MAT_ABYSS_GLOW_BLUE),
+        (76, -9.1, -2, MAT_ABYSS_GLOW_WARM),
+        (-29, -8.7, 3, MAT_ABYSS_GLOW_BLUE),
+        (26, -8.7, -6, MAT_ABYSS_GLOW_WARM),
+    ]):
+        add_ellipsoid(f"A1DepthGlowMote_{i:02d}", (x, y, z), (0.58, 0.58, 0.58), material, 16, 8, i * 17)
+
+
 def build_scene():
     for spec in A1_PLATFORM_SPECS:
         add_a1_platform_shell(spec)
@@ -708,7 +754,9 @@ def build_scene():
     add_a1_center_pickup_hero()
     add_props()
     add_chunky_cover_clusters()
+    add_a1_prop_framing()
     add_background_depth()
+    add_a1_depth_ribbons()
 
 
 def export_glb():
