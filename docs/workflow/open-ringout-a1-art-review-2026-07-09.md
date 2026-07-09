@@ -2,6 +2,8 @@
 
 Screenshot: `reports/open_ringout_slice_screenshot.png`
 
+Dependency Note: This art pass assumes the Demo-stage Open Ring-Out baseline is already merged or present in the integration workspace, including `scenes/maps/open_ringout_slice.tscn`, `scripts/maps/open_ringout_slice.gd`, `scripts/tests/run_open_ringout_slice_verifier.ps1`, and the runtime/gameplay support files for the playable slice.
+
 Decision: PASS
 Total Score: 35/40
 

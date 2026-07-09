@@ -29,7 +29,8 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 	await create_timer(0.65).timeout
-	_stage_showcase_shots(arena)
+	if not _stage_showcase_shots(arena):
+		return
 	await create_timer(0.18).timeout
 	await process_frame
 
@@ -75,10 +76,11 @@ func _configure_showcase_roster() -> bool:
 	]
 	return true
 
-func _stage_showcase_shots(arena: Node) -> void:
+func _stage_showcase_shots(arena: Node) -> bool:
 	var chars = arena.get("_characters") as Array
 	if chars.size() < 4:
-		return
+		_fail("Open Ring-Out screenshot staging expected 4 characters, found %d" % chars.size())
+		return false
 	var poses = [
 		{"pos": Vector3(-16.5, 1.15, -8.5), "look": Vector3(8.0, 1.15, 5.0), "weapon": &"pistol"},
 		{"pos": Vector3(17.5, 1.15, -7.0), "look": Vector3(32.0, 1.15, 8.0), "weapon": &"smg"},
@@ -86,11 +88,16 @@ func _stage_showcase_shots(arena: Node) -> void:
 		{"pos": Vector3(12.0, 1.15, 12.0), "look": Vector3(26.0, 1.15, 24.0), "weapon": &"ak_rifle"},
 	]
 	for i in range(4):
-		_pose_character(chars[i] as BaseCharacter, poses[i])
+		var character := chars[i] as BaseCharacter
+		if character == null:
+			_fail("Open Ring-Out screenshot staging character %d is not a BaseCharacter" % i)
+			return false
+		_pose_character(character, poses[i])
 	_fire_forward(chars[0] as BaseCharacter)
 	_fire_forward(chars[1] as BaseCharacter)
 	_fire_forward(chars[2] as BaseCharacter)
 	_fire_forward(chars[3] as BaseCharacter)
+	return true
 
 func _pose_character(character: BaseCharacter, pose: Dictionary) -> void:
 	if character == null:

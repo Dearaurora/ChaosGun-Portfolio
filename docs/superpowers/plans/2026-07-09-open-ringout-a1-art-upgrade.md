@@ -4,6 +4,8 @@
 
 **Goal:** 将默认 `Open Ring-Out Slice` 升级成 A1 高级玩具天空岛英雄主视觉资产，同时保持现有碰撞、出生点、武器点、镜头和回归验证稳定。
 
+**Integration dependency:** This art pass assumes the Demo-stage Open Ring-Out baseline is already merged or present in the integration workspace, including `scenes/maps/open_ringout_slice.tscn`, `scripts/maps/open_ringout_slice.gd`, `scripts/tests/run_open_ringout_slice_verifier.ps1`, and the runtime/gameplay support files that define the current playable slice.
+
 **Architecture:** Godot 继续拥有玩法层、碰撞层、角色、武器、HUD、灯光和截图验证；Blender Python 生成的 GLB 作为 `OpenRingoutBlenderVisuals` 下的主要可见舞台。执行顺序先补 Open Ring-Out 专用 Blender 美术验收门槛，再重做 `tools/build_open_ringout_blender_visuals.py` 的平台、桥、边缘、深渊和外围道具资产，最后通过 Godot 导入、自动验证和截图人工评分。
 
 **Tech Stack:** Godot 4.6 GDScript, Blender 5.1 Python, glTF/GLB, PowerShell test runners, existing `open_ringout_slice` scene/runtime.
