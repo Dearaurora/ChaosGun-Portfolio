@@ -21,3 +21,15 @@ desktop.ini
 *.xcf
 *.blend1
 *.blend2
+
+# Generated reports
+reports/
+
+# Local Godot / Blender verification output
+/godot_*.txt
+/blender_mcp_*.log
+/tools/__pycache__/
+*.pyc
+
+# Local design-session artifacts
+/.superpowers/

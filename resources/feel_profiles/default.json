@@ -1,0 +1,37 @@
+{
+  "id": "default",
+  "label": "Current baseline",
+  "game_config": {
+    "bullet_speed_multiplier": 10.0,
+    "knockback_multiplier": 1.8,
+    "knockback_lift_ratio": 0.32,
+    "max_recoil_impulse": 14.0,
+    "air_recoil_multiplier": 0.35,
+    "edge_recoil_multiplier": 0.25
+  },
+  "weapon_feel_overrides": {
+    "pistol": {
+      "recoil_force": 8.0,
+      "knockback_power": 120.0
+    },
+    "smg": {
+      "recoil_force": 4.0,
+      "knockback_power": 60.0
+    },
+    "ak_rifle": {
+      "recoil_force": 10.0,
+      "knockback_power": 100.0
+    },
+    "sniper": {
+      "recoil_force": 28.0,
+      "knockback_power": 500.0
+    }
+  },
+  "score_targets": {
+    "armed_ai_min": 2.0,
+    "deaths_min": 1.0,
+    "ring_outs_min": 1.0,
+    "first_death_min_seconds": 4.0,
+    "first_death_max_seconds": 16.0
+  }
+}

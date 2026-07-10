@@ -1,10 +1,8 @@
-extends CanvasLayer
-## 结算画面 —— 某角色获胜时弹出，显示简洁统计
+﻿extends CanvasLayer
+class_name VictoryScreen
 
-const COL_SURFACE := Color("#0c0c1f")
 const COL_PANEL := Color("#1d1d37")
 const COL_PRIMARY := Color("#cafd00")
-const COL_SECONDARY := Color("#ff7441")
 const COL_HEART := Color("#ff6e81")
 const COL_TEXT := Color("#e5e3ff")
 
@@ -13,7 +11,6 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 
-## 显示结算画面（带角色统计）
 func show_victory(winner_name: String, winner_color: Color, characters: Array = []) -> void:
 	visible = true
 	get_tree().paused = true
@@ -24,13 +21,11 @@ func _build_ui(winner_name: String, winner_color: Color, characters: Array) -> v
 	var has_stats = characters.size() > 0
 	var card_h := 280.0 + (characters.size() * 28.0) if has_stats else 280.0
 
-	# 蒙版
 	var mask = ColorRect.new()
 	mask.color = Color(0, 0, 0, 0.7)
 	mask.size = vp
 	add_child(mask)
 
-	# 中央卡片
 	var card_w := 420.0
 	var card = Panel.new()
 	card.position = Vector2((vp.x - card_w) / 2.0, (vp.y - card_h) / 2.0)
@@ -51,7 +46,6 @@ func _build_ui(winner_name: String, winner_color: Color, characters: Array) -> v
 	card.add_theme_stylebox_override("panel", style)
 	add_child(card)
 
-	# "GAME SET"
 	var title = Label.new()
 	title.text = "GAME SET"
 	title.position = Vector2(0, 16)
@@ -61,7 +55,6 @@ func _build_ui(winner_name: String, winner_color: Color, characters: Array) -> v
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	card.add_child(title)
 
-	# 胜者名 + WINS!
 	var winner_label = Label.new()
 	winner_label.text = winner_name + "  WINS!"
 	winner_label.position = Vector2(0, 56)
@@ -71,10 +64,8 @@ func _build_ui(winner_name: String, winner_color: Color, characters: Array) -> v
 	winner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	card.add_child(winner_label)
 
-	# 统计表（简洁：名字 / 击杀 / 死亡）
 	var stats_y := 100.0
 	if has_stats:
-		# 表头
 		var header = Label.new()
 		header.text = "                    KO    FALL"
 		header.position = Vector2(30, stats_y)
@@ -97,20 +88,19 @@ func _build_ui(winner_name: String, winner_color: Color, characters: Array) -> v
 			card.add_child(row)
 			stats_y += 26.0
 
-	# 按钮
 	var btn_w := 240.0
 	var btn_h := 44.0
 	var btn_x := (card_w - btn_w) / 2.0
 	var btn_y := stats_y + 16.0
 
-	var restart_btn = _create_btn("↻  REMATCH", COL_PRIMARY, btn_x, btn_y, btn_w, btn_h)
+	var restart_btn = _create_btn("REMATCH", COL_PRIMARY, btn_x, btn_y, btn_w, btn_h)
 	restart_btn.pressed.connect(func():
 		get_tree().paused = false
 		get_tree().reload_current_scene()
 	)
 	card.add_child(restart_btn)
 
-	var menu_btn = _create_btn("⌂  MAIN MENU", COL_HEART, btn_x, btn_y + 54, btn_w, btn_h)
+	var menu_btn = _create_btn("MAIN MENU", COL_HEART, btn_x, btn_y + 54, btn_w, btn_h)
 	menu_btn.pressed.connect(func():
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")

@@ -1,4 +1,5 @@
 extends CanvasLayer
+const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
 ## NEON KINETIC 风格游戏 HUD —— 复刻 Stitch 设计稿
 ## 配色：深紫黑底 #0c0c1f / 霓虹绿 #cafd00 / 橙 #ff7441 / 粉红 #ff6e81
 
@@ -39,6 +40,7 @@ var _a_hearts: Array[ColorRect] = []
 var _score_label: Label
 var _p_kill_label: Label
 var _a_kill_label: Label
+var _profile_badge_label: Label
 
 # Game Over
 var _game_over_container: PanelContainer
@@ -57,7 +59,11 @@ func _ready() -> void:
 	_player = get_parent() as BaseCharacter
 	# 延迟一帧查找 AI
 	await get_tree().process_frame
-	for n in get_tree().current_scene.get_children():
+	var scene = get_tree().current_scene
+	if scene == null:
+		_build_ui()
+		return
+	for n in scene.get_children():
 		if n is BaseCharacter and n != _player:
 			_ai = n
 			break
@@ -78,6 +84,7 @@ func _build_ui() -> void:
 
 	# --- 中央计分板 ---
 	_build_scoreboard()
+	_build_profile_badge()
 
 	# --- Game Over ---
 	_build_game_over()
@@ -161,7 +168,8 @@ func _create_player_panel(title: String, accent: Color, glow: Color, is_right: b
 	var hearts_y := 44.0
 	var heart_size := 16.0
 	var heart_gap := 2.0
-	var max_lives = GameConfig.default_lives
+	var game_config = RuntimeGlobals.game_config()
+	var max_lives = game_config.get("default_lives") if game_config and game_config.get("default_lives") is int else 10
 	var hearts_total_w = max_lives * (heart_size + heart_gap) - heart_gap
 	var hearts_x: float
 	if not is_right:
@@ -305,6 +313,43 @@ func _build_scoreboard() -> void:
 	_a_kill_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_a_kill_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	board.add_child(_a_kill_label)
+
+func _build_profile_badge() -> void:
+	var profile_id = _get_active_profile_id()
+	if profile_id.is_empty():
+		return
+	var vp_w = get_viewport().get_visible_rect().size.x
+	var badge = Panel.new()
+	badge.position = Vector2((vp_w - 260.0) / 2.0, 86)
+	badge.size = Vector2(260, 28)
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0.45)
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(COL_PRIMARY.r, COL_PRIMARY.g, COL_PRIMARY.b, 0.35)
+	badge.add_theme_stylebox_override("panel", style)
+	add_child(badge)
+
+	_profile_badge_label = Label.new()
+	_profile_badge_label.text = "FEEL: %s" % profile_id.to_upper()
+	_profile_badge_label.position = Vector2(10, 3)
+	_profile_badge_label.size = Vector2(240, 22)
+	_profile_badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_profile_badge_label.add_theme_font_size_override("font_size", 12)
+	_profile_badge_label.add_theme_color_override("font_color", COL_TEXT)
+	badge.add_child(_profile_badge_label)
+
+func _get_active_profile_id() -> String:
+	var game_config = RuntimeGlobals.game_config()
+	if game_config == null:
+		return ""
+	return String(game_config.get_meta("feel_profile_id", ""))
 
 # ============================================================
 #  Game Over 屏幕

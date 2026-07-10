@@ -13,16 +13,23 @@ const VISION_RANGE: float = 50.0
 const EDGE_SAFE_DIST: float = 8.0
 const AIM_OFFSET_DEG: float = 5.0     # 瞄准偏移（±度）
 const REACTION_TIME: float = 0.3
-const PICKUP_RANGE: float = 15.0
+const PICKUP_RANGE: float = 35.0
+const LANE_TARGET_Z_TOLERANCE: float = 4.0
+
+const CONTROL_MODE_LANE := "lane_2d"
+const CONTROL_MODE_LOCK_ON := "lock_on"
 
 enum State { PATROL, CHASE, SHOOT, FLEE_EDGE }
 var _state: State = State.PATROL
 var _target: Node3D = null            # 追踪的玩家
 var _patrol_dest: Vector3 = Vector3.ZERO
 var _reaction_timer: float = 0.0
+var _visual_move_dir: Vector3 = Vector3.ZERO
+var _visual_move_speed_ratio: float = 0.0
 var _fire_cooldown_ai: float = 0.0    # AI 自己的开火节奏控制
 
 func _ready() -> void:
+	super._ready()
 	_pick_patrol_dest()
 	if weapon_manager:
 		weapon_manager.weapon_switched.connect(_on_weapon_switched)
@@ -32,8 +39,16 @@ func _process(delta: float) -> void:
 	# 弹跳动画
 	var visual = get_visual()
 	if visual and not is_dead:
-		var is_moving = linear_velocity.length() > 1.0
-		visual.animate_movement(is_moving, delta)
+		var facing_dir := -transform.basis.z
+		facing_dir.y = 0.0
+		var move_dir := _visual_move_dir
+		var speed_ratio := _visual_move_speed_ratio
+		if move_dir.length_squared() <= 0.01:
+			var horizontal_velocity := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+			if horizontal_velocity.length() > 0.8:
+				move_dir = horizontal_velocity.normalized()
+				speed_ratio = clampf(horizontal_velocity.length() / 16.0, 0.0, 1.0)
+		visual.animate_locomotion(move_dir, facing_dir, speed_ratio, delta)
 
 func _physics_process(delta: float) -> void:
 	if is_dead or is_game_over:
@@ -61,14 +76,28 @@ func _physics_process(delta: float) -> void:
 		State.FLEE_EDGE:
 			move_dir = _do_flee_edge(delta)
 
+	if move_dir.length() > 0.1:
+		_visual_move_dir = move_dir.normalized()
+		_visual_move_speed_ratio = clampf(move_dir.length() / maxf(_game_config_float("character_speed", 550.0), 1.0), 0.0, 1.0)
+	else:
+		_visual_move_dir = Vector3.ZERO
+		_visual_move_speed_ratio = 0.0
+
 	# --- 应用移动 ---
 	if move_dir.length() > 0.1:
-		apply_central_force(move_dir.normalized() * GameConfig.character_speed)
+		apply_central_force(move_dir.normalized() * _game_config_float("character_speed", 550.0))
 
 # ============================================================
 #  FSM 状态切换
 # ============================================================
 func _update_state() -> void:
+	if weapon_manager and not weapon_manager.has_primary():
+		var priority_pickup = _find_nearby_pickup()
+		if priority_pickup:
+			_target = priority_pickup
+			_state = State.CHASE
+			return
+
 	# 最高优先级：逃离边缘
 	if _is_self_near_edge():
 		if _state != State.FLEE_EDGE:
@@ -141,7 +170,7 @@ func _do_chase(_delta: float) -> Vector3:
 			_pick_patrol_dest()
 		return Vector3.ZERO
 	_face_direction(chase_dir)
-	return chase_dir * GameConfig.character_speed
+	return chase_dir * _game_config_float("character_speed", 550.0)
 
 func _do_shoot(delta: float) -> Vector3:
 	if not _target or not is_instance_valid(_target):
@@ -150,7 +179,15 @@ func _do_shoot(delta: float) -> Vector3:
 
 	var to_target_flat = _target.global_position - global_position
 	to_target_flat.y = 0
-	_face_direction(to_target_flat.normalized())
+	var is_lane_mode = _control_mode() == CONTROL_MODE_LANE
+	if is_lane_mode:
+		var x_sign = 1.0 if to_target_flat.x >= 0.0 else -1.0
+		_face_direction(Vector3(x_sign, 0.0, 0.0))
+		if absf(to_target_flat.z) > LANE_TARGET_Z_TOLERANCE:
+			var lane_align_sign = 1.0 if to_target_flat.z >= 0.0 else -1.0
+			return Vector3(0.0, 0.0, lane_align_sign) * _game_config_float("character_speed", 550.0)
+	else:
+		_face_direction(to_target_flat.normalized())
 
 	# 反应时间
 	if _reaction_timer > 0.0:
@@ -161,10 +198,11 @@ func _do_shoot(delta: float) -> Vector3:
 	if weapon_manager and weapon_point:
 		var target_aim_pos = _target.global_position + Vector3(0, 1.0, 0)
 		var fire_origin = weapon_point.global_position if weapon_point else global_position
-		var aim_dir = (target_aim_pos - fire_origin).normalized()
+		var aim_dir = _get_lane_fire_dir_to(_target) if is_lane_mode else (target_aim_pos - fire_origin).normalized()
 		# 瞄准偏移
-		var offset_rad = deg_to_rad(randf_range(-AIM_OFFSET_DEG, AIM_OFFSET_DEG))
-		aim_dir = aim_dir.rotated(Vector3.UP, offset_rad)
+		if not is_lane_mode:
+			var offset_rad = deg_to_rad(randf_range(-AIM_OFFSET_DEG, AIM_OFFSET_DEG))
+			aim_dir = aim_dir.rotated(Vector3.UP, offset_rad)
 		weapon_manager.try_fire(weapon_point, aim_dir, self)
 
 	return Vector3.ZERO  # 射击时站定
@@ -185,7 +223,7 @@ func _do_flee_edge(_delta: float) -> Vector3:
 		# 四面楚歌，站着不动
 		return Vector3.ZERO
 	_face_direction(best_dir)
-	return best_dir * GameConfig.character_speed
+	return best_dir * _game_config_float("character_speed", 550.0)
 
 func _respawn() -> void:
 	super._respawn()
@@ -199,6 +237,21 @@ func _face_direction(dir: Vector3) -> void:
 	if dir.length_squared() < 0.01: return
 	var target_basis = Basis.looking_at(dir, Vector3.UP)
 	transform.basis = transform.basis.slerp(target_basis, 0.3)
+
+func _control_mode() -> String:
+	var config = _game_config()
+	if config == null:
+		return CONTROL_MODE_LOCK_ON
+	var value = config.get("control_mode")
+	if value is String:
+		return value
+	return CONTROL_MODE_LOCK_ON
+
+func _get_lane_fire_dir_to(target: Node3D) -> Vector3:
+	var x_sign = 1.0
+	if target and is_instance_valid(target):
+		x_sign = 1.0 if target.global_position.x >= global_position.x else -1.0
+	return Vector3(x_sign, 0.0, 0.0)
 
 func _find_target() -> void:
 	# 如果当前目标是拾取物且已被捡走，重新找玩家
@@ -234,7 +287,7 @@ func _find_nearby_pickup() -> WeaponPickup:
 
 func _pick_patrol_dest() -> void:
 	# 从重生点列表中随机选一个作为巡逻目的地（保证目的地有地面）
-	var points = GameConfig.respawn_points
+	var points = _game_config_respawn_points()
 	if points.is_empty():
 		_patrol_dest = global_position
 		return

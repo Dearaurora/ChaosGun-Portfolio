@@ -1,0 +1,34 @@
+{
+  "id": "shooter_kick",
+  "label": "Stronger shooter recoil, softer target push",
+  "game_config": {
+    "bullet_speed_multiplier": 10.0,
+    "knockback_multiplier": 1.45,
+    "knockback_lift_ratio": 0.28
+  },
+  "weapon_feel_overrides": {
+    "pistol": {
+      "recoil_force": 42.0,
+      "knockback_power": 70.0
+    },
+    "smg": {
+      "recoil_force": 16.0,
+      "knockback_power": 48.0
+    },
+    "ak_rifle": {
+      "recoil_force": 35.0,
+      "knockback_power": 82.0
+    },
+    "sniper": {
+      "recoil_force": 78.0,
+      "knockback_power": 420.0
+    }
+  },
+  "score_targets": {
+    "armed_ai_min": 2.0,
+    "deaths_min": 1.0,
+    "ring_outs_min": 1.0,
+    "first_death_min_seconds": 5.0,
+    "first_death_max_seconds": 18.0
+  }
+}

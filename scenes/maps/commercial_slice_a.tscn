@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/maps/commercial_slice_a.gd" id="1_map"]
+[ext_resource type="Script" uid="uid://dwlowsr7w2nod" path="res://scripts/weapons/weapon_spawner.gd" id="2_spawner"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="3_pause"]
+
+[node name="CommercialSliceA" type="Node3D"]
+script = ExtResource("1_map")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.43301272, 0.24999999, 0, 0.49999997, 0.86602545, -0.5, -0.75, 0.43301266, 0, 100, 0)
+shadow_enabled = true
+
+[node name="GlobalCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 50, 50)
+projection = 1
+current = true
+size = 100.0
+
+[node name="WeaponSpawner" type="Node" parent="."]
+script = ExtResource("2_spawner")
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("3_pause")

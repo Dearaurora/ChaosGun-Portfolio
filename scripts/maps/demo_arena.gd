@@ -1,21 +1,25 @@
-extends Node3D
-## demo_arena 的胜负判定脚本 —— 挂在 DemoArena 根节点
+﻿extends Node3D
+## demo_arena 的胜负判定脚本
 
 var _characters: Array = []
 var _victory_screen: CanvasLayer = null
 var _match_ended := false
 
+const CONTROL_MODE_PANEL_SCRIPT = preload("res://scripts/ui/control_mode_panel.gd")
+
 func _ready() -> void:
-	# 等一帧让子节点都 ready
 	await get_tree().process_frame
 	_setup_victory_screen()
+	_setup_control_mode_panel()
 	_connect_characters()
 
 func _setup_victory_screen() -> void:
-	var vs_script = load("res://scripts/ui/victory_screen.gd")
-	_victory_screen = CanvasLayer.new()
-	_victory_screen.set_script(vs_script)
+	_victory_screen = VictoryScreen.new()
 	add_child(_victory_screen)
+
+func _setup_control_mode_panel() -> void:
+	var panel = CONTROL_MODE_PANEL_SCRIPT.new()
+	add_child(panel)
 
 func _connect_characters() -> void:
 	for child in get_children():
@@ -23,7 +27,7 @@ func _connect_characters() -> void:
 			child.eliminated.connect(_on_character_eliminated)
 			_characters.append(child)
 
-func _on_character_eliminated(character: BaseCharacter) -> void:
+func _on_character_eliminated(_character: BaseCharacter) -> void:
 	if _match_ended:
 		return
 

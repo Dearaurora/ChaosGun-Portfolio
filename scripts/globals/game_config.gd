@@ -35,12 +35,17 @@ extends Node
 @export var character_speed: float = 550.0
 @export var character_horizontal_damp: float = 2.0
 @export var character_air_horizontal_damp: float = 0.5
-@export var character_gravity_scale: float = 8
-@export var character_jump_impulse: float = 20.0
+@export var character_gravity_scale: float = 20.0
+@export var character_jump_impulse: float = 400.0
 @export var character_air_control_multiplier: float = 0.2
 
 # 战斗数值倍数
 @export_group("战斗调整")
-@export var bullet_speed_multiplier: float = 5.0
+@export var bullet_speed_multiplier: float = 1.0
 @export var knockback_multiplier: float = 1.8
 @export var knockback_lift_ratio: float = 0.35  ## 击退力中转为向上冲量的比例（0~1）
+@export var max_recoil_impulse: float = 14.0
+@export var air_recoil_multiplier: float = 0.35
+@export var edge_recoil_multiplier: float = 0.25
+@export var weapon_feel_overrides: Dictionary = {}
+@export var control_mode: String = "lock_on"

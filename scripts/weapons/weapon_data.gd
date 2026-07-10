@@ -35,7 +35,7 @@ static func create_pistol() -> WeaponData:
 	d.fire_mode = FireMode.SEMI_AUTO
 	d.fire_rate = 4.0
 	d.bullet_speed = 60.0
-	d.knockback_power = 90.0
+	d.knockback_power = 120.0
 	d.base_spread = 0.0
 	d.max_spread = 0.0
 	d.spread_increase_per_shot = 0.0
@@ -45,7 +45,7 @@ static func create_pistol() -> WeaponData:
 	d.bullet_radius = 0.4
 	d.bullet_lifetime = 2.0
 	d.stun_duration = 0.0
-	d.recoil_force = 25.0
+	d.recoil_force = 8.0
 	d.damage = 25.0
 	d.projectile_scene = load("res://scenes/weapons/pistol_projectile.tscn")
 	d.shoot_sound = load("res://assets/audio/sfx/shoot_pistol.ogg")
@@ -69,7 +69,7 @@ static func create_smg() -> WeaponData:
 	d.bullet_radius = 0.3
 	d.bullet_lifetime = 1.5
 	d.stun_duration = 0.0
-	d.recoil_force = 8.0
+	d.recoil_force = 4.0
 	d.damage = 12.0
 	d.projectile_scene = load("res://scenes/weapons/smg_projectile.tscn")
 	d.shoot_sound = load("res://assets/audio/sfx/shoot_smg.ogg")
@@ -93,7 +93,7 @@ static func create_ak_rifle() -> WeaponData:
 	d.bullet_radius = 0.5
 	d.bullet_lifetime = 2.5
 	d.stun_duration = 0.0
-	d.recoil_force = 20.0
+	d.recoil_force = 10.0
 	d.damage = 20.0
 	d.projectile_scene = load("res://scenes/weapons/ak_projectile.tscn")
 	d.shoot_sound = load("res://assets/audio/sfx/shoot_ak.ogg")
@@ -117,7 +117,7 @@ static func create_sniper() -> WeaponData:
 	d.bullet_radius = 0.3
 	d.bullet_lifetime = 3.0
 	d.stun_duration = 0.3
-	d.recoil_force = 55.0
+	d.recoil_force = 28.0
 	d.damage = 80.0
 	d.projectile_scene = load("res://scenes/weapons/sniper_projectile.tscn")
 	d.shoot_sound = load("res://assets/audio/sfx/shoot_sniper.ogg")

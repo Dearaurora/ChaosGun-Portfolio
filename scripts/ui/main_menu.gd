@@ -137,7 +137,14 @@ func _create_button(text: String, accent: Color, x: float, y: float, w: float, h
 
 # ------------------------------------------------------------------
 func _on_vs_ai() -> void:
-	get_tree().change_scene_to_file("res://scenes/maps/demo_arena.tscn")
+	MatchConfig.slots = [
+		MatchConfig.SlotType.HUMAN,
+		MatchConfig.SlotType.AI,
+		MatchConfig.SlotType.EMPTY,
+		MatchConfig.SlotType.EMPTY,
+	]
+	MatchConfig.select_default_playable_map()
+	get_tree().change_scene_to_file(MatchConfig.get_selected_map_path())
 
 func _on_local_battle() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/character_select.tscn")

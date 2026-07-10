@@ -1,0 +1,37 @@
+{
+  "id": "candidate_v1",
+  "label": "Moderate recoil with reliable ring-out push",
+  "game_config": {
+    "bullet_speed_multiplier": 10.0,
+    "knockback_multiplier": 1.95,
+    "knockback_lift_ratio": 0.28,
+    "max_recoil_impulse": 12.0,
+    "air_recoil_multiplier": 0.30,
+    "edge_recoil_multiplier": 0.20
+  },
+  "weapon_feel_overrides": {
+    "pistol": {
+      "recoil_force": 5.0,
+      "knockback_power": 138.0
+    },
+    "smg": {
+      "recoil_force": 2.0,
+      "knockback_power": 72.0
+    },
+    "ak_rifle": {
+      "recoil_force": 7.0,
+      "knockback_power": 118.0
+    },
+    "sniper": {
+      "recoil_force": 20.0,
+      "knockback_power": 530.0
+    }
+  },
+  "score_targets": {
+    "armed_ai_min": 2.0,
+    "deaths_min": 2.0,
+    "ring_outs_min": 1.0,
+    "first_death_min_seconds": 5.0,
+    "first_death_max_seconds": 15.0
+  }
+}

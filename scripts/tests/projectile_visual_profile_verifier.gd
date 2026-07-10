@@ -1,0 +1,170 @@
+extends SceneTree
+
+var _failures: Array[String] = []
+
+func _initialize() -> void:
+	print("==================================================")
+	print("[Projectile Visual Profile Verifier]")
+	print("==================================================")
+
+	var probe := Projectile.new()
+	if not probe.has_method("configure_visual_profile"):
+		_fail("Projectile must expose configure_visual_profile(weapon_id, color)")
+		await _finish([probe])
+		return
+	if not probe.has_method("get_visual_profile_debug"):
+		_fail("Projectile must expose visual profile debug data for verification")
+		await _finish([probe])
+		return
+	probe.queue_free()
+
+	var pistol := await _make_scene_projectile(&"pistol", Color("#ffd94a"))
+	var smg := await _make_scene_projectile(&"smg", Color("#65ff49"))
+	var ak := await _make_scene_projectile(&"ak_rifle", Color("#ffb13b"))
+	var sniper := await _make_scene_projectile(&"sniper", Color("#5ce3ff"))
+
+	_verify_short_readable_projectile(pistol, "pistol")
+	_verify_short_readable_projectile(smg, "smg")
+	_verify_short_readable_projectile(ak, "ak_rifle")
+	_verify_short_readable_projectile(sniper, "sniper")
+	_verify_weapon_silhouette_differences(pistol, smg, ak, sniper)
+	await _finish([pistol, smg, ak, sniper])
+
+func _make_scene_projectile(weapon_id: StringName, color: Color) -> Projectile:
+	var scene := load("res://scenes/weapons/pistol_projectile.tscn") as PackedScene
+	var projectile := scene.instantiate() as Projectile
+	projectile.configure_visual_profile(weapon_id, color)
+	root.add_child(projectile)
+	await process_frame
+	return projectile
+
+func _verify_short_readable_projectile(projectile: Projectile, label: String) -> void:
+	var profile := projectile.call("get_visual_profile_debug") as Dictionary
+	var body_length := float(profile.get("body_length", 99.0))
+	var body_radius := float(profile.get("body_radius", 0.0))
+	var trail_length := float(profile.get("trail_length", 99.0))
+	var trail_alpha := float(profile.get("trail_alpha", 1.0))
+	var trajectory_length := float(profile.get("trajectory_length", -1.0))
+	var trajectory_width := float(profile.get("trajectory_width", 0.0))
+	var outline_alpha := float(profile.get("outline_alpha", 0.0))
+	if body_length < 0.70 or body_length > 1.45:
+		_fail("%s bullet body should be large enough to dodge-read, length %.2f" % [label, body_length])
+	if body_radius < 0.14 or body_radius > 0.34:
+		_fail("%s bullet radius should stay readable without becoming chunky, radius %.2f" % [label, body_radius])
+	if trail_length <= 0.15 or trail_length > 1.25:
+		_fail("%s bullet trail should be short, got %.2f" % [label, trail_length])
+	if trail_alpha > 0.46:
+		_fail("%s trail alpha should stay low enough not to cover combat, alpha %.2f" % [label, trail_alpha])
+	if trajectory_length < 1.15 or trajectory_length > 2.85:
+		_fail("%s trajectory ribbon should be long enough to read without becoming a beam, length %.2f" % [label, trajectory_length])
+	if trajectory_width < 0.14 or trajectory_width > 0.44:
+		_fail("%s trajectory ribbon needs screen-readable width, got %.2f" % [label, trajectory_width])
+	if outline_alpha < 0.52:
+		_fail("%s trajectory needs a dark readable underlay, alpha %.2f" % [label, outline_alpha])
+
+	var core := _find_mesh(projectile, "BulletCore")
+	var rim := _find_mesh(projectile, "BulletRim")
+	var trail := _find_mesh(projectile, "ShortTrail")
+	var trajectory_underlay := _find_mesh(projectile, "TrajectoryUnderlay")
+	var trajectory_core := _find_mesh(projectile, "TrajectoryCore")
+	var lead_spark := _find_mesh(projectile, "LeadSpark")
+	if core == null:
+		_fail("%s missing BulletCore mesh" % label)
+	if rim == null:
+		_fail("%s missing dark BulletRim mesh" % label)
+	if trail == null:
+		_fail("%s missing ShortTrail mesh" % label)
+	if trajectory_underlay == null:
+		_fail("%s missing TrajectoryUnderlay mesh" % label)
+	if trajectory_core == null:
+		_fail("%s missing TrajectoryCore mesh" % label)
+	if lead_spark == null:
+		_fail("%s missing LeadSpark mesh" % label)
+
+	var placeholder := projectile.get_node_or_null("MeshInstance3D")
+	if placeholder is MeshInstance3D and (placeholder as MeshInstance3D).visible:
+		_fail("%s should hide the old spherical placeholder mesh" % label)
+
+	if core:
+		var core_mat := core.material_override as StandardMaterial3D
+		if core_mat == null or not core_mat.emission_enabled or core_mat.emission_energy_multiplier < 2.5:
+			_fail("%s core should be bright and readable" % label)
+	if rim:
+		var rim_mat := rim.material_override as StandardMaterial3D
+		if rim_mat == null:
+			_fail("%s rim should have a material" % label)
+		else:
+			var rim_color := rim_mat.albedo_color
+			if rim_color.r + rim_color.g + rim_color.b > 0.42:
+				_fail("%s rim should read as a dark outline" % label)
+	if trail:
+		var trail_mat := trail.material_override as StandardMaterial3D
+		if trail_mat == null or trail_mat.albedo_color.a > 0.46:
+			_fail("%s trail material should be translucent" % label)
+	if trajectory_underlay:
+		var underlay_mat := trajectory_underlay.material_override as StandardMaterial3D
+		if underlay_mat == null:
+			_fail("%s trajectory underlay should have a material" % label)
+		else:
+			var underlay_color := underlay_mat.albedo_color
+			if underlay_color.r + underlay_color.g + underlay_color.b > 0.50 or underlay_color.a < 0.52:
+				_fail("%s trajectory underlay should be a visible dark outline" % label)
+	if trajectory_core:
+		var trajectory_mat := trajectory_core.material_override as StandardMaterial3D
+		if trajectory_mat == null or not trajectory_mat.emission_enabled or trajectory_mat.albedo_color.a > 0.72:
+			_fail("%s trajectory core should be bright but translucent" % label)
+	if lead_spark:
+		var spark_mat := lead_spark.material_override as StandardMaterial3D
+		if spark_mat == null or not spark_mat.emission_enabled or spark_mat.emission_energy_multiplier < 4.8:
+			_fail("%s lead spark should punch through the party camera" % label)
+
+func _verify_weapon_silhouette_differences(pistol: Projectile, smg: Projectile, ak: Projectile, sniper: Projectile) -> void:
+	var pistol_profile := pistol.call("get_visual_profile_debug") as Dictionary
+	var smg_profile := smg.call("get_visual_profile_debug") as Dictionary
+	var ak_profile := ak.call("get_visual_profile_debug") as Dictionary
+	var sniper_profile := sniper.call("get_visual_profile_debug") as Dictionary
+
+	if float(smg_profile["body_radius"]) >= float(ak_profile["body_radius"]):
+		_fail("SMG bullet should be smaller than rifle bullet")
+	if float(sniper_profile["body_length"]) <= float(pistol_profile["body_length"]):
+		_fail("Sniper bullet should have the longest readable dash")
+	if float(sniper_profile["trail_length"]) > 1.25:
+		_fail("Sniper trail should still stay shorter than a beam")
+	if float(sniper_profile.get("trajectory_length", -1.0)) <= float(ak_profile.get("trajectory_length", -1.0)):
+		_fail("Sniper trajectory should read as the longest fast shot")
+	if float(ak_profile.get("trajectory_width", 0.0)) <= float(smg_profile.get("trajectory_width", 0.0)):
+		_fail("Rifle trajectory should be wider than SMG spray")
+	else:
+		print("OK  weapon-specific compact projectile silhouettes")
+
+func _find_mesh(node: Node, mesh_name: String) -> MeshInstance3D:
+	if node is MeshInstance3D and node.name == mesh_name:
+		return node as MeshInstance3D
+	for child in node.get_children():
+		var found := _find_mesh(child, mesh_name)
+		if found:
+			return found
+	return null
+
+func _fail(message: String) -> void:
+	_failures.append(message)
+	push_error(message)
+
+func _finish(nodes: Array) -> void:
+	for node in nodes:
+		if node and is_instance_valid(node):
+			node.queue_free()
+	await process_frame
+
+	print("\n==================================================")
+	if _failures.is_empty():
+		print("[Projectile Visual Profile Verifier] PASS")
+		print("==================================================")
+		quit(0)
+		return
+
+	print("[Projectile Visual Profile Verifier] FAIL")
+	for failure in _failures:
+		print("- ", failure)
+	print("==================================================")
+	quit(1)

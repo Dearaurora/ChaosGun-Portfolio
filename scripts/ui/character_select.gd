@@ -78,13 +78,16 @@ func _build_ui() -> void:
 	# 地图选择器（居中）
 	var map_center_x: float = vp.x / 2.0
 	var map_btn_w := 40.0
+	var has_multiple_maps := MatchConfig.MAPS.size() > 1
 
 	var map_prev = _create_btn("◀", COL_TEXT, map_center_x - 140, bottom_y + 8, map_btn_w, map_btn_w)
 	map_prev.pressed.connect(_on_map_prev)
+	map_prev.visible = has_multiple_maps
+	map_prev.disabled = not has_multiple_maps
 	add_child(map_prev)
 
 	_map_label = Label.new()
-	_map_label.text = MatchConfig.MAPS[MatchConfig.selected_map_index][0]
+	_map_label.text = MatchConfig.get_selected_map_name()
 	_map_label.position = Vector2(map_center_x - 90, bottom_y)
 	_map_label.size = Vector2(180, 56)
 	_map_label.add_theme_font_size_override("font_size", 16)
@@ -95,6 +98,8 @@ func _build_ui() -> void:
 
 	var map_next = _create_btn("▶", COL_TEXT, map_center_x + 100, bottom_y + 8, map_btn_w, map_btn_w)
 	map_next.pressed.connect(_on_map_next)
+	map_next.visible = has_multiple_maps
+	map_next.disabled = not has_multiple_maps
 	add_child(map_next)
 
 	# START 按钮
@@ -292,9 +297,15 @@ func _on_start() -> void:
 	get_tree().change_scene_to_file(MatchConfig.get_selected_map_path())
 
 func _on_map_prev() -> void:
+	if MatchConfig.MAPS.size() <= 1:
+		_map_label.text = MatchConfig.get_selected_map_name()
+		return
 	MatchConfig.selected_map_index = (MatchConfig.selected_map_index - 1 + MatchConfig.MAPS.size()) % MatchConfig.MAPS.size()
-	_map_label.text = MatchConfig.MAPS[MatchConfig.selected_map_index][0]
+	_map_label.text = MatchConfig.get_selected_map_name()
 
 func _on_map_next() -> void:
+	if MatchConfig.MAPS.size() <= 1:
+		_map_label.text = MatchConfig.get_selected_map_name()
+		return
 	MatchConfig.selected_map_index = (MatchConfig.selected_map_index + 1) % MatchConfig.MAPS.size()
-	_map_label.text = MatchConfig.MAPS[MatchConfig.selected_map_index][0]
+	_map_label.text = MatchConfig.get_selected_map_name()

@@ -1,0 +1,104 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/maps/demo_arena.tscn" id="1_base"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/gate.glb" id="2_gate"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/town_banner-red.glb" id="3_banner_r"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/town_banner-green.glb" id="4_banner_g"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/grave_altar-stone.glb" id="5_altar"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/grave_pillar-large.glb" id="6_pillar"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/nature_tree_oak.glb" id="7_tree_oak"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/nature_tree_small.glb" id="8_tree_small"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/nature_rock_smallTopA.glb" id="9_rock"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/nature_log_stack.glb" id="10_log"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/town_lantern.glb" id="11_lantern"]
+[ext_resource type="PackedScene" path="res://assets/models/third_party/kenney/curated_food_dojo/grave_lantern-glass.glb" id="12_glantern"]
+
+[node name="AssetShowcaseKenney" type="Node3D"]
+
+[node name="Base" parent="." instance=ExtResource("1_base")]
+
+[node name="KenneyDressing" type="Node3D" parent="."]
+
+[node name="GateNorth" parent="KenneyDressing" instance=ExtResource("2_gate")]
+transform = Transform3D(2.4, 0, 0, 0, 2.4, 0, 0, 0, 2.4, 0, 0, -24)
+
+[node name="GateSouth" parent="KenneyDressing" instance=ExtResource("2_gate")]
+transform = Transform3D(-2.4, 0, -2.09815e-07, 0, 2.4, 0, 2.09815e-07, 0, -2.4, 0, 0, 24)
+
+[node name="BannerNorthL" parent="KenneyDressing" instance=ExtResource("3_banner_r")]
+transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, -8, 1.0, -20)
+
+[node name="BannerNorthR" parent="KenneyDressing" instance=ExtResource("4_banner_g")]
+transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 8, 1.0, -20)
+
+[node name="BannerSouthL" parent="KenneyDressing" instance=ExtResource("4_banner_g")]
+transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, -8, 1.0, 20)
+
+[node name="BannerSouthR" parent="KenneyDressing" instance=ExtResource("3_banner_r")]
+transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 8, 1.0, 20)
+
+[node name="AltarNorth" parent="KenneyDressing" instance=ExtResource("5_altar")]
+transform = Transform3D(2.0, 0, 0, 0, 1.8, 0, 0, 0, 2.0, 0, 0, -14)
+
+[node name="AltarSouth" parent="KenneyDressing" instance=ExtResource("5_altar")]
+transform = Transform3D(2.0, 0, 0, 0, 1.8, 0, 0, 0, 2.0, 0, 0, 14)
+
+[node name="PillarNW" parent="KenneyDressing" instance=ExtResource("6_pillar")]
+transform = Transform3D(2.0, 0, 0, 0, 2.2, 0, 0, 0, 2.0, -6, 0, -6)
+
+[node name="PillarNE" parent="KenneyDressing" instance=ExtResource("6_pillar")]
+transform = Transform3D(2.0, 0, 0, 0, 2.2, 0, 0, 0, 2.0, 6, 0, -6)
+
+[node name="PillarSW" parent="KenneyDressing" instance=ExtResource("6_pillar")]
+transform = Transform3D(2.0, 0, 0, 0, 2.2, 0, 0, 0, 2.0, -6, 0, 6)
+
+[node name="PillarSE" parent="KenneyDressing" instance=ExtResource("6_pillar")]
+transform = Transform3D(2.0, 0, 0, 0, 2.2, 0, 0, 0, 2.0, 6, 0, 6)
+
+[node name="TreeNW" parent="KenneyDressing" instance=ExtResource("7_tree_oak")]
+transform = Transform3D(2.8, 0, 0, 0, 3.0, 0, 0, 0, 2.8, -18, 0, -18)
+
+[node name="TreeNE" parent="KenneyDressing" instance=ExtResource("7_tree_oak")]
+transform = Transform3D(2.8, 0, 0, 0, 3.0, 0, 0, 0, 2.8, 18, 0, -18)
+
+[node name="TreeSW" parent="KenneyDressing" instance=ExtResource("7_tree_oak")]
+transform = Transform3D(2.8, 0, 0, 0, 3.0, 0, 0, 0, 2.8, -18, 0, 18)
+
+[node name="TreeSE" parent="KenneyDressing" instance=ExtResource("7_tree_oak")]
+transform = Transform3D(2.8, 0, 0, 0, 3.0, 0, 0, 0, 2.8, 18, 0, 18)
+
+[node name="TreeNMidL" parent="KenneyDressing" instance=ExtResource("8_tree_small")]
+transform = Transform3D(2.1, 0, 0, 0, 2.2, 0, 0, 0, 2.1, -10, 0, -22)
+
+[node name="TreeNMidR" parent="KenneyDressing" instance=ExtResource("8_tree_small")]
+transform = Transform3D(2.1, 0, 0, 0, 2.2, 0, 0, 0, 2.1, 10, 0, -22)
+
+[node name="TreeSMidL" parent="KenneyDressing" instance=ExtResource("8_tree_small")]
+transform = Transform3D(2.1, 0, 0, 0, 2.2, 0, 0, 0, 2.1, -10, 0, 22)
+
+[node name="TreeSMidR" parent="KenneyDressing" instance=ExtResource("8_tree_small")]
+transform = Transform3D(2.1, 0, 0, 0, 2.2, 0, 0, 0, 2.1, 10, 0, 22)
+
+[node name="RockWest" parent="KenneyDressing" instance=ExtResource("9_rock")]
+transform = Transform3D(2.6, 0, 0, 0, 2.2, 0, 0, 0, 2.4, -22, 0, 0)
+
+[node name="RockEast" parent="KenneyDressing" instance=ExtResource("9_rock")]
+transform = Transform3D(-2.6, 0, -2.27299e-07, 0, 2.2, 0, 2.09815e-07, 0, -2.4, 22, 0, 0)
+
+[node name="LogNorth" parent="KenneyDressing" instance=ExtResource("10_log")]
+transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 0, 0, -22)
+
+[node name="LogSouth" parent="KenneyDressing" instance=ExtResource("10_log")]
+transform = Transform3D(-2.2, 0, -1.92231e-07, 0, 2.2, 0, 1.92231e-07, 0, -2.2, 0, 0, 22)
+
+[node name="LanternNW" parent="KenneyDressing" instance=ExtResource("11_lantern")]
+transform = Transform3D(2.3, 0, 0, 0, 2.3, 0, 0, 0, 2.3, -14, 0, -14)
+
+[node name="LanternNE" parent="KenneyDressing" instance=ExtResource("11_lantern")]
+transform = Transform3D(2.3, 0, 0, 0, 2.3, 0, 0, 0, 2.3, 14, 0, -14)
+
+[node name="GLanternSW" parent="KenneyDressing" instance=ExtResource("12_glantern")]
+transform = Transform3D(2.3, 0, 0, 0, 2.3, 0, 0, 0, 2.3, -14, 0, 14)
+
+[node name="GLanternSE" parent="KenneyDressing" instance=ExtResource("12_glantern")]
+transform = Transform3D(2.3, 0, 0, 0, 2.3, 0, 0, 0, 2.3, 14, 0, 14)
