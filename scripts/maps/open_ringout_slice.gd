@@ -10,6 +10,26 @@ const BACKDROP_ROOT_NAME := "OpenRingoutBackdrop"
 const ART_ROOT_NAME := "OpenRingoutArt"
 const BLENDER_VISUAL_ROOT_NAME := "OpenRingoutBlenderVisuals"
 const BLENDER_VISUAL_SCENE_PATH := "res://assets/models/generated/open_ringout_slice/open_ringout_visuals.glb"
+const SUNSET_V2_VISUAL_ROOT_NAME := "SunsetV2GameplayVisuals"
+const SUNSET_V2_VISUAL_SCENE_PATH := "res://assets/models/generated/sunset_toy_sky_islands/open_ringout_v2_preview.glb"
+const SUNSET_V2_HIDDEN_LEGACY_PREFIXES := [
+	"main_deck_",
+	"main_west_lip_",
+	"main_east_lip_",
+	"east_bridge_",
+	"A1MainDeck",
+	"A1MainWestLip",
+	"A1MainEastLip",
+	"A1EastBridge",
+	"A1BridgeMouthMarkerEastBridge",
+	"A1SurfacePanel_Main",
+	"A1SurfacePanel_WestLip",
+	"A1SurfacePanel_EastLip",
+	"A1SurfacePanel_BridgeE",
+	"tile_line_",
+	"concept_outer_edge_glow_main",
+	"EastCombatLaneFloorInset",
+]
 
 const DRESSING_ASSET_BASE := "res://assets/models/third_party/kenney/curated_food_dojo/"
 
@@ -463,11 +483,37 @@ func _build_blender_visual_layer() -> void:
 
 	visual_scene.name = "BlenderAuthoredOpenRingoutVisuals"
 	visual_root.add_child(visual_scene)
+	_build_sunset_v2_visual_layer(visual_root, visual_scene)
 	_set_generated_platform_art_visible(false)
 	_set_generated_support_visuals_visible(false)
 	var art_root = get_node_or_null(ART_ROOT_NAME)
 	if art_root:
 		art_root.visible = false
+
+func _build_sunset_v2_visual_layer(parent: Node3D, legacy_visual: Node3D) -> void:
+	var packed_scene = load(SUNSET_V2_VISUAL_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_warning("Sunset V2 visual scene is not available: %s" % SUNSET_V2_VISUAL_SCENE_PATH)
+		return
+	var visual_scene = packed_scene.instantiate() as Node3D
+	if visual_scene == null:
+		push_warning("Sunset V2 visual scene could not be instantiated.")
+		return
+	visual_scene.name = SUNSET_V2_VISUAL_ROOT_NAME
+	parent.add_child(visual_scene)
+	_set_sunset_v2_legacy_nodes_visible(legacy_visual, false)
+
+func _set_sunset_v2_legacy_nodes_visible(node: Node, is_visible: bool) -> void:
+	if node is Node3D and _is_sunset_v2_replaced_legacy_name(String(node.name)):
+		(node as Node3D).visible = is_visible
+	for child in node.get_children():
+		_set_sunset_v2_legacy_nodes_visible(child, is_visible)
+
+func _is_sunset_v2_replaced_legacy_name(node_name: String) -> bool:
+	for prefix in SUNSET_V2_HIDDEN_LEGACY_PREFIXES:
+		if node_name.begins_with(String(prefix)):
+			return true
+	return false
 
 func _set_generated_support_visuals_visible(is_visible: bool) -> void:
 	var cover_root = get_node_or_null(COVER_ROOT_NAME)

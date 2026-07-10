@@ -1,7 +1,7 @@
 extends SceneTree
 
 const SCENE_PATH := "res://scenes/maps/open_ringout_slice.tscn"
-const OUT_PATH := "res://reports/open_ringout_slice_screenshot.png"
+const DEFAULT_OUT_PATH := "res://reports/open_ringout_slice_screenshot.png"
 const VIEWPORT_SIZE := Vector2i(1536, 960)
 const RENDER_DRIVER_REQUIRED_MESSAGE := "Open Ring-Out screenshot capture cannot run with --headless: Godot's headless DisplayServer disables rendering and window management, so root.get_texture() cannot provide a screenshot. Run this gate from a render-capable display driver, for example the Windows console Godot executable without --headless."
 
@@ -44,14 +44,24 @@ func _initialize() -> void:
 		_fail("Viewport screenshot image is empty. %s" % RENDER_DRIVER_REQUIRED_MESSAGE)
 		return
 
-	var err = image.save_png(OUT_PATH)
+	var out_path := _resolve_output_path()
+	var err = image.save_png(out_path)
 	if err != OK:
-		push_error("Could not save screenshot to %s, error %d" % [OUT_PATH, err])
+		push_error("Could not save screenshot to %s, error %d" % [out_path, err])
 		quit(1)
 		return
 
-	print("Saved screenshot: %s" % ProjectSettings.globalize_path(OUT_PATH))
+	print("Saved screenshot: %s" % ProjectSettings.globalize_path(out_path))
 	quit(0)
+
+func _resolve_output_path() -> String:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--output="):
+			var requested := argument.trim_prefix("--output=").strip_edges()
+			if requested.begins_with("res://") and requested.ends_with(".png"):
+				return requested
+			push_warning("Ignoring invalid screenshot output path: %s" % requested)
+	return DEFAULT_OUT_PATH
 
 func _fail(message: String) -> void:
 	push_error(message)
