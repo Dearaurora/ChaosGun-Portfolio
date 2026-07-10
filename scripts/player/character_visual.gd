@@ -74,11 +74,11 @@ func _build_asset_visual() -> bool:
 	_asset_root.name = "BeanCharacterAsset"
 	add_child(_asset_root)
 
-	_create_marker("FaceVisor", Vector3(0, 1.92, -1.12))
-	_create_marker("LeftHand", Vector3(-1.05, 1.25, -0.7))
-	_create_marker("RightHand", Vector3(1.05, 1.25, -0.7))
-	_create_marker("LeftFoot", Vector3(-0.55, 0.24, -0.35))
-	_create_marker("RightFoot", Vector3(0.55, 0.24, -0.35))
+	_create_marker("FaceVisor", Vector3(0, 1.58, -0.84))
+	_create_marker("LeftHand", Vector3(-0.18, 1.13, -1.40))
+	_create_marker("RightHand", Vector3(0.18, 0.98, -1.34))
+	_create_marker("LeftFoot", Vector3(-0.39, 0.18, -0.16))
+	_create_marker("RightFoot", Vector3(0.39, 0.18, -0.16))
 	_cache_asset_meshes(_asset_root)
 	set_body_color(body_color)
 	return true
@@ -306,8 +306,8 @@ func _build_limbs() -> void:
 func _build_weapon_holder() -> void:
 	_weapon_holder = Node3D.new()
 	_weapon_holder.name = "WeaponHolder"
-	_weapon_holder.position = Vector3(0.68, 1.16, -0.92)
-	_weapon_holder.scale = Vector3.ONE * 1.18
+	_weapon_holder.position = Vector3(0.0, 1.03, -1.45)
+	_weapon_holder.scale = Vector3.ONE
 	add_child(_weapon_holder)
 
 ## 切换枪械可视模型
@@ -372,6 +372,7 @@ func _build_weapon_asset_visual(weapon_id: StringName) -> bool:
 	weapon_asset.name = "WeaponAsset"
 	weapon_asset.set_meta("weapon_id", String(weapon_id))
 	weapon_asset.position = Vector3(0.0, 0.04, -0.10)
+	weapon_asset.rotation_degrees.y = 180.0
 	weapon_asset.scale = Vector3.ONE * _weapon_asset_scale(weapon_id)
 	_weapon_holder.add_child(weapon_asset)
 	return true
@@ -496,6 +497,7 @@ func get_weapon_readability_debug() -> Dictionary:
 		"has_asset": asset != null,
 		"uses_proxy": proxy != null,
 		"asset_scale": _weapon_asset_scale(_current_weapon_id),
+		"asset_rotation_y": asset.rotation_degrees.y if asset else 0.0,
 		"has_magazine": bool(profile.get("has_magazine", false)),
 		"has_stock": bool(profile.get("has_stock", false)),
 		"has_scope": bool(profile.get("has_scope", false)),
@@ -518,13 +520,13 @@ func _weapon_model_path(weapon_id: StringName) -> String:
 func _weapon_asset_scale(weapon_id: StringName) -> float:
 	match weapon_id:
 		&"pistol":
-			return 1.56
-		&"smg":
 			return 1.34
+		&"smg":
+			return 1.14
 		&"ak_rifle":
-			return 1.18
+			return 1.00
 		&"sniper":
-			return 1.08
+			return 0.92
 		_:
 			return 1.0
 

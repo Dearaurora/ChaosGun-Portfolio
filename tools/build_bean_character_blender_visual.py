@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import bpy
+from mathutils import Vector
 
 
 OUT_PATH = Path("assets/models/generated/characters/bean_character.glb")
@@ -28,6 +29,8 @@ MAT_VISOR_RIM = mat("bean_visor_rim", (0.08, 0.11, 0.16, 1.0), 0.68)
 MAT_VISOR_GLASS = mat("bean_visor_glass", (0.74, 0.93, 1.0, 1.0), 0.34)
 MAT_HIGHLIGHT = mat("bean_visor_highlight", (1.0, 1.0, 1.0, 1.0), 0.28)
 MAT_FOOT = mat("bean_soft_feet", (0.035, 0.045, 0.06, 1.0), 0.76)
+MAT_FACE = mat("bean_recessed_face", (0.075, 0.045, 0.085, 1.0), 0.72)
+MAT_EYE = mat("bean_warm_eyes", (1.0, 0.57, 0.12, 1.0), 0.40)
 
 
 def add_uv_sphere(name, loc, scale, material, segments=32, rings=16):
@@ -39,6 +42,28 @@ def add_uv_sphere(name, loc, scale, material, segments=32, rings=16):
     bpy.ops.object.shade_smooth()
     normal = obj.modifiers.new(name="weighted_normals", type="WEIGHTED_NORMAL")
     normal.keep_sharp = True
+    return obj
+
+
+def add_pear_body(name, loc, scale, material):
+    obj = add_uv_sphere(name, loc, scale, material, 40, 24)
+    for vertex in obj.data.vertices:
+        normalized_z = max(-1.0, min(1.0, vertex.co.z))
+        lower_weight = (1.0 - normalized_z) * 0.5
+        crown_weight = (normalized_z + 1.0) * 0.5
+        width_factor = 0.90 + lower_weight * 0.22 - crown_weight * 0.04
+        vertex.co.x *= width_factor
+        vertex.co.y *= 0.96 + lower_weight * 0.10
+    return obj
+
+
+def add_soft_limb(name, start, end, radius, material):
+    start_v = Vector(start)
+    end_v = Vector(end)
+    direction = end_v - start_v
+    obj = add_uv_sphere(name, (start_v + end_v) * 0.5, (radius, radius, direction.length * 0.56), material, 24, 14)
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = direction.to_track_quat("Z", "Y")
     return obj
 
 
@@ -60,22 +85,28 @@ def add_cube(name, loc, scale, material, bevel=0.08, rot=(0, 0, 0)):
 
 
 def build_character():
-    # Blender export uses Y-up conversion. Model front is -Y in Blender so it lands on -Z in Godot.
-    add_uv_sphere("Body", (0, 0, 1.28), (1.08, 0.96, 0.98), MAT_BODY, 36, 18)
-    add_uv_sphere("BellyLower", (0, 0.02, 0.68), (0.86, 0.78, 0.48), MAT_BODY, 32, 12)
+    # Blender +Y maps to Godot -Z during glTF Y-up conversion.
+    add_pear_body("Body", (0, 0.02, 1.22), (0.98, 0.82, 1.06), MAT_BODY)
 
-    add_uv_sphere("FaceVisorRim", (0, -0.86, 1.42), (0.68, 0.17, 0.34), MAT_VISOR_RIM, 28, 12)
-    add_uv_sphere("FaceVisorGlass", (0, -0.96, 1.42), (0.55, 0.07, 0.24), MAT_VISOR_GLASS, 28, 10)
-    add_uv_sphere("FaceVisorHighlight", (-0.24, -1.01, 1.52), (0.14, 0.025, 0.045), MAT_HIGHLIGHT, 16, 6)
+    add_uv_sphere("FaceOpening", (0, 1.00, 1.54), (0.52, 0.115, 0.29), MAT_FACE, 32, 16)
+    add_uv_sphere("EyeLeft", (-0.19, 1.11, 1.54), (0.07, 0.028, 0.13), MAT_EYE, 16, 10)
+    add_uv_sphere("EyeRight", (0.19, 1.11, 1.54), (0.07, 0.028, 0.13), MAT_EYE, 16, 10)
 
-    add_uv_sphere("LeftHand", (-0.88, -0.47, 0.98), (0.24, 0.21, 0.27), MAT_BODY, 20, 10)
-    add_uv_sphere("RightHand", (0.88, -0.47, 0.98), (0.24, 0.21, 0.27), MAT_BODY, 20, 10)
-    add_uv_sphere("LeftHandGrip", (0.38, -0.90, 0.96), (0.18, 0.14, 0.22), MAT_BODY, 20, 10)
-    add_uv_sphere("RightHandGrip", (0.78, -0.86, 0.98), (0.20, 0.15, 0.24), MAT_BODY, 20, 10)
-    add_uv_sphere("LeftFoot", (-0.42, -0.20, 0.20), (0.36, 0.43, 0.18), MAT_FOOT, 20, 8)
-    add_uv_sphere("RightFoot", (0.42, -0.20, 0.20), (0.36, 0.43, 0.18), MAT_FOOT, 20, 8)
+    left_shoulder = (-0.84, 0.42, 1.30)
+    left_elbow = (-0.80, 1.14, 1.08)
+    left_hand = (-0.20, 1.48, 1.13)
+    right_shoulder = (0.84, 0.42, 1.30)
+    right_elbow = (0.80, 1.12, 1.00)
+    right_hand = (0.20, 1.42, 0.98)
+    add_soft_limb("BodyArmLeftUpper", left_shoulder, left_elbow, 0.22, MAT_BODY)
+    add_soft_limb("BodyArmLeftFore", left_elbow, left_hand, 0.20, MAT_BODY)
+    add_soft_limb("BodyArmRightUpper", right_shoulder, right_elbow, 0.22, MAT_BODY)
+    add_soft_limb("BodyArmRightFore", right_elbow, right_hand, 0.20, MAT_BODY)
+    add_uv_sphere("LeftHandGrip", left_hand, (0.22, 0.18, 0.22), MAT_BODY, 22, 12)
+    add_uv_sphere("RightHandGrip", right_hand, (0.22, 0.18, 0.22), MAT_BODY, 22, 12)
 
-    add_cube("ToyShadowSoftener", (0, 0.12, 0.08), (1.36, 0.86, 0.05), MAT_FOOT, 0.12, (0, 0, math.radians(0)))
+    add_uv_sphere("LeftFoot", (-0.39, 0.16, 0.18), (0.38, 0.45, 0.19), MAT_FOOT, 24, 10)
+    add_uv_sphere("RightFoot", (0.39, 0.16, 0.18), (0.38, 0.45, 0.19), MAT_FOOT, 24, 10)
 
 
 def export_glb():

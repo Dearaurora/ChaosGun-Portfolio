@@ -88,7 +88,7 @@ func _build_roster(stage: Node3D) -> void:
 		var visual := CharacterVisual.new()
 		visual.body_color = entry["color"]
 		visual.position = Vector3(float(entry["x"]), 0.0, 0.0)
-		visual.rotation_degrees.y = 52.0
+		visual.rotation_degrees.y = 25.0
 		stage.add_child(visual)
 		visual.call_deferred("set_weapon_visual", entry["weapon"])
 

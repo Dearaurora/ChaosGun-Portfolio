@@ -26,6 +26,7 @@ func _initialize() -> void:
 		profiles[String(weapon_id)] = debug
 		_verify_weapon_pose(debug, String(weapon_id))
 		_verify_weapon_asset(visual, String(weapon_id))
+		_verify_no_torso_intersection(visual, String(weapon_id))
 
 	_verify_weapon_silhouette_steps(profiles)
 	await _finish(visual)
@@ -33,14 +34,16 @@ func _initialize() -> void:
 func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
 	var holder_position := debug.get("holder_position", Vector3.ZERO) as Vector3
 	var holder_scale := float(debug.get("holder_scale", 0.0))
-	if holder_position.x < 0.45 or holder_position.x > 0.85:
-		_fail("%s weapon holder should bridge both modeled hands, got x %.2f" % [weapon_id, holder_position.x])
-	if holder_position.z < -1.08 or holder_position.z > -0.72:
-		_fail("%s weapon holder should sit in front of the torso without floating, got z %.2f" % [weapon_id, holder_position.z])
-	if holder_position.y < 1.00 or holder_position.y > 1.30:
+	if absf(holder_position.x) > 0.10:
+		_fail("%s weapon holder should be centered between both hands, got x %.2f" % [weapon_id, holder_position.x])
+	if holder_position.z < -1.55 or holder_position.z > -1.35:
+		_fail("%s weapon holder should remain in the chest clearance plane, got z %.2f" % [weapon_id, holder_position.z])
+	if holder_position.y < 0.95 or holder_position.y > 1.12:
 		_fail("%s weapon holder should align with modeled hands, got y %.2f" % [weapon_id, holder_position.y])
-	if holder_scale < 1.10 or holder_scale > 1.24:
+	if holder_scale < 0.95 or holder_scale > 1.05:
 		_fail("%s weapon holder scale should preserve hand contact and silhouette, got %.2f" % [weapon_id, holder_scale])
+	if absf(float(debug.get("asset_rotation_y", 0.0)) - 180.0) > 0.1:
+		_fail("%s asset must face Godot -Z instead of back into the torso" % weapon_id)
 
 	var length := float(debug.get("silhouette_length", 0.0))
 	var width := float(debug.get("silhouette_width", 0.0))
@@ -92,6 +95,52 @@ func _collect_asset_material_stats(node: Node, stats: Dictionary) -> void:
 				colors.append(mat.albedo_color)
 	for child in node.get_children():
 		_collect_asset_material_stats(child, stats)
+
+func _verify_no_torso_intersection(visual: CharacterVisual, weapon_id: String) -> void:
+	var torso := _find_descendant(visual, "Body") as MeshInstance3D
+	var asset := visual.get_node_or_null("WeaponHolder/WeaponAsset")
+	if torso == null or asset == null:
+		_fail("%s cannot evaluate torso clearance without Body and WeaponAsset" % weapon_id)
+		return
+	var torso_points: Array[Vector3] = []
+	var weapon_points: Array[Vector3] = []
+	_collect_mesh_bounds(torso, torso_points)
+	_collect_mesh_bounds(asset, weapon_points)
+	if torso_points.is_empty() or weapon_points.is_empty():
+		_fail("%s cannot evaluate empty mesh bounds" % weapon_id)
+		return
+	var torso_front_z := INF
+	var weapon_rear_z := -INF
+	for point in torso_points:
+		torso_front_z = minf(torso_front_z, point.z)
+	for point in weapon_points:
+		weapon_rear_z = maxf(weapon_rear_z, point.z)
+	var clearance := torso_front_z - weapon_rear_z
+	if clearance < 0.04:
+		_fail("%s penetrates the torso depth plane, clearance %.3f" % [weapon_id, clearance])
+	else:
+		print("OK  %s torso clearance %.3f" % [weapon_id, clearance])
+
+func _find_descendant(node: Node, target_name: String) -> Node:
+	if node.name == target_name:
+		return node
+	for child in node.get_children():
+		var found := _find_descendant(child, target_name)
+		if found != null:
+			return found
+	return null
+
+func _collect_mesh_bounds(node: Node, points: Array[Vector3]) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		var bounds := mesh_instance.get_aabb()
+		for x in [0.0, 1.0]:
+			for y in [0.0, 1.0]:
+				for z in [0.0, 1.0]:
+					var local_point := bounds.position + bounds.size * Vector3(x, y, z)
+					points.append(mesh_instance.global_transform * local_point)
+	for child in node.get_children():
+		_collect_mesh_bounds(child, points)
 
 func _color_distance(a: Color, b: Color) -> float:
 	return absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b)
