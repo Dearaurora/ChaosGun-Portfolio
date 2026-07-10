@@ -123,6 +123,13 @@ def materials():
         "wood": hero.make_material("v3_prop_wood", "#A75C2D", 0.82),
         "wood_light": hero.make_material("v3_prop_wood_light", "#D18A43", 0.76),
         "wood_dark": hero.make_material("v3_prop_wood_dark", "#613B35", 0.88),
+        "green": hero.make_material("v3_landmark_green", "#588F43", 0.86),
+        "green_light": hero.make_material("v3_landmark_green_light", "#84B34D", 0.82),
+        "green_dark": hero.make_material("v3_landmark_green_dark", "#35583B", 0.90),
+        "blue": hero.make_material("v3_landmark_blue", "#2878B8", 0.76),
+        "blue_light": hero.make_material("v3_landmark_blue_light", "#4FA9D5", 0.70),
+        "tire": hero.make_material("v3_landmark_tire", "#29233D", 0.88),
+        "cream": hero.make_material("v3_landmark_cream", "#F1D9AE", 0.82),
     }
 
 
@@ -216,17 +223,35 @@ def add_central_platform(collection, mats):
         add_box(f"V2CentralEdgeGem_{index}", (x, 1.00, z), (0.34, 0.12, 0.34), mats["cyan"], collection, 0.08)
 
 
-def add_east_bridge(collection, mats):
-    add_box("V2EastBridgeShadow", (31.8, -0.72, -1.15), (7.4, 0.58, 0.72), mats["shadow"], collection, 0.24)
-    add_box("V2EastBridgeSupportB", (31.8, -0.72, 5.15), (7.4, 0.58, 0.72), mats["shadow"], collection, 0.24)
+def add_bridge_module(prefix, center, length, width, span_axis, collection, mats):
+    center_x, center_z = center
+    if span_axis == "x":
+        support_positions = ((center_x, center_z - width * 0.39), (center_x, center_z + width * 0.39))
+        support_size = (length + 0.4, 0.58, 0.72)
+    else:
+        support_positions = ((center_x - width * 0.39, center_z), (center_x + width * 0.39, center_z))
+        support_size = (0.72, 0.58, length + 0.4)
+    add_box(f"{prefix}Shadow", (support_positions[0][0], -0.72, support_positions[0][1]), support_size, mats["shadow"], collection, 0.24)
+    add_box(f"{prefix}SupportB", (support_positions[1][0], -0.72, support_positions[1][1]), support_size, mats["shadow"], collection, 0.24)
+
+    plank_count = 6
+    step = length / plank_count
     for index in range(6):
-        x = 28.9 + index * 1.16
+        offset = -length * 0.5 + step * (float(index) + 0.5)
         material = mats["bridge_alt"] if index % 3 == 1 else mats["bridge"]
-        add_box(f"V2EastBridgePlank_{index}", (x, -0.17, 2.0), (1.02, 0.70, 7.55), material, collection, 0.16)
-        for side_index, z in enumerate((-1.18, 5.18)):
+        if span_axis == "x":
+            plank_pos = (center_x + offset, -0.17, center_z)
+            plank_size = (step * 0.88, 0.70, width * 0.94)
+            fastener_positions = ((center_x + offset, center_z - width * 0.39), (center_x + offset, center_z + width * 0.39))
+        else:
+            plank_pos = (center_x, -0.17, center_z + offset)
+            plank_size = (width * 0.94, 0.70, step * 0.88)
+            fastener_positions = ((center_x - width * 0.39, center_z + offset), (center_x + width * 0.39, center_z + offset))
+        add_box(f"{prefix}Plank_{index}", plank_pos, plank_size, material, collection, 0.16)
+        for side_index, fastener_pos in enumerate(fastener_positions):
             hero.add_cylinder(
-                f"V2EastBridgeFastener_{index}_{side_index}",
-                bpos((x, 0.225, z)),
+                f"{prefix}Fastener_{index}_{side_index}",
+                bpos((fastener_pos[0], 0.225, fastener_pos[1])),
                 0.11,
                 0.065,
                 mats["fastener"],
@@ -234,9 +259,155 @@ def add_east_bridge(collection, mats):
                 bevel=0.025,
                 vertices=18,
             )
-    for index, (x, z) in enumerate(((28.25, -2.0), (28.25, 6.0), (35.35, -2.0), (35.35, 6.0))):
-        add_box(f"V2EastBridgePost_{index}", (x, 0.52, z), (0.68, 1.02, 0.68), mats["post"], collection, 0.18)
-        add_box(f"V2EastBridgeGem_{index}", (x, 1.08, z), (0.34, 0.12, 0.34), mats["cyan"], collection, 0.08)
+    corner_positions = (
+        (center_x - length * 0.5, center_z - width * 0.5),
+        (center_x - length * 0.5, center_z + width * 0.5),
+        (center_x + length * 0.5, center_z - width * 0.5),
+        (center_x + length * 0.5, center_z + width * 0.5),
+    ) if span_axis == "x" else (
+        (center_x - width * 0.5, center_z - length * 0.5),
+        (center_x + width * 0.5, center_z - length * 0.5),
+        (center_x - width * 0.5, center_z + length * 0.5),
+        (center_x + width * 0.5, center_z + length * 0.5),
+    )
+    for index, (x, z) in enumerate(corner_positions):
+        add_box(f"{prefix}Post_{index}", (x, 0.52, z), (0.68, 1.02, 0.68), mats["post"], collection, 0.18)
+        add_box(f"{prefix}Gem_{index}", (x, 1.08, z), (0.34, 0.12, 0.34), mats["cyan"], collection, 0.08)
+
+
+def add_all_bridges(collection, mats):
+    add_bridge_module("V2EastBridge", (31.8, 2.0), 7.0, 8.0, "x", collection, mats)
+    add_bridge_module("V3WestBridge", (-31.8, 2.0), 6.6, 9.0, "x", collection, mats)
+    add_bridge_module("V3NorthBridge", (4.0, -20.2), 5.2, 11.0, "z", collection, mats)
+    add_bridge_module("V3SouthBridge", (7.0, 20.0), 5.0, 11.0, "z", collection, mats)
+
+
+def add_side_island(name, center, size, panel_mat, collection, mats):
+    x, z = center
+    sx, sz = size
+    radius = min(sx, sz) * 0.22
+    hero.add_rounded_tapered_prism(
+        f"{name}Cliff",
+        bpos((x, -4.45, z)),
+        (sx * 0.95, sz * 0.95),
+        (sx * 0.70, sz * 0.70),
+        6.2,
+        radius,
+        radius * 0.68,
+        mats["cliff"],
+        collection,
+        0.16,
+    )
+    hero.add_rounded_tapered_prism(
+        f"{name}WarmBand",
+        bpos((x, -1.18, z)),
+        (sx * 1.01, sz * 1.01),
+        (sx * 0.96, sz * 0.96),
+        0.90,
+        radius * 1.03,
+        radius * 0.96,
+        mats["side"],
+        collection,
+        0.10,
+    )
+    hero.add_rounded_tapered_prism(
+        f"{name}Top",
+        bpos((x, -0.30, z)),
+        (sx, sz),
+        (sx * 0.985, sz * 0.985),
+        0.90,
+        radius,
+        radius * 0.98,
+        mats["deck_light"],
+        collection,
+        0.10,
+    )
+    add_box(f"{name}TopInset", (x, 0.18, z), (sx * 0.84, 0.045, sz * 0.82), panel_mat, collection, radius * 0.52)
+
+    post_positions = (
+        (x - sx * 0.40, z - sz * 0.38),
+        (x + sx * 0.40, z - sz * 0.38),
+        (x - sx * 0.40, z + sz * 0.38),
+        (x + sx * 0.40, z + sz * 0.38),
+    )
+    for index, (post_x, post_z) in enumerate(post_positions):
+        add_box(f"{name}EdgePost_{index}", (post_x, 0.48, post_z), (0.62, 0.76, 0.62), mats["post"], collection, 0.17)
+        add_box(f"{name}EdgeGem_{index}", (post_x, 0.90, post_z), (0.30, 0.11, 0.30), mats["cyan"], collection, 0.07)
+
+
+def add_outer_islands(collection, mats):
+    add_side_island("V3NorthIsland", (4.0, -30.0), (22.0, 15.0), mats["deck_panel_a"], collection, mats)
+    add_side_island("V3EastIsland", (38.0, 3.0), (20.0, 18.0), mats["deck_panel_b"], collection, mats)
+    add_side_island("V3SouthIsland", (9.0, 30.0), (24.0, 16.0), mats["deck_panel_a"], collection, mats)
+    add_side_island("V3WestIsland", (-39.0, 2.0), (18.0, 20.0), mats["deck_panel_b"], collection, mats)
+
+
+def add_windmill(collection, mats):
+    x, z = (7.0, -31.0)
+    hero.add_cone("V3NorthWindmillTower", bpos((x, 2.0, z)), 1.55, 1.02, 3.6, mats["wood"], collection)
+    hero.add_cone("V3NorthWindmillRoof", bpos((x, 4.25, z)), 1.45, 0.18, 1.55, mats["red_dark"], collection)
+    blade_center = bpos((x, 4.05, z + 1.18))
+    for index, angle in enumerate((45.0, 135.0)):
+        hero.add_rounded_box(
+            f"V3NorthWindmillBlade_{index}",
+            blade_center,
+            (4.7, 0.24, 0.52),
+            mats["orange_light"],
+            collection,
+            0.12,
+            (0.0, math.radians(angle), 0.0),
+        )
+    hero.add_cylinder(
+        "V3NorthWindmillHub",
+        blade_center,
+        0.48,
+        0.52,
+        mats["gold_dark"],
+        collection,
+        rotation=(math.pi / 2.0, 0.0, 0.0),
+        bevel=0.10,
+        vertices=24,
+    )
+
+
+def add_tree(name, godot_pos, scale, collection, mats):
+    x, _y, z = godot_pos
+    hero.add_cylinder(f"{name}Trunk", bpos((x, 1.25 * scale, z)), 0.32 * scale, 2.5 * scale, mats["wood_dark"], collection, bevel=0.08, vertices=18)
+    hero.add_cone(f"{name}FoliageLower", bpos((x, 3.0 * scale, z)), 1.65 * scale, 0.48 * scale, 3.0 * scale, mats["green"], collection)
+    hero.add_cone(f"{name}FoliageUpper", bpos((x, 4.35 * scale, z)), 1.25 * scale, 0.18 * scale, 2.5 * scale, mats["green_light"], collection)
+
+
+def add_barrel(name, godot_pos, body_mat, collection, mats):
+    hero.add_cylinder(name, bpos(godot_pos), 0.95, 1.65, body_mat, collection, bevel=0.16, vertices=28)
+    for band_index, y_offset in enumerate((-0.52, 0.52)):
+        hero.add_torus(
+            f"{name}Band_{band_index}",
+            bpos((godot_pos[0], godot_pos[1] + y_offset, godot_pos[2])),
+            0.95,
+            0.08,
+            mats["tire"],
+            collection,
+        )
+
+
+def add_landmarks(collection, mats):
+    add_windmill(collection, mats)
+    add_tree("V3EastTreeA", (36.5, 0.0, -0.5), 1.0, collection, mats)
+    add_tree("V3EastTreeB", (42.0, 0.0, 5.5), 0.82, collection, mats)
+    add_barrel("V3SouthBarrelRed", (3.8, 1.05, 29.0), mats["red"], collection, mats)
+    add_barrel("V3SouthBarrelBlue", (6.0, 1.05, 31.2), mats["blue"], collection, mats)
+    add_barrel("V3SouthBarrelGold", (8.2, 1.05, 28.8), mats["gold"], collection, mats)
+    for index, (y, material) in enumerate(((0.68, mats["tire"]), (1.28, mats["red_dark"]), (1.88, mats["tire"]))):
+        hero.add_torus(
+            f"V3WestTire_{index}",
+            bpos((-41.5, y, 0.5)),
+            1.05,
+            0.30,
+            material,
+            collection,
+        )
+    add_box("V3WestFlagPole", (-35.5, 2.2, 6.8), (0.20, 4.4, 0.20), mats["cream"], collection, 0.06)
+    add_box("V3WestFlagBanner", (-34.2, 3.65, 6.8), (2.5, 1.05, 0.16), mats["blue"], collection, 0.08)
 
 
 def add_segmented_bumper(name, godot_pos, length, radius, body_mat, light_mat, dark_mat, collection):
@@ -353,8 +524,10 @@ def build():
     collection = hero.make_collection("SUNSET_OPEN_RINGOUT_V2_GAMEPLAY")
     mats = materials()
     add_central_platform(collection, mats)
-    add_east_bridge(collection, mats)
+    add_outer_islands(collection, mats)
+    add_all_bridges(collection, mats)
     add_gameplay_props(collection, mats)
+    add_landmarks(collection, mats)
 
     bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE_PATH))
     bpy.ops.object.select_all(action="DESELECT")

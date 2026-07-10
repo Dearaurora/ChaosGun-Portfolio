@@ -24,6 +24,17 @@ const REQUIRED_V2_NODES := [
 	"V3WoodCrateBody",
 	"V3OrangeCrateBody",
 	"V3TanCrateBody",
+	"V3NorthIslandTop",
+	"V3EastIslandTop",
+	"V3SouthIslandTop",
+	"V3WestIslandTop",
+	"V3NorthBridgePlank_0",
+	"V3SouthBridgePlank_0",
+	"V3WestBridgePlank_0",
+	"V3NorthWindmillTower",
+	"V3EastTreeATrunk",
+	"V3SouthBarrelRed",
+	"V3WestTire_0",
 ]
 
 const HIDDEN_LEGACY_NODES := [
@@ -50,6 +61,10 @@ const HIDDEN_LEGACY_NODES := [
 	"ChunkyCoverClusterWest",
 	"gold_bolt_0",
 	"tile_line_x_0",
+	"north_deck_irregular_top_slab",
+	"south_bridge_irregular_top_slab",
+	"A1NorthDeckHeroCrown",
+	"A1WestBridgeRouteRailL",
 ]
 
 var _failures: Array[String] = []
@@ -94,9 +109,9 @@ func _initialize() -> void:
 				_fail("Missing expected legacy node: %s" % node_name)
 			elif node.visible:
 				_fail("Replaced legacy node is still visible: %s" % node_name)
-		var north_deck = legacy_root.find_child("north_deck_irregular_top_slab", true, false) as Node3D
-		if north_deck == null or not north_deck.visible:
-			_fail("Unreplaced north deck must remain visible")
+		var far_cloud = legacy_root.find_child("FarAbyssCloudPuff_0", true, false) as Node3D
+		if far_cloud == null or not far_cloud.visible:
+			_fail("Unreplaced background depth art must remain visible")
 
 	await _finish()
 
