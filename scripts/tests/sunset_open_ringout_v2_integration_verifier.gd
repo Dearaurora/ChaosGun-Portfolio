@@ -40,6 +40,14 @@ const REQUIRED_V2_NODES := [
 	"V3CloudNorthWest_0",
 	"V3DistantIslandNWCliff",
 	"V3HotAirBalloonBody",
+	"V4CentralPanel_0_0",
+	"V4CentralCliffShoulder_0",
+	"V3NorthIslandCliffMidShelf",
+	"V3EastIslandV4CliffFacet_0",
+	"V4NorthWindmillBase",
+	"V3EastTreeAV4FoliageMiddle",
+	"V3SouthIslandV4TopPanel_0",
+	"V3SouthBarrelRedV4TopLid",
 ]
 
 const HIDDEN_LEGACY_NODES := [
@@ -101,7 +109,7 @@ func _initialize() -> void:
 				_fail("Missing V2 node: %s" % node_name)
 		if _contains_collision(v2_root):
 			_fail("V2 gameplay visual layer must remain collision-free")
-		_verify_nonblack_texture(v2_root, "V2CentralPanel_0_0")
+		_verify_nonblack_texture(v2_root, "V4CentralPanel_0_0")
 		_verify_nonblack_texture(v2_root, "V2EastBridgePlank_0")
 
 	var legacy_root = _arena.get_node_or_null("OpenRingoutBlenderVisuals/BlenderAuthoredOpenRingoutVisuals")

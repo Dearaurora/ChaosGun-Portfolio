@@ -9,8 +9,9 @@ OUTPUT_DIR = ROOT / "assets" / "textures" / "generated" / "sunset_toy_sky_island
 SIZE = 512
 
 TEXTURES = {
-    "deck_wood_light": ("#B66F25", "#E0A44A", 0.92),
-    "deck_wood_mid": ("#A95D20", "#CF8736", 1.05),
+    "deck_wood_light": ("#C57927", "#EDB352", 0.92),
+    "deck_wood_mid": ("#B96722", "#DD943B", 1.05),
+    "deck_wood_gold": ("#CA7022", "#F0A946", 0.84),
     "bridge_wood_mid": ("#8E4925", "#C67C3A", 1.12),
     "bridge_wood_light": ("#A85B28", "#D99848", 0.98),
 }

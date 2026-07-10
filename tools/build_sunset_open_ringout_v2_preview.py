@@ -95,17 +95,18 @@ def make_textured_material(name, texture_name, roughness):
 
 def materials():
     return {
-        "deck": hero.make_material("v2_sunset_deck", "#98491B", 0.74),
-        "deck_light": hero.make_material("v2_sunset_deck_highlight", "#B98326", 0.78),
+        "deck": hero.make_material("v2_sunset_deck", "#AD5420", 0.74),
+        "deck_light": hero.make_material("v2_sunset_deck_highlight", "#D27A2B", 0.78),
         "deck_panel_a": make_textured_material("v3_sunset_deck_panel_a", "deck_wood_light", 0.80),
         "deck_panel_b": make_textured_material("v3_sunset_deck_panel_b", "deck_wood_mid", 0.82),
-        "side": hero.make_material("v2_sunset_warm_side", "#8F391C", 0.82),
-        "cliff": hero.make_material("v2_sunset_plum_cliff", "#39265F", 0.92),
-        "cliff_mid": hero.make_material("v2_sunset_plum_cliff_mid", "#40295F", 0.94),
-        "cliff_light": hero.make_material("v2_sunset_plum_cliff_light", "#482C63", 0.92),
+        "deck_panel_c": make_textured_material("v4_sunset_deck_panel_gold", "deck_wood_gold", 0.78),
+        "side": hero.make_material("v2_sunset_warm_side", "#A84B24", 0.82),
+        "cliff": hero.make_material("v2_sunset_plum_cliff", "#342653", 0.92),
+        "cliff_mid": hero.make_material("v2_sunset_plum_cliff_mid", "#49336E", 0.94),
+        "cliff_light": hero.make_material("v2_sunset_plum_cliff_light", "#5A3D7E", 0.92),
         "bridge": make_textured_material("v3_sunset_bridge_wood", "bridge_wood_mid", 0.82),
         "bridge_alt": make_textured_material("v3_sunset_bridge_wood_alt", "bridge_wood_light", 0.82),
-        "seam": hero.make_material("v3_sunset_floor_seam", "#95552C", 0.90),
+        "seam": hero.make_material("v3_sunset_floor_seam", "#6D3E31", 0.90),
         "rim": hero.make_material("v2_sunset_edge_rim", "#D9902F", 0.68),
         "fastener": hero.make_material("v2_sunset_bridge_fastener", "#493455", 0.68, 0.10),
         "post": hero.make_material("v2_sunset_edge_post", "#493455", 0.72, 0.08),
@@ -159,7 +160,7 @@ def add_central_platform(collection, mats):
     add_tapered_polygon("V2CentralTop", outline, scale_outline(outline, 0.992), -0.31, 0.92, mats["deck"], collection, 0.10)
     add_tapered_polygon("V2CentralTopInset", scale_outline(outline, 0.958), scale_outline(outline, 0.958), 0.165, 0.04, mats["deck_light"], collection, 0.025)
 
-    facet_outline = scale_outline(outline, 0.91)
+    facet_outline = scale_outline(outline, 0.925)
     facet_step = max(1, len(facet_outline) // 9)
     for facet_index, point_index in enumerate(range(0, len(facet_outline), facet_step)):
         x, z = facet_outline[point_index]
@@ -171,15 +172,36 @@ def add_central_platform(collection, mats):
         material = mats["cliff_light"] if facet_index % 3 == 0 else mats["cliff_mid"]
         facet = hero.add_tapered_box(
             f"V2CentralCliffFacet_{facet_index}",
-            (x, -z, -4.45 - float(facet_index % 3) * 0.16),
-            (5.2, 2.15),
-            (3.8, 1.45),
-            4.35 + float(facet_index % 2) * 0.28,
+            (x, -z, -3.55 - float(facet_index % 3) * 0.18),
+            (5.25, 2.35),
+            (3.35, 1.18),
+            4.85 + float(facet_index % 2) * 0.32,
             material,
             collection,
-            0.18,
+            0.24,
         )
         facet.rotation_euler[2] = yaw
+
+    shoulder_specs = (
+        (-20.5, 18.2, 8.2, 4.2, -0.08),
+        (-8.0, 18.6, 9.0, 4.5, 0.04),
+        (7.0, 17.8, 8.6, 4.1, -0.03),
+        (21.5, 16.0, 7.4, 3.8, 0.08),
+        (28.1, 6.0, 6.4, 3.5, math.pi / 2.0),
+        (-28.2, 8.5, 6.8, 3.7, math.pi / 2.0),
+    )
+    for index, (x, z, top_width, top_depth, yaw) in enumerate(shoulder_specs):
+        shoulder = hero.add_tapered_box(
+            f"V4CentralCliffShoulder_{index}",
+            (x, -z, -3.05 - float(index % 2) * 0.22),
+            (top_width, top_depth),
+            (top_width * 0.54, top_depth * 0.48),
+            5.15 + float(index % 3) * 0.32,
+            mats["cliff_light" if index % 3 == 1 else "cliff_mid"],
+            collection,
+            0.28,
+        )
+        shoulder.rotation_euler[2] = yaw
 
     rim_outline = scale_outline(outline, 0.968)
     for index, start in enumerate(rim_outline):
@@ -201,24 +223,25 @@ def add_central_platform(collection, mats):
             (0.0, 0.0, yaw),
         )
 
-    panel_centers_x = (-13.5, -4.5, 4.5, 13.5)
-    panel_centers_z = (-8.0, 0.0, 8.0)
+    panel_centers_x = (-21.75, -13.05, -4.35, 4.35, 13.05, 21.75)
+    panel_centers_z = (-11.70, -3.90, 3.90, 11.70)
+    panel_materials = (mats["deck_panel_a"], mats["deck_panel_b"], mats["deck_panel_c"])
     for z_index, z in enumerate(panel_centers_z):
         for x_index, x in enumerate(panel_centers_x):
-            material = mats["deck_panel_a"] if (x_index + z_index) % 3 == 0 else mats["deck_panel_b"]
+            material = panel_materials[(x_index * 2 + z_index) % len(panel_materials)]
             add_box(
-                f"V2CentralPanel_{z_index}_{x_index}",
-                (x, 0.199, z),
-                (8.68, 0.028, 7.68),
+                f"V4CentralPanel_{z_index}_{x_index}",
+                (x, 0.206 + float((x_index + z_index) % 2) * 0.004, z),
+                (8.38, 0.038, 7.46),
                 material,
                 collection,
-                0.10,
+                0.14,
             )
 
-    for index, x in enumerate((-18.0, -9.0, 0.0, 9.0, 18.0)):
-        add_box(f"V2CentralSeamX_{index}", (x, 0.205, 0.0), (0.075, 0.025, 30.0), mats["seam"], collection, 0.012)
-    for index, z in enumerate((-12.0, -4.0, 4.0, 12.0)):
-        add_box(f"V2CentralSeamZ_{index}", (0.0, 0.21, z), (45.0, 0.025, 0.075), mats["seam"], collection, 0.012)
+    for index, x in enumerate((-17.40, -8.70, 0.0, 8.70, 17.40)):
+        add_box(f"V4CentralSeamX_{index}", (x, 0.232, 0.0), (0.13, 0.030, 31.10), mats["seam"], collection, 0.018)
+    for index, z in enumerate((-7.80, 0.0, 7.80)):
+        add_box(f"V4CentralSeamZ_{index}", (0.0, 0.234, z), (51.60, 0.030, 0.13), mats["seam"], collection, 0.018)
 
     edge_posts = [
         (-23.0, -16.5), (22.5, -16.5), (28.2, -11.5), (28.2, 6.0),
@@ -317,6 +340,37 @@ def add_side_island(name, center, size, panel_mat, collection, mats):
         0.16,
     )
     hero.add_rounded_tapered_prism(
+        f"{name}CliffMidShelf",
+        bpos((x, -2.35, z)),
+        (sx * 0.975, sz * 0.975),
+        (sx * 0.84, sz * 0.84),
+        2.15,
+        radius * 0.98,
+        radius * 0.82,
+        mats["cliff_mid"],
+        collection,
+        0.18,
+    )
+    facet_scale = min(sx, sz)
+    side_facet_specs = (
+        (-sx * 0.24, sz * 0.39, 0.0),
+        (sx * 0.24, sz * 0.39, 0.0),
+        (-sx * 0.41, sz * 0.04, math.pi / 2.0),
+        (sx * 0.41, sz * 0.04, math.pi / 2.0),
+    )
+    for facet_index, (offset_x, offset_z, yaw) in enumerate(side_facet_specs):
+        facet = hero.add_tapered_box(
+            f"{name}V4CliffFacet_{facet_index}",
+            (x + offset_x, -(z + offset_z), -3.15 - float(facet_index % 2) * 0.22),
+            (facet_scale * 0.46, facet_scale * 0.24),
+            (facet_scale * 0.25, facet_scale * 0.12),
+            4.75 + float(facet_index % 3) * 0.28,
+            mats["cliff_light" if facet_index % 3 == 0 else "cliff_mid"],
+            collection,
+            0.24,
+        )
+        facet.rotation_euler[2] = yaw
+    hero.add_rounded_tapered_prism(
         f"{name}WarmBand",
         bpos((x, -1.18, z)),
         (sx * 1.01, sz * 1.01),
@@ -341,6 +395,20 @@ def add_side_island(name, center, size, panel_mat, collection, mats):
         0.10,
     )
     add_box(f"{name}TopInset", (x, 0.18, z), (sx * 0.84, 0.045, sz * 0.82), panel_mat, collection, radius * 0.52)
+    side_panel_materials = (mats["deck_panel_a"], mats["deck_panel_b"], mats["deck_panel_c"])
+    for row_index, z_direction in enumerate((-1.0, 1.0)):
+        for column_index, x_direction in enumerate((-1.0, 1.0)):
+            panel_index = row_index * 2 + column_index
+            add_box(
+                f"{name}V4TopPanel_{panel_index}",
+                (x + x_direction * sx * 0.205, 0.208, z + z_direction * sz * 0.198),
+                (sx * 0.395, 0.036, sz * 0.375),
+                side_panel_materials[(panel_index + len(name)) % len(side_panel_materials)],
+                collection,
+                radius * 0.18,
+            )
+    add_box(f"{name}V4TopSeamX", (x, 0.232, z), (0.12, 0.028, sz * 0.77), mats["seam"], collection, 0.016)
+    add_box(f"{name}V4TopSeamZ", (x, 0.234, z), (sx * 0.80, 0.028, 0.12), mats["seam"], collection, 0.016)
 
     post_positions = (
         (x - sx * 0.40, z - sz * 0.38),
@@ -362,6 +430,8 @@ def add_outer_islands(collection, mats):
 
 def add_windmill(collection, mats):
     x, z = (7.0, -31.0)
+    hero.add_cylinder("V4NorthWindmillBase", bpos((x, 0.42, z)), 2.35, 0.72, mats["blue"], collection, bevel=0.18, vertices=32)
+    hero.add_cylinder("V4NorthWindmillBaseTrim", bpos((x, 0.78, z)), 2.05, 0.18, mats["blue_light"], collection, bevel=0.07, vertices=32)
     add_box("V3NorthWindmillHouse", (x, 1.25, z), (4.1, 2.5, 3.6), mats["cream"], collection, 0.48)
     add_box("V3NorthWindmillDoor", (x, 1.15, z + 1.84), (1.05, 1.65, 0.16), mats["wood_dark"], collection, 0.14)
     add_box("V3NorthWindmillSill", (x, 2.18, z + 1.88), (1.48, 0.18, 0.18), mats["gold_dark"], collection, 0.06)
@@ -378,6 +448,19 @@ def add_windmill(collection, mats):
             0.12,
             (0.0, math.radians(angle), 0.0),
         )
+        angle_radians = math.radians(angle)
+        for tip_index, direction in enumerate((-1.0, 1.0)):
+            tip_x = blade_center[0] + math.cos(angle_radians) * 2.34 * direction
+            tip_z = blade_center[2] - math.sin(angle_radians) * 2.34 * direction
+            hero.add_rounded_box(
+                f"V4NorthWindmillBladeTip_{index}_{tip_index}",
+                (tip_x, blade_center[1], tip_z),
+                (0.82, 0.30, 0.72),
+                mats["gold_light"],
+                collection,
+                0.16,
+                (0.0, math.radians(angle), 0.0),
+            )
     hero.add_cylinder(
         "V3NorthWindmillHub",
         blade_center,
@@ -396,11 +479,32 @@ def add_tree(name, godot_pos, scale, collection, mats):
     hero.add_cylinder(f"{name}Trunk", bpos((x, 1.25 * scale, z)), 0.32 * scale, 2.5 * scale, mats["wood_dark"], collection, bevel=0.08, vertices=18)
     hero.add_cone(f"{name}FoliageLower", bpos((x, 3.0 * scale, z)), 1.65 * scale, 0.48 * scale, 3.0 * scale, mats["green"], collection)
     hero.add_cone(f"{name}FoliageUpper", bpos((x, 4.35 * scale, z)), 1.25 * scale, 0.18 * scale, 2.5 * scale, mats["green_light"], collection)
+    hero.add_cone(f"{name}V4FoliageMiddle", bpos((x, 3.72 * scale, z)), 1.42 * scale, 0.30 * scale, 2.55 * scale, mats["green_dark"], collection)
     hero.add_sphere(f"{name}Shrub", bpos((x + 1.25 * scale, 0.62 * scale, z + 0.45 * scale)), bsize((0.80 * scale, 0.62 * scale, 0.80 * scale)), mats["green_dark"], collection, 20, 10)
 
 
 def add_barrel(name, godot_pos, body_mat, collection, mats):
     hero.add_cylinder(name, bpos(godot_pos), 0.95, 1.65, body_mat, collection, bevel=0.16, vertices=28)
+    hero.add_cylinder(
+        f"{name}V4TopLid",
+        bpos((godot_pos[0], godot_pos[1] + 0.86, godot_pos[2])),
+        0.82,
+        0.14,
+        mats["wood_light"],
+        collection,
+        bevel=0.05,
+        vertices=28,
+    )
+    hero.add_cylinder(
+        f"{name}V4TopPlug",
+        bpos((godot_pos[0] + 0.25, godot_pos[1] + 0.96, godot_pos[2] - 0.08)),
+        0.10,
+        0.10,
+        mats["gold_light"],
+        collection,
+        bevel=0.03,
+        vertices=16,
+    )
     for band_index, y_offset in enumerate((-0.52, 0.52)):
         hero.add_torus(
             f"{name}Band_{band_index}",
