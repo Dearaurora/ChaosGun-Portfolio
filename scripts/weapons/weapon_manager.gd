@@ -85,6 +85,22 @@ func _drop_primary() -> void:
 	primary.queue_free()
 	primary = null
 
+func reset_to_sidearm() -> void:
+	is_switching = false
+	_switch_timer = 0.0
+	if primary:
+		if primary.ammo_depleted.is_connected(_on_primary_ammo_depleted):
+			primary.ammo_depleted.disconnect(_on_primary_ammo_depleted)
+		primary.queue_free()
+		primary = null
+	if sidearm == null:
+		sidearm = Weapon.new()
+		sidearm.name = "Sidearm"
+		add_child(sidearm)
+	sidearm.init_weapon(WeaponData.create_pistol())
+	current_weapon = sidearm
+	weapon_switched.emit(sidearm.weapon_data)
+
 func _on_primary_ammo_depleted() -> void:
 	# 弹药耗尽 → 丢弃主武器 → 切回手枪
 	if current_weapon == primary:

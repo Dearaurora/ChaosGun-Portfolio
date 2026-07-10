@@ -177,8 +177,10 @@ func _verify_weapon_spawns(arena: Node) -> void:
 		_fail("Legacy multi-point weapon spawn pools should be disabled for the open ringout slice")
 	if int(spawner.get("max_active_pickups")) != 2:
 		_fail("Open ringout weapon spawner should allow only center + one random pickup")
-	if not is_equal_approx(float(spawner.get("random_spawn_interval")), 15.0):
-		_fail("Random weapon spawn interval should be 15 seconds, got %.2f" % float(spawner.get("random_spawn_interval")))
+	if not is_equal_approx(float(spawner.get("random_spawn_interval")), 22.5):
+		_fail("Random weapon spawn interval should be 22.5 seconds, got %.2f" % float(spawner.get("random_spawn_interval")))
+	if not is_equal_approx(float(spawner.get("respawn_cooldown")), 4.5):
+		_fail("Center weapon respawn cooldown should be 4.5 seconds, got %.2f" % float(spawner.get("respawn_cooldown")))
 	if float(spawner.get("random_stay_duration")) >= float(spawner.get("random_spawn_interval")):
 		_fail("Random weapon lifetime must be shorter than its spawn interval")
 
@@ -1069,6 +1071,16 @@ func _verify_ringout_respawn(arena: Node) -> void:
 	else:
 		print("OK  initial lives: ", character.lives)
 
+	var manager: WeaponManager = character.weapon_manager
+	if manager == null:
+		_fail("Character is missing WeaponManager during respawn weapon check")
+		return
+	manager.equip_weapon(WeaponData.create_smg())
+	await process_frame
+	if not manager.has_primary() or manager.current_weapon == null or manager.current_weapon.weapon_data.weapon_id != &"smg":
+		_fail("Could not equip non-default weapon before respawn test")
+		return
+
 	character.global_position = Vector3(0, -20, 0)
 	character.call("_check_fall")
 	await process_frame
@@ -1085,6 +1097,16 @@ func _verify_ringout_respawn(arena: Node) -> void:
 		_fail("Character did not respawn after ring-out delay")
 	else:
 		print("OK  character respawned")
+
+	if manager.has_primary():
+		_fail("Respawned character retained a primary weapon")
+	elif manager.current_weapon == null or manager.current_weapon.weapon_data.weapon_id != &"pistol":
+		_fail("Respawned character should hold the base pistol")
+	else:
+		print("OK  respawn reset weapon to base pistol")
+	var visual: Node = character.get_visual()
+	if visual and StringName(visual.get("_current_weapon_id")) != &"pistol":
+		_fail("Respawned character visual did not reset to pistol")
 
 	var playable = arena.get_node_or_null("OpenRingoutPlayable") as Node3D
 	if playable and not _point_over_playable_surface(character.global_position, playable):

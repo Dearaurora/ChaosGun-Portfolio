@@ -201,9 +201,9 @@ func _configure_map_runtime() -> void:
 		]
 		weapon_spawner.initial_delay = 0.45
 		weapon_spawner.stay_duration = 20.0
-		weapon_spawner.random_spawn_interval = 15.0
+		weapon_spawner.random_spawn_interval = 22.5
 		weapon_spawner.random_stay_duration = 4.5
-		weapon_spawner.respawn_cooldown = 3.0
+		weapon_spawner.respawn_cooldown = 4.5
 		weapon_spawner.max_active_pickups = 2
 		weapon_spawner.fixed_spawn_points = center_points
 		weapon_spawner.random_spawn_points = random_points

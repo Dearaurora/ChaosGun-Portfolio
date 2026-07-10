@@ -255,6 +255,8 @@ func _die() -> void:
 
 func _respawn() -> void:
 	is_dead = false
+	if weapon_manager:
+		weapon_manager.reset_to_sidearm()
 
 	# 随机复活点
 	var respawn_points = _game_config_respawn_points()
