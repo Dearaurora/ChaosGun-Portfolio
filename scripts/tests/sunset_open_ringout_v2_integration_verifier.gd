@@ -82,6 +82,12 @@ const HIDDEN_LEGACY_NODES := [
 	"south_bridge_irregular_top_slab",
 	"A1NorthDeckHeroCrown",
 	"A1WestBridgeRouteRailL",
+	"A1PerimeterToyBlock_0",
+	"A1PerimeterToyBlock_1",
+	"A1PerimeterToyBlock_2",
+	"A1PerimeterToyBlock_3",
+	"A1PerimeterToyBlock_4",
+	"A1PerimeterToyBlock_5",
 ]
 
 var _failures: Array[String] = []

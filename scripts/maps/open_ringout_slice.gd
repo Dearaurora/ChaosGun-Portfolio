@@ -49,6 +49,7 @@ const SUNSET_V2_HIDDEN_LEGACY_PREFIXES := [
 	"A1SurfacePanel_BridgeW",
 	"A1CenterPickup",
 	"A1EdgeBeacon_",
+	"A1PerimeterToyBlock_",
 	"center_pickup_",
 	"tile_line_",
 	"concept_outer_edge_glow_main",
