@@ -44,6 +44,8 @@ Total: 29/35
 - Open Ring-Out broad gameplay verifier: PASS.
 - Open Ring-Out A1 Blender visual verifier: PASS, 554 mesh instances and 51 materials.
 - Render-capable gameplay screenshot review at 1536 x 960: PASS for height, overlap, bridge connection, and combat readability.
+- Legacy A1 center halos, burst ticks, and duplicate yellow edge beacons are hidden;
+  the center pickup now uses only the grounded runtime marker.
 
 The next environment step should propagate the approved shell to the four side
 islands and remaining bridges. It should keep the current collision and map

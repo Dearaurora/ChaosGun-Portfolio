@@ -25,6 +25,12 @@ const HIDDEN_LEGACY_NODES := [
 	"A1EastBridgeRouteRailL",
 	"A1SurfacePanel_MainNW",
 	"A1SurfacePanel_BridgeE",
+	"A1CenterPickupHaloCool",
+	"A1CenterPickupTick_0",
+	"A1CenterPickupSpark_0",
+	"A1CenterPickupBurstTick_0",
+	"A1EdgeBeacon_00",
+	"center_pickup_glow_disc",
 	"tile_line_x_0",
 ]
 
