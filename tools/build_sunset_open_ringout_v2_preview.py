@@ -130,6 +130,13 @@ def materials():
         "blue_light": hero.make_material("v3_landmark_blue_light", "#4FA9D5", 0.70),
         "tire": hero.make_material("v3_landmark_tire", "#29233D", 0.88),
         "cream": hero.make_material("v3_landmark_cream", "#F1D9AE", 0.82),
+        "cloud_cream": hero.make_material("v3_cloud_cream", "#F3C6B6", 0.98),
+        "cloud_pink": hero.make_material("v3_cloud_pink", "#D995B4", 0.98),
+        "cloud_violet": hero.make_material("v3_cloud_violet", "#8E83C8", 0.98),
+        "distance_cliff": hero.make_material("v3_distance_cliff", "#4A3D75", 0.96),
+        "distance_top": hero.make_material("v3_distance_top", "#C96E33", 0.90),
+        "balloon": hero.make_material("v3_balloon_purple", "#7047A4", 0.72),
+        "balloon_gold": hero.make_material("v3_balloon_gold", "#E7A73A", 0.68),
     }
 
 
@@ -274,6 +281,17 @@ def add_bridge_module(prefix, center, length, width, span_axis, collection, mats
         add_box(f"{prefix}Post_{index}", (x, 0.52, z), (0.68, 1.02, 0.68), mats["post"], collection, 0.18)
         add_box(f"{prefix}Gem_{index}", (x, 1.08, z), (0.34, 0.12, 0.34), mats["cyan"], collection, 0.08)
 
+    if span_axis == "x":
+        for end_index, end_x in enumerate((center_x - length * 0.5, center_x + length * 0.5)):
+            add_box(f"{prefix}MouthBeam_{end_index}", (end_x, 0.34, center_z), (0.38, 0.34, width * 0.90), mats["gold_dark"], collection, 0.10)
+        for rail_index, rail_z in enumerate((center_z - width * 0.49, center_z + width * 0.49)):
+            add_box(f"{prefix}SideRail_{rail_index}", (center_x, 0.72, rail_z), (length * 0.72, 0.18, 0.18), mats["cream"], collection, 0.07)
+    else:
+        for end_index, end_z in enumerate((center_z - length * 0.5, center_z + length * 0.5)):
+            add_box(f"{prefix}MouthBeam_{end_index}", (center_x, 0.34, end_z), (width * 0.90, 0.34, 0.38), mats["gold_dark"], collection, 0.10)
+        for rail_index, rail_x in enumerate((center_x - width * 0.49, center_x + width * 0.49)):
+            add_box(f"{prefix}SideRail_{rail_index}", (rail_x, 0.72, center_z), (0.18, 0.18, length * 0.72), mats["cream"], collection, 0.07)
+
 
 def add_all_bridges(collection, mats):
     add_bridge_module("V2EastBridge", (31.8, 2.0), 7.0, 8.0, "x", collection, mats)
@@ -344,6 +362,9 @@ def add_outer_islands(collection, mats):
 
 def add_windmill(collection, mats):
     x, z = (7.0, -31.0)
+    add_box("V3NorthWindmillHouse", (x, 1.25, z), (4.1, 2.5, 3.6), mats["cream"], collection, 0.48)
+    add_box("V3NorthWindmillDoor", (x, 1.15, z + 1.84), (1.05, 1.65, 0.16), mats["wood_dark"], collection, 0.14)
+    add_box("V3NorthWindmillSill", (x, 2.18, z + 1.88), (1.48, 0.18, 0.18), mats["gold_dark"], collection, 0.06)
     hero.add_cone("V3NorthWindmillTower", bpos((x, 2.0, z)), 1.55, 1.02, 3.6, mats["wood"], collection)
     hero.add_cone("V3NorthWindmillRoof", bpos((x, 4.25, z)), 1.45, 0.18, 1.55, mats["red_dark"], collection)
     blade_center = bpos((x, 4.05, z + 1.18))
@@ -375,6 +396,7 @@ def add_tree(name, godot_pos, scale, collection, mats):
     hero.add_cylinder(f"{name}Trunk", bpos((x, 1.25 * scale, z)), 0.32 * scale, 2.5 * scale, mats["wood_dark"], collection, bevel=0.08, vertices=18)
     hero.add_cone(f"{name}FoliageLower", bpos((x, 3.0 * scale, z)), 1.65 * scale, 0.48 * scale, 3.0 * scale, mats["green"], collection)
     hero.add_cone(f"{name}FoliageUpper", bpos((x, 4.35 * scale, z)), 1.25 * scale, 0.18 * scale, 2.5 * scale, mats["green_light"], collection)
+    hero.add_sphere(f"{name}Shrub", bpos((x + 1.25 * scale, 0.62 * scale, z + 0.45 * scale)), bsize((0.80 * scale, 0.62 * scale, 0.80 * scale)), mats["green_dark"], collection, 20, 10)
 
 
 def add_barrel(name, godot_pos, body_mat, collection, mats):
@@ -390,6 +412,20 @@ def add_barrel(name, godot_pos, body_mat, collection, mats):
         )
 
 
+def add_fence_segment(name, center, length, axis, collection, mats):
+    x, z = center
+    if axis == "x":
+        post_positions = ((x - length * 0.5, z), (x, z), (x + length * 0.5, z))
+        rail_size = (length, 0.16, 0.18)
+    else:
+        post_positions = ((x, z - length * 0.5), (x, z), (x, z + length * 0.5))
+        rail_size = (0.18, 0.16, length)
+    for index, (post_x, post_z) in enumerate(post_positions):
+        add_box(f"{name}Post_{index}", (post_x, 0.82, post_z), (0.24, 1.45, 0.24), mats["cream"], collection, 0.08)
+    for index, height in enumerate((0.58, 1.05)):
+        add_box(f"{name}Rail_{index}", (x, height, z), rail_size, mats["cream"], collection, 0.06)
+
+
 def add_landmarks(collection, mats):
     add_windmill(collection, mats)
     add_tree("V3EastTreeA", (36.5, 0.0, -0.5), 1.0, collection, mats)
@@ -397,6 +433,8 @@ def add_landmarks(collection, mats):
     add_barrel("V3SouthBarrelRed", (3.8, 1.05, 29.0), mats["red"], collection, mats)
     add_barrel("V3SouthBarrelBlue", (6.0, 1.05, 31.2), mats["blue"], collection, mats)
     add_barrel("V3SouthBarrelGold", (8.2, 1.05, 28.8), mats["gold"], collection, mats)
+    add_box("V3SouthBarrelPalletA", (6.0, 0.18, 30.0), (6.4, 0.28, 0.45), mats["wood_dark"], collection, 0.10)
+    add_box("V3SouthBarrelPalletB", (6.0, 0.18, 31.1), (6.4, 0.28, 0.45), mats["wood_dark"], collection, 0.10)
     for index, (y, material) in enumerate(((0.68, mats["tire"]), (1.28, mats["red_dark"]), (1.88, mats["tire"]))):
         hero.add_torus(
             f"V3WestTire_{index}",
@@ -408,6 +446,121 @@ def add_landmarks(collection, mats):
         )
     add_box("V3WestFlagPole", (-35.5, 2.2, 6.8), (0.20, 4.4, 0.20), mats["cream"], collection, 0.06)
     add_box("V3WestFlagBanner", (-34.2, 3.65, 6.8), (2.5, 1.05, 0.16), mats["blue"], collection, 0.08)
+    hero.add_torus("V3WestLifeRing", bpos((-44.0, 1.15, 6.8)), 1.05, 0.28, mats["cream"], collection, rotation=(math.pi / 2.0, 0.0, 0.0))
+    add_fence_segment("V3NorthFence", (-1.5, -35.8), 7.0, "x", collection, mats)
+    add_fence_segment("V3EastFence", (46.5, 5.5), 6.0, "z", collection, mats)
+    add_fence_segment("V3SouthFence", (15.5, 36.0), 7.0, "x", collection, mats)
+    add_fence_segment("V3WestFence", (-46.4, -3.0), 6.0, "z", collection, mats)
+
+
+def add_cloud_cluster(name, center, scale, material, collection):
+    offsets = (
+        (-1.8, 0.0, 0.0, 1.25),
+        (-0.7, 0.1, 0.2, 1.45),
+        (0.6, 0.0, 0.3, 1.55),
+        (1.8, -0.1, 0.0, 1.20),
+        (0.0, 0.35, -0.2, 1.35),
+    )
+    for index, (offset_x, offset_z, offset_y, puff_scale) in enumerate(offsets):
+        godot_pos = (
+            center[0] + offset_x * scale,
+            center[1] + offset_y * scale,
+            center[2] + offset_z * scale,
+        )
+        godot_scale = (2.6 * scale * puff_scale, 1.15 * scale * puff_scale, 1.65 * scale * puff_scale)
+        hero.add_sphere(f"{name}_{index}", bpos(godot_pos), bsize(godot_scale), material, collection, 24, 12)
+
+
+def add_distant_island(name, center, scale, collection, mats):
+    x, y, z = center
+    hero.add_rounded_tapered_prism(
+        f"{name}Cliff",
+        bpos((x, y, z)),
+        (7.5 * scale, 5.4 * scale),
+        (4.0 * scale, 2.8 * scale),
+        6.8 * scale,
+        1.25 * scale,
+        0.72 * scale,
+        mats["distance_cliff"],
+        collection,
+        0.18,
+    )
+    add_box(f"{name}Top", (x, y + 3.55 * scale, z), (7.7 * scale, 0.48 * scale, 5.6 * scale), mats["distance_top"], collection, 0.52 * scale)
+    add_box(
+        f"{name}TopInset",
+        (x, y + 3.88 * scale, z),
+        (6.45 * scale, 0.22 * scale, 4.45 * scale),
+        mats["orange_light"],
+        collection,
+        0.44 * scale,
+    )
+    for facet_index, facet_x in enumerate((-2.15, 0.0, 2.15)):
+        hero.add_cone(
+            f"{name}CliffFacet_{facet_index}",
+            bpos((x + facet_x * scale, y - 0.15 * scale, z + 0.30 * scale)),
+            1.35 * scale,
+            0.62 * scale,
+            5.1 * scale,
+            mats["cliff_light" if facet_index == 1 else "distance_cliff"],
+            collection,
+        )
+    for tree_index, (tree_x, tree_z, tree_scale) in enumerate(((-1.35, 0.55, 1.0), (1.15, -0.45, 0.72))):
+        hero.add_cone(
+            f"{name}Tree_{tree_index}",
+            bpos((x + tree_x * scale, y + (5.15 if tree_index == 0 else 4.82) * scale, z + tree_z * scale)),
+            1.05 * tree_scale * scale,
+            0.12 * scale,
+            2.9 * tree_scale * scale,
+            mats["green_dark" if tree_index == 0 else "green_light"],
+            collection,
+        )
+
+
+def add_hot_air_balloon(collection, mats):
+    center = (27.0, 9.0, -33.0)
+    scale = 0.68
+    hero.add_sphere("V3HotAirBalloonBody", bpos(center), bsize((3.8 * scale, 5.0 * scale, 3.8 * scale)), mats["balloon"], collection, 36, 20)
+    for index, x_offset in enumerate((-1.45 * scale, 0.0, 1.45 * scale)):
+        hero.add_sphere(
+            f"V3HotAirBalloonStripe_{index}",
+            bpos((center[0] + x_offset, center[1], center[2] - 0.10)),
+            bsize((0.48 * scale, 5.05 * scale, 3.86 * scale)),
+            mats["balloon_gold"],
+            collection,
+            24,
+            14,
+        )
+    basket_y = center[1] - 5.6 * scale
+    add_box("V3HotAirBalloonBasket", (center[0], basket_y, center[2]), (2.2 * scale, 1.5 * scale, 1.8 * scale), mats["wood_dark"], collection, 0.24 * scale)
+    rope_y = center[1] - 3.85 * scale
+    for index, (offset_x, offset_z) in enumerate(((-0.8, -0.6), (-0.8, 0.6), (0.8, -0.6), (0.8, 0.6))):
+        add_box(
+            f"V3HotAirBalloonRope_{index}",
+            (center[0] + offset_x * scale, rope_y, center[2] + offset_z * scale),
+            (0.10 * scale, 3.4 * scale, 0.10 * scale),
+            mats["cream"],
+            collection,
+            0.03 * scale,
+        )
+
+
+def add_backdrop(collection, mats):
+    cloud_specs = (
+        ("V3CloudNorthWest", (-58.0, -10.3, -55.0), 2.6, mats["cloud_pink"]),
+        ("V3CloudNorth", (0.0, -10.7, -72.0), 3.2, mats["cloud_cream"]),
+        ("V3CloudNorthEast", (57.0, -10.4, -58.0), 2.7, mats["cloud_violet"]),
+        ("V3CloudSouthWest", (-58.0, -10.5, 58.0), 2.8, mats["cloud_violet"]),
+        ("V3CloudSouth", (2.0, -10.2, 74.0), 3.3, mats["cloud_pink"]),
+        ("V3CloudSouthEast", (59.0, -10.6, 58.0), 2.7, mats["cloud_cream"]),
+        ("V3CloudWest", (-78.0, -10.8, 2.0), 2.9, mats["cloud_cream"]),
+        ("V3CloudEast", (80.0, -10.5, 4.0), 2.9, mats["cloud_pink"]),
+    )
+    for name, center, scale, material in cloud_specs:
+        add_cloud_cluster(name, center, scale, material, collection)
+    add_distant_island("V3DistantIslandNW", (-17.0, -7.5, -20.0), 0.66, collection, mats)
+    add_distant_island("V3DistantIslandNE", (31.0, -8.0, -27.0), 0.58, collection, mats)
+    add_distant_island("V3DistantIslandSouth", (30.0, -8.2, 37.0), 0.62, collection, mats)
+    add_hot_air_balloon(collection, mats)
 
 
 def add_segmented_bumper(name, godot_pos, length, radius, body_mat, light_mat, dark_mat, collection):
@@ -528,6 +681,7 @@ def build():
     add_all_bridges(collection, mats)
     add_gameplay_props(collection, mats)
     add_landmarks(collection, mats)
+    add_backdrop(collection, mats)
 
     bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE_PATH))
     bpy.ops.object.select_all(action="DESELECT")

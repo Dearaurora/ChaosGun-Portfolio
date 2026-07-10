@@ -35,6 +35,11 @@ const REQUIRED_V2_NODES := [
 	"V3EastTreeATrunk",
 	"V3SouthBarrelRed",
 	"V3WestTire_0",
+	"V3NorthFencePost_0",
+	"V2EastBridgeMouthBeam_0",
+	"V3CloudNorthWest_0",
+	"V3DistantIslandNWCliff",
+	"V3HotAirBalloonBody",
 ]
 
 const HIDDEN_LEGACY_NODES := [
