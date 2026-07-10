@@ -306,8 +306,8 @@ func _build_limbs() -> void:
 func _build_weapon_holder() -> void:
 	_weapon_holder = Node3D.new()
 	_weapon_holder.name = "WeaponHolder"
-	_weapon_holder.position = Vector3(1.12, 1.46, -1.32)
-	_weapon_holder.scale = Vector3.ONE * 1.36
+	_weapon_holder.position = Vector3(0.68, 1.16, -0.92)
+	_weapon_holder.scale = Vector3.ONE * 1.18
 	add_child(_weapon_holder)
 
 ## 切换枪械可视模型
@@ -315,12 +315,11 @@ func set_weapon_visual(weapon_id: StringName) -> void:
 	_current_weapon_id = weapon_id
 	# 清除旧模型
 	for child in _weapon_holder.get_children():
-		child.name = "QueuedWeaponVisual"
+		_weapon_holder.remove_child(child)
 		child.queue_free()
 
 	var built_asset := _build_weapon_asset_visual(weapon_id)
 	if built_asset:
-		_build_weapon_readability_proxy(weapon_id)
 		return
 
 	var gun_mat = StandardMaterial3D.new()
@@ -372,36 +371,10 @@ func _build_weapon_asset_visual(weapon_id: StringName) -> bool:
 
 	weapon_asset.name = "WeaponAsset"
 	weapon_asset.set_meta("weapon_id", String(weapon_id))
-	weapon_asset.position = Vector3(0.0, 0.08, -0.18)
+	weapon_asset.position = Vector3(0.0, 0.04, -0.10)
 	weapon_asset.scale = Vector3.ONE * _weapon_asset_scale(weapon_id)
-	_tint_weapon_asset_meshes(weapon_asset, weapon_id)
 	_weapon_holder.add_child(weapon_asset)
 	return true
-
-func _tint_weapon_asset_meshes(node: Node, weapon_id: StringName) -> void:
-	if node is MeshInstance3D:
-		var mesh_instance := node as MeshInstance3D
-		var lower_name := String(mesh_instance.name).to_lower()
-		var accent := _weapon_color(weapon_id)
-		var mat := StandardMaterial3D.new()
-		mat.roughness = 0.76
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		if lower_name.contains("grip") or lower_name.contains("handle") or lower_name.contains("stock") or lower_name.contains("mag"):
-			mat.albedo_color = Color("#202838")
-			mat.emission_enabled = false
-		elif lower_name.contains("barrel") or lower_name.contains("muzzle") or lower_name.contains("scope"):
-			mat.albedo_color = accent.lerp(Color.WHITE, 0.34)
-			mat.emission_enabled = true
-			mat.emission = accent
-			mat.emission_energy_multiplier = 0.55
-		else:
-			mat.albedo_color = accent
-			mat.emission_enabled = true
-			mat.emission = accent
-			mat.emission_energy_multiplier = 0.75
-		mesh_instance.material_override = mat
-	for child in node.get_children():
-		_tint_weapon_asset_meshes(child, weapon_id)
 
 func _build_weapon_readability_proxy(weapon_id: StringName) -> void:
 	var profile := _weapon_readability_profile(weapon_id)
@@ -513,13 +486,16 @@ func _weapon_readability_profile(weapon_id: StringName) -> Dictionary:
 func get_weapon_readability_debug() -> Dictionary:
 	var profile := _weapon_readability_profile(_current_weapon_id)
 	var proxy := _weapon_holder.get_node_or_null("WeaponReadability") if _weapon_holder else null
+	var asset := _weapon_holder.get_node_or_null("WeaponAsset") if _weapon_holder else null
 	return {
 		"weapon_id": String(_current_weapon_id),
 		"holder_position": _weapon_holder.position if _weapon_holder else Vector3.ZERO,
 		"holder_scale": _weapon_holder.scale.x if _weapon_holder else 0.0,
 		"silhouette_length": float(profile["silhouette_length"]),
 		"silhouette_width": float(profile["silhouette_width"]),
-		"has_outline": proxy != null and proxy.get_node_or_null("WeaponReadabilityOutline") != null,
+		"has_asset": asset != null,
+		"uses_proxy": proxy != null,
+		"asset_scale": _weapon_asset_scale(_current_weapon_id),
 		"has_magazine": bool(profile.get("has_magazine", false)),
 		"has_stock": bool(profile.get("has_stock", false)),
 		"has_scope": bool(profile.get("has_scope", false)),
@@ -542,13 +518,13 @@ func _weapon_model_path(weapon_id: StringName) -> String:
 func _weapon_asset_scale(weapon_id: StringName) -> float:
 	match weapon_id:
 		&"pistol":
-			return 1.62
+			return 1.56
 		&"smg":
-			return 1.48
+			return 1.34
 		&"ak_rifle":
-			return 1.36
+			return 1.18
 		&"sniper":
-			return 1.24
+			return 1.08
 		_:
 			return 1.0
 

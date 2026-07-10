@@ -58,6 +58,33 @@ def add_cylinder(name, loc, radius, depth, material, bevel=0.0, rot=(0, 0, 0), v
     return obj
 
 
+def add_tapered_box(name, loc, rear_width, front_width, length, height, material, bevel=0.035):
+    rear_y = length * 0.5
+    front_y = -length * 0.5
+    bottom = -height * 0.5
+    top = height * 0.5
+    vertices = [
+        (-rear_width * 0.5, rear_y, bottom), (rear_width * 0.5, rear_y, bottom),
+        (rear_width * 0.5, rear_y, top), (-rear_width * 0.5, rear_y, top),
+        (-front_width * 0.5, front_y, bottom), (front_width * 0.5, front_y, bottom),
+        (front_width * 0.5, front_y, top), (-front_width * 0.5, front_y, top),
+    ]
+    faces = [(0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1), (3, 2, 6, 7), (1, 5, 6, 2), (0, 3, 7, 4)]
+    mesh = bpy.data.meshes.new(name + "Mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.materials.append(material)
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = loc
+    bpy.context.collection.objects.link(obj)
+    bevel_mod = obj.modifiers.new(name="toy_bevel", type="BEVEL")
+    bevel_mod.width = bevel
+    bevel_mod.segments = 4
+    bevel_mod.affect = "EDGES"
+    normal = obj.modifiers.new(name="weighted_normals", type="WEIGHTED_NORMAL")
+    normal.keep_sharp = True
+    return obj
+
+
 def add_muzzle(name, y, material, glow_material):
     # The model points toward Blender -Y, which imports as Godot -Z.
     add_cylinder(name + "Barrel", (0, y, 0.18), 0.045, 0.28, material, 0.01, (math.radians(90), 0, 0), 24)
@@ -71,10 +98,14 @@ def build_pistol():
     steel = mat("warm_steel_barrel", (0.78, 0.80, 0.82, 1.0), 0.5, 0.05)
     glow = mat("pistol_muzzle_blue", (0.42, 0.9, 1.0, 1.0), 0.35, emission=(0.25, 0.75, 1.0, 1.0), strength=0.35)
 
-    add_cube("Body", (0, -0.28, 0.18), (0.34, 0.58, 0.23), blue, 0.055)
-    add_cube("Slide", (0, -0.36, 0.32), (0.40, 0.52, 0.13), orange, 0.045)
+    add_tapered_box("Body", (0, -0.28, 0.18), 0.36, 0.30, 0.62, 0.24, blue, 0.05)
+    add_cube("Slide", (0, -0.37, 0.33), (0.40, 0.56, 0.13), orange, 0.04)
+    add_cube("SlideInsetLeft", (-0.205, -0.38, 0.32), (0.025, 0.30, 0.065), dark, 0.01)
+    add_cube("SlideInsetRight", (0.205, -0.38, 0.32), (0.025, 0.30, 0.065), dark, 0.01)
     add_cube("Grip", (0, 0.02, -0.08), (0.25, 0.20, 0.44), dark, 0.045, (math.radians(-12), 0, 0))
     add_cube("TriggerGuard", (0, -0.11, 0.03), (0.26, 0.12, 0.15), orange, 0.028)
+    add_cube("RearSight", (0, -0.12, 0.43), (0.24, 0.06, 0.055), dark, 0.012)
+    add_cube("FrontSight", (0, -0.61, 0.43), (0.08, 0.05, 0.065), dark, 0.01)
     add_muzzle("Pistol", -0.64, steel, glow)
 
 
@@ -85,11 +116,15 @@ def build_smg():
     steel = mat("smg_soft_steel", (0.72, 0.75, 0.75, 1.0), 0.5, 0.05)
     glow = mat("smg_muzzle_green", (0.62, 1.0, 0.26, 1.0), 0.35, emission=(0.38, 1.0, 0.2, 1.0), strength=0.35)
 
-    add_cube("Body", (0, -0.42, 0.18), (0.35, 0.86, 0.24), green, 0.055)
-    add_cube("TopRail", (0, -0.42, 0.34), (0.28, 0.70, 0.10), yellow, 0.035)
+    add_tapered_box("Body", (0, -0.38, 0.18), 0.38, 0.32, 0.76, 0.25, green, 0.05)
+    add_cube("FrontShroud", (0, -0.78, 0.18), (0.32, 0.30, 0.28), yellow, 0.045)
+    add_cube("TopRail", (0, -0.43, 0.35), (0.24, 0.64, 0.08), dark, 0.025)
+    for y in (-0.72, -0.81):
+        add_cube("ShroudVent", (0, y, 0.34), (0.18, 0.035, 0.035), dark, 0.008)
     add_cube("Grip", (0, -0.02, -0.09), (0.22, 0.18, 0.43), dark, 0.04, (math.radians(-10), 0, 0))
     add_cube("Magazine", (0, -0.40, -0.13), (0.20, 0.18, 0.42), dark, 0.035, (math.radians(8), 0, 0))
-    add_cube("StubStock", (0, 0.11, 0.17), (0.30, 0.25, 0.20), yellow, 0.04)
+    add_tapered_box("StubStock", (0, 0.16, 0.17), 0.34, 0.25, 0.34, 0.22, yellow, 0.04)
+    add_cube("ChargingHandle", (0.21, -0.23, 0.27), (0.12, 0.10, 0.06), dark, 0.018)
     add_muzzle("SMG", -0.91, steel, glow)
 
 
@@ -100,12 +135,19 @@ def build_ak_rifle():
     steel = mat("rifle_soft_steel", (0.72, 0.73, 0.70, 1.0), 0.48, 0.05)
     glow = mat("rifle_muzzle_warm", (1.0, 0.72, 0.18, 1.0), 0.32, emission=(1.0, 0.58, 0.12, 1.0), strength=0.35)
 
-    add_cube("LongBody", (0, -0.55, 0.19), (0.34, 1.10, 0.24), orange, 0.055)
-    add_cube("ForegripTrim", (0, -0.90, 0.35), (0.30, 0.34, 0.10), amber, 0.035)
-    add_cube("Stock", (0, 0.18, 0.18), (0.38, 0.48, 0.24), dark, 0.05, (math.radians(4), 0, 0))
+    add_tapered_box("Receiver", (0, -0.42, 0.19), 0.38, 0.34, 0.66, 0.26, orange, 0.05)
+    add_tapered_box("Foregrip", (0, -0.92, 0.19), 0.35, 0.26, 0.42, 0.28, amber, 0.045)
+    add_cube("TopCover", (0, -0.43, 0.36), (0.29, 0.58, 0.08), dark, 0.025)
+    for y in (-0.80, -0.91, -1.02):
+        add_cube("ForegripRib", (0, y, 0.34), (0.30, 0.045, 0.045), orange, 0.01)
+    add_tapered_box("Stock", (0, 0.25, 0.18), 0.46, 0.28, 0.58, 0.27, dark, 0.05)
+    add_cube("StockPad", (0, 0.56, 0.18), (0.48, 0.09, 0.31), amber, 0.035)
     add_cube("Grip", (0, -0.12, -0.10), (0.22, 0.18, 0.46), dark, 0.04, (math.radians(-12), 0, 0))
-    add_cube("CurvedMag", (0, -0.46, -0.18), (0.22, 0.26, 0.52), amber, 0.04, (math.radians(13), 0, 0))
+    add_cube("CurvedMagUpper", (0, -0.43, -0.10), (0.22, 0.22, 0.31), amber, 0.04, (math.radians(8), 0, 0))
+    add_cube("CurvedMagLower", (0, -0.37, -0.34), (0.22, 0.24, 0.29), amber, 0.04, (math.radians(24), 0, 0))
     add_cylinder("RifleBarrel", (0, -1.25, 0.19), 0.04, 0.48, steel, 0.008, (math.radians(90), 0, 0), 24)
+    add_cylinder("GasTube", (0, -1.16, 0.31), 0.025, 0.34, dark, 0.006, (math.radians(90), 0, 0), 20)
+    add_cube("FrontSight", (0, -1.34, 0.34), (0.12, 0.07, 0.18), dark, 0.018)
     add_cylinder("RifleMuzzleGlow", (0, -1.53, 0.19), 0.06, 0.035, glow, 0.005, (math.radians(90), 0, 0), 24)
 
 
@@ -117,13 +159,22 @@ def build_sniper():
     glass = mat("sniper_scope_glass", (0.50, 0.95, 1.0, 1.0), 0.34, emission=(0.16, 0.65, 1.0, 1.0), strength=0.2)
     glow = mat("sniper_muzzle_cyan", (0.50, 0.95, 1.0, 1.0), 0.32, emission=(0.18, 0.75, 1.0, 1.0), strength=0.35)
 
-    add_cube("SlimBody", (0, -0.64, 0.18), (0.25, 1.22, 0.20), cyan, 0.045)
-    add_cube("Stock", (0, 0.25, 0.17), (0.34, 0.56, 0.22), dark, 0.045)
+    add_tapered_box("SlimBody", (0, -0.58, 0.18), 0.30, 0.22, 1.02, 0.22, cyan, 0.04)
+    add_tapered_box("Stock", (0, 0.28, 0.17), 0.44, 0.26, 0.66, 0.27, dark, 0.045)
+    add_cube("CheekRest", (0, 0.16, 0.34), (0.31, 0.28, 0.10), cream, 0.03)
+    add_cube("StockPad", (0, 0.63, 0.17), (0.46, 0.09, 0.31), cyan, 0.03)
     add_cube("Grip", (0, -0.08, -0.10), (0.20, 0.16, 0.42), dark, 0.035, (math.radians(-12), 0, 0))
     add_cube("Magazine", (0, -0.52, -0.12), (0.17, 0.16, 0.34), cream, 0.035)
+    add_cube("ScopeMountRear", (0, -0.35, 0.34), (0.16, 0.10, 0.18), dark, 0.02)
+    add_cube("ScopeMountFront", (0, -0.70, 0.34), (0.16, 0.10, 0.18), dark, 0.02)
     add_cylinder("ScopeTube", (0, -0.54, 0.43), 0.08, 0.52, dark, 0.008, (math.radians(90), 0, 0), 24)
+    add_cylinder("ScopeRearRing", (0, -0.28, 0.43), 0.105, 0.07, cream, 0.01, (math.radians(90), 0, 0), 24)
+    add_cylinder("ScopeFrontRing", (0, -0.80, 0.43), 0.105, 0.07, cream, 0.01, (math.radians(90), 0, 0), 24)
     add_cylinder("ScopeLens", (0, -0.83, 0.43), 0.083, 0.025, glass, 0.004, (math.radians(90), 0, 0), 24)
+    add_cube("BarrelShroud", (0, -1.08, 0.19), (0.21, 0.36, 0.20), cream, 0.035)
     add_cylinder("LongBarrel", (0, -1.31, 0.19), 0.032, 0.70, steel, 0.006, (math.radians(90), 0, 0), 24)
+    add_cube("BipodLeft", (-0.12, -1.08, -0.02), (0.04, 0.06, 0.38), dark, 0.012, (0, math.radians(-10), math.radians(-18)))
+    add_cube("BipodRight", (0.12, -1.08, -0.02), (0.04, 0.06, 0.38), dark, 0.012, (0, math.radians(10), math.radians(18)))
     add_cylinder("SniperMuzzleGlow", (0, -1.72, 0.19), 0.052, 0.035, glow, 0.004, (math.radians(90), 0, 0), 24)
 
 
