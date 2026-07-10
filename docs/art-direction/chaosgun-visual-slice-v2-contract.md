@@ -7,22 +7,29 @@ commercial party games in a store page or trailer. The target is whole-frame
 cohesion: environment, character silhouettes, weapons, animation pose, VFX,
 lighting, backdrop, camera composition, and HUD must read as one product.
 
-The approved umbrella identity is **Cloudtop Toy Arsenal / 云端玩具兵工厂**.
-The arena is a playful floating workshop where toy weapons, recoil mechanisms,
-targets, ammo capsules, and launch rails define both the world and the gameplay
-language. It must feel original to ChaosGun and must not copy a specific level,
-character, prop, or UI treatment from another game.
+The approved identity is **Sunset Toy Sky Islands / 暖光玩具天空岛**.
+The arena is a welcoming floating toy playground built from warm rounded island
+slabs, wooden bridges, soft purple cliffs, sunset clouds, and sparse storybook
+props. ChaosGun identity comes primarily from the four armed toy characters,
+projectile colors, impact effects, ring-out edges, and center pickup rather than
+turning the whole environment into a weapon factory.
+
+Selected visual reference:
+`docs/art-direction/references/sunset-toy-sky-islands-selected.png`
 
 ## Reference Hierarchy
 
-1. Primary structural reference: the current Open Ring-Out screenshot. Preserve
+1. Primary visual reference: `sunset-toy-sky-islands-selected.png`. Match its
+   warm/cool balance, rounded island language, cloud depth, large clean floor
+   fields, sparse playful prop framing, and soft storybook toy rendering.
+2. Primary structural reference: the current Open Ring-Out screenshot. Preserve
    its fixed isometric camera, central island, four side islands, four bridges,
    combat routes, ring-out edges, four-player staging, and pickup positions.
-2. Primary quality reference: the whole-frame cohesion, material clarity, and
+3. Primary quality reference: the whole-frame cohesion, material clarity, and
    readable toy scale associated with top commercial party games.
-3. Secondary action reference: compact silhouettes, immediate projectile paths,
+4. Secondary action reference: compact silhouettes, immediate projectile paths,
    and exaggerated hit feedback associated with fast top-down party combat.
-4. Forbidden influence: direct copying of Overcooked, Boomerang Fu, Among Us,
+5. Forbidden influence: direct copying of Overcooked, Boomerang Fu, Among Us,
    Fall Guys, or any identifiable commercial character, arena, logo, or UI.
 
 ## Whole-Frame Rules
@@ -40,66 +47,89 @@ character, prop, or UI treatment from another game.
   safe-traversal language.
 - HUD may be redesigned into smaller corner clusters, but it must retain player,
   lives, weapon, and ammo information without covering the side islands.
-- Backdrop depth comes from cloud layers, distant workshop islands, suspended
-  rails, and atmospheric value separation, not random floating particles.
+- Backdrop depth comes from layered pink-violet clouds, distant tiny islands,
+  one or two large framing silhouettes such as a balloon, and atmospheric value
+  separation, not random floating particles.
 - Surface detail uses large readable panels first, medium trim second, and sparse
   small accents last. No uniformly scattered decoration.
+- The central combat floor stays mostly open. Prop personality is concentrated
+  on the four side islands and dead-space perimeter, with one to three authored
+  clusters per island rather than decoration spread evenly across the board.
 
 ## Material And Lighting Tokens
 
-- Main deck: warm ivory or light honey plastic, with a readable top-to-side value
-  break and subtle molded texture.
-- Structural underside: deep plum, charcoal violet, or desaturated navy.
-- Traversal accents: cyan or clean sky blue.
-- Danger accents: coral red or safety orange.
-- Reward/energy accents: focused gold; emissive effects are reserved for active
-  pickups, projectiles, and danger signals.
+- Main deck: warm orange-honey toy wood or resin, approximately `#D47A32`, with
+  golden upper highlights near `#F2A354`, subtle broad grain, and a readable
+  top-to-side value break.
+- Structural underside: deep matte plum-violet around `#3E2D68`, shifting cooler
+  and darker toward the island bottoms.
+- Bridges: medium warm wood around `#B66E3F`, using broad planks, chunky end caps,
+  and small cyan jewel markers at safe entrances.
+- Sky and cloud depth: periwinkle blue around `#5968C5`, violet shadow around
+  `#51418F`, and soft pink-peach cloud light around `#E8A3B1`.
+- Danger accents: saturated toy red around `#E54532`, reserved for bumpers,
+  hazards, and hostile projectile language.
+- Traversal and player feedback accents: clean cyan around `#45C9EE`.
+- Reward/energy accents: focused gold around `#FFD05A`; emissive effects are
+  reserved for pickups, projectiles, bridge markers, and ring-out warning edges.
 - Use soft key light, cool fill, strong contact shadows, restrained bloom, and
   visible material roughness differences. Avoid flat unlit pastel surfaces.
 - Prefer a small shared material system, vertex color variation, a trim/gradient
   atlas, and instanced modules over many one-off flat-color materials.
 
-## Paintover Directions
+## Selected Shape And Prop Language
 
-### A. Modular Arsenal Workshop
+- Islands use broad convex outlines with large rounded corners, thick warm side
+  bands, and tapered purple cliff masses. Avoid thin plates and mechanical trays.
+- Floor segmentation is large and calm: roughly four to six broad tile divisions
+  across the central combat width. Seams are shallow and slightly irregular.
+- Bridges use simple chunky wooden planks. They should read as warm handcrafted
+  toy connections, not conveyors, laboratory pads, or illuminated metal ramps.
+- Covers use red upholstered cylinders, rounded golden crates, low toy blocks,
+  and a small number of circular pads. Keep silhouettes bold and familiar.
+- Side-island prop families may include a windmill, pinwheel, balloon, toy ducks,
+  simple conifer trees, barrels, tires, fences, flags, and stacked blocks.
+- Each side island gets one memorable vignette and supporting pieces. Do not place
+  every prop family on every island.
+- Background islands stay simplified and slightly blurred, with one main prop or
+  tree cluster each. They must reinforce scale without becoming new gameplay.
 
-Chunky molded construction plates, toy gun assembly rails, ammo capsules, target
-discs, and recoil pistons. Palette: honey plastic, charcoal-plum structure, cyan
-routes, coral danger pieces, and focused gold energy. This is the recommended
-direction because it connects the environment directly to ChaosGun's core verb.
+## Character And Action Language
 
-### B. Clockwork Shooting Carnival
-
-Wind-up mechanisms, spring launchers, rotating target plates, striped safety
-rails, and compact carnival-machine details. Palette: warm cream, mint, vermilion,
-navy, and brass. More expressive and playful, but must avoid becoming a generic
-theme park or steampunk scene.
-
-### C. Capsule Ballistics Lab
-
-Rounded toy-lab modules, transparent or glossy ammo capsules, pneumatic tubes,
-charging pads, and clean modular test-bay markings. Palette: off-white, turquoise,
-coral, deep violet, and lemon energy. Cleaner and more modern, but must avoid
-clinical sci-fi, holographic-dashboard, or neon-cyber styling.
+- Preserve the compact bean-like readability from the selected reference, but
+  use an original ChaosGun head/visor, small feet, small gripping hands, and a
+  clearer forward lean while firing.
+- Character height on screen stays close to the reference. Do not enlarge the
+  cast until they dominate the board or shrink them into colored dots.
+- Weapons are dark neutral toy guns with player-color accents and strong muzzle
+  shapes. Each is held close to the body with a readable aim line.
+- Projectile trails are short segmented streaks in player colors. Muzzle flashes
+  are compact warm stars. Impacts use a fast directional burst plus one readable
+  knockback arc; avoid persistent particle clouds.
+- Contact shadows and directional cast shadows ground every fighter and cover.
 
 ## Immediate Failure Conditions
 
 - Camera, island arrangement, bridges, or gameplay routes change materially.
+- The environment becomes a white laboratory, dense arsenal, factory floor,
+  steampunk machine, neon sci-fi board, or mechanical target range.
 - Environment remains a collection of flat beveled boxes with decorative strips.
 - Characters remain stiff capsules with floating weapons and no grounded pose.
 - HUD remains four large black cards dominating the corners.
 - The image relies on bloom, particles, or saturation instead of material depth.
 - Small props are distributed evenly without compositional purpose.
+- Repeated target decals, bolts, screws, pipes, and panel seams overwhelm the warm
+  open floor fields or make the board feel mass-produced and clinical.
 - Any commercial game's recognizable art, character, prop, or UI is reproduced.
 
 ## Paintover Deliverables And Gate
 
-Produce one 16:9 concept frame for each direction using the current screenshot as
-the edit target. Each frame must preserve topology while showing the proposed
-environment, character treatment, weapon grip, one active projectile/impact beat,
-compact HUD, and backdrop treatment.
+Produce one 16:9 topology-preserving translation frame using the current gameplay
+screenshot as the structural edit target and the selected image as the visual
+reference. It must show the proposed environment, character treatment, weapon
+grip, one active projectile/impact beat, compact HUD, and backdrop treatment.
 
-Only one direction advances to 3D. Acceptance order:
+Acceptance order:
 
 1. ChaosGun identity and direction fit.
 2. Gameplay topology and readability preservation.
@@ -107,5 +137,8 @@ Only one direction advances to 3D. Acceptance order:
 4. Material, lighting, depth, and HUD cohesion.
 5. Feasibility as a reusable modular Blender kit.
 
-After approval, the first 3D task is limited to one central-platform quadrant,
-one hero character, one pistol, one shot/impact effect, and one compact HUD unit.
+The first 3D task is limited to one central-platform quadrant, one bridge mouth,
+one rounded cliff module, one red bumper, one golden crate, one hero character,
+one pistol, one shot/impact effect, and one compact HUD unit. The windmill side
+island vignette is the first environment extension only after that hero slice
+passes screenshot review.
