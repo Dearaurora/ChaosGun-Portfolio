@@ -39,10 +39,10 @@ func _build_environment(stage: Node3D) -> void:
 	var world_environment := WorldEnvironment.new()
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("#817fd0")
+	environment.background_color = Color("#e8ddd5")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#c5b8dc")
-	environment.ambient_light_energy = 0.42
+	environment.ambient_light_color = Color("#f3dfd2")
+	environment.ambient_light_energy = 0.56
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.ssao_enabled = true
 	environment.ssao_radius = 1.2
@@ -55,7 +55,7 @@ func _build_floor(stage: Node3D) -> void:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(15.5, 0.5, 5.4)
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("#f47f49")
+	material.albedo_color = Color("#d7b29d")
 	material.roughness = 0.82
 	mesh.material = material
 	floor.mesh = mesh
@@ -65,14 +65,14 @@ func _build_floor(stage: Node3D) -> void:
 func _build_lighting(stage: Node3D) -> void:
 	var key := DirectionalLight3D.new()
 	key.light_color = Color("#ffd0a1")
-	key.light_energy = 2.15
+	key.light_energy = 1.45
 	key.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
 	key.shadow_enabled = true
 	stage.add_child(key)
 
 	var fill := OmniLight3D.new()
 	fill.light_color = Color("#9bc6ff")
-	fill.light_energy = 4.0
+	fill.light_energy = 2.2
 	fill.omni_range = 13.0
 	fill.position = Vector3(-5.0, 4.0, -4.0)
 	stage.add_child(fill)

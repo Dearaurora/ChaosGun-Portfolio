@@ -11,8 +11,10 @@
 
 ## Implemented
 
-- Replaced the spherical body and duplicate hand setup with one pear body, two articulated soft arm chains, two grip hands, and compact feet.
-- Replaced the oversized visor with a small plum face opening and two warm eye elements.
+- Replaced the spherical body with a controlled ten-ring profile mesh that defines a rounded crown, narrower shoulders, full lower torso, and raised leg opening.
+- Replaced segmented arm ellipsoids with continuous Bezier-derived soft arm meshes and two compact grip hands.
+- Replaced the oversized visor with a thin rounded-rectangle plum face panel and two warm emissive eye elements.
+- Added colored ankle cuffs and separate dark soles so the feet connect to the body instead of reading as detached discs.
 - Corrected the asset-axis contract: Blender `+Y` maps to Godot `-Z` during glTF conversion.
 - Rotated weapon assets 180 degrees so barrels point away from the body.
 - Centered the weapon holder in front of the chest and rebalanced all weapon scales.
@@ -20,10 +22,10 @@
 
 ## Clearance Gate
 
-- Pistol: `0.483`
-- SMG: `0.326`
-- AK rifle: `0.097`
-- Sniper: `0.081`
+- Pistol: `0.501`
+- SMG: `0.344`
+- AK rifle: `0.115`
+- Sniper: `0.099`
 - Required minimum: `0.040`
 
 All values are positive distances between the weapon's rear-most point and the torso's front-most depth plane.

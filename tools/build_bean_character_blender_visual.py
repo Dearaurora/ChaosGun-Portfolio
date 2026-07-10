@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
 
 
 OUT_PATH = Path("assets/models/generated/characters/bean_character.glb")
@@ -31,6 +30,10 @@ MAT_HIGHLIGHT = mat("bean_visor_highlight", (1.0, 1.0, 1.0, 1.0), 0.28)
 MAT_FOOT = mat("bean_soft_feet", (0.035, 0.045, 0.06, 1.0), 0.76)
 MAT_FACE = mat("bean_recessed_face", (0.075, 0.045, 0.085, 1.0), 0.72)
 MAT_EYE = mat("bean_warm_eyes", (1.0, 0.57, 0.12, 1.0), 0.40)
+_eye_bsdf = MAT_EYE.node_tree.nodes.get("Principled BSDF")
+if "Emission Color" in _eye_bsdf.inputs:
+    _eye_bsdf.inputs["Emission Color"].default_value = (1.0, 0.30, 0.035, 1.0)
+    _eye_bsdf.inputs["Emission Strength"].default_value = 0.45
 
 
 def add_uv_sphere(name, loc, scale, material, segments=32, rings=16):
@@ -45,25 +48,74 @@ def add_uv_sphere(name, loc, scale, material, segments=32, rings=16):
     return obj
 
 
-def add_pear_body(name, loc, scale, material):
-    obj = add_uv_sphere(name, loc, scale, material, 40, 24)
-    for vertex in obj.data.vertices:
-        normalized_z = max(-1.0, min(1.0, vertex.co.z))
-        lower_weight = (1.0 - normalized_z) * 0.5
-        crown_weight = (normalized_z + 1.0) * 0.5
-        width_factor = 0.90 + lower_weight * 0.22 - crown_weight * 0.04
-        vertex.co.x *= width_factor
-        vertex.co.y *= 0.96 + lower_weight * 0.10
+def add_profile_body(name, material, segments=40):
+    profile = [
+        (0.31, 0.50),
+        (0.39, 0.70),
+        (0.48, 0.88),
+        (0.78, 0.99),
+        (1.14, 1.03),
+        (1.52, 0.99),
+        (1.86, 0.84),
+        (2.10, 0.70),
+        (2.27, 0.49),
+        (2.36, 0.27),
+        (2.42, 0.08),
+    ]
+    depth_ratio = 0.82
+    vertices = []
+    for z, radius in profile:
+        for index in range(segments):
+            angle = math.tau * index / segments
+            vertices.append((math.cos(angle) * radius, math.sin(angle) * radius * depth_ratio, z))
+    faces = []
+    for ring in range(len(profile) - 1):
+        for index in range(segments):
+            next_index = (index + 1) % segments
+            a = ring * segments + index
+            b = ring * segments + next_index
+            c = (ring + 1) * segments + next_index
+            d = (ring + 1) * segments + index
+            faces.append((a, b, c, d))
+    faces.append(tuple(reversed(range(segments))))
+    top_start = (len(profile) - 1) * segments
+    faces.append(tuple(top_start + index for index in range(segments)))
+    mesh = bpy.data.meshes.new(name + "Mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.materials.append(material)
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    subdivision = obj.modifiers.new(name="body_surface", type="SUBSURF")
+    subdivision.levels = 2
+    subdivision.render_levels = 2
     return obj
 
 
-def add_soft_limb(name, start, end, radius, material):
-    start_v = Vector(start)
-    end_v = Vector(end)
-    direction = end_v - start_v
-    obj = add_uv_sphere(name, (start_v + end_v) * 0.5, (radius, radius, direction.length * 0.56), material, 24, 14)
-    obj.rotation_mode = "QUATERNION"
-    obj.rotation_quaternion = direction.to_track_quat("Z", "Y")
+def add_curved_arm(name, shoulder, elbow, wrist, radius, material):
+    curve_data = bpy.data.curves.new(name + "Curve", type="CURVE")
+    curve_data.dimensions = "3D"
+    curve_data.resolution_u = 12
+    curve_data.bevel_depth = radius
+    curve_data.bevel_resolution = 5
+    curve_data.resolution_u = 16
+    curve_data.materials.append(material)
+    spline = curve_data.splines.new(type="BEZIER")
+    spline.bezier_points.add(2)
+    for point, coordinate in zip(spline.bezier_points, (shoulder, elbow, wrist)):
+        point.co = coordinate
+        point.handle_left_type = "AUTO"
+        point.handle_right_type = "AUTO"
+    obj = bpy.data.objects.new(name, curve_data)
+    bpy.context.collection.objects.link(obj)
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.convert(target="MESH")
+    obj.select_set(False)
+    for polygon in obj.data.polygons:
+        polygon.use_smooth = True
     return obj
 
 
@@ -86,27 +138,27 @@ def add_cube(name, loc, scale, material, bevel=0.08, rot=(0, 0, 0)):
 
 def build_character():
     # Blender +Y maps to Godot -Z during glTF Y-up conversion.
-    add_pear_body("Body", (0, 0.02, 1.22), (0.98, 0.82, 1.06), MAT_BODY)
+    add_profile_body("Body", MAT_BODY)
 
-    add_uv_sphere("FaceOpening", (0, 1.00, 1.54), (0.52, 0.115, 0.29), MAT_FACE, 32, 16)
-    add_uv_sphere("EyeLeft", (-0.19, 1.11, 1.54), (0.07, 0.028, 0.13), MAT_EYE, 16, 10)
-    add_uv_sphere("EyeRight", (0.19, 1.11, 1.54), (0.07, 0.028, 0.13), MAT_EYE, 16, 10)
+    add_cube("FaceOpening", (0, 0.785, 1.60), (0.96, 0.075, 0.48), MAT_FACE, 0.16)
+    add_uv_sphere("EyeLeft", (-0.18, 0.84, 1.60), (0.072, 0.025, 0.13), MAT_EYE, 16, 10)
+    add_uv_sphere("EyeRight", (0.18, 0.84, 1.60), (0.072, 0.025, 0.13), MAT_EYE, 16, 10)
 
-    left_shoulder = (-0.84, 0.42, 1.30)
-    left_elbow = (-0.80, 1.14, 1.08)
-    left_hand = (-0.20, 1.48, 1.13)
-    right_shoulder = (0.84, 0.42, 1.30)
-    right_elbow = (0.80, 1.12, 1.00)
-    right_hand = (0.20, 1.42, 0.98)
-    add_soft_limb("BodyArmLeftUpper", left_shoulder, left_elbow, 0.22, MAT_BODY)
-    add_soft_limb("BodyArmLeftFore", left_elbow, left_hand, 0.20, MAT_BODY)
-    add_soft_limb("BodyArmRightUpper", right_shoulder, right_elbow, 0.22, MAT_BODY)
-    add_soft_limb("BodyArmRightFore", right_elbow, right_hand, 0.20, MAT_BODY)
-    add_uv_sphere("LeftHandGrip", left_hand, (0.22, 0.18, 0.22), MAT_BODY, 22, 12)
-    add_uv_sphere("RightHandGrip", right_hand, (0.22, 0.18, 0.22), MAT_BODY, 22, 12)
+    left_shoulder = (-0.86, 0.34, 1.38)
+    left_elbow = (-0.90, 1.02, 1.12)
+    left_hand = (-0.22, 1.43, 1.15)
+    right_shoulder = (0.86, 0.34, 1.38)
+    right_elbow = (0.90, 1.00, 1.04)
+    right_hand = (0.22, 1.39, 0.99)
+    add_curved_arm("BodyArmLeft", left_shoulder, left_elbow, left_hand, 0.18, MAT_BODY)
+    add_curved_arm("BodyArmRight", right_shoulder, right_elbow, right_hand, 0.18, MAT_BODY)
+    add_uv_sphere("LeftHandGrip", left_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
+    add_uv_sphere("RightHandGrip", right_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
 
-    add_uv_sphere("LeftFoot", (-0.39, 0.16, 0.18), (0.38, 0.45, 0.19), MAT_FOOT, 24, 10)
-    add_uv_sphere("RightFoot", (0.39, 0.16, 0.18), (0.38, 0.45, 0.19), MAT_FOOT, 24, 10)
+    add_uv_sphere("BodyFootCuffLeft", (-0.39, 0.10, 0.23), (0.31, 0.33, 0.20), MAT_BODY, 24, 10)
+    add_uv_sphere("BodyFootCuffRight", (0.39, 0.10, 0.23), (0.31, 0.33, 0.20), MAT_BODY, 24, 10)
+    add_uv_sphere("LeftFoot", (-0.39, 0.20, 0.13), (0.38, 0.43, 0.13), MAT_FOOT, 24, 10)
+    add_uv_sphere("RightFoot", (0.39, 0.20, 0.13), (0.38, 0.43, 0.13), MAT_FOOT, 24, 10)
 
 
 def export_glb():
