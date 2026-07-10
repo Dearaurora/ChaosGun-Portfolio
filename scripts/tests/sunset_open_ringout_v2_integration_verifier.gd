@@ -51,6 +51,7 @@ const REQUIRED_V2_NODES := [
 	"V3EastIslandV5SocketBed",
 	"V3EastIslandV5SocketSideBeam_0",
 	"V3WestIslandV5SocketBackBeam",
+	"V8NorthWindmillWindow",
 ]
 
 const HIDDEN_LEGACY_NODES := [
@@ -165,6 +166,12 @@ func _verify_nonblack_texture(root_node: Node, mesh_name: String) -> void:
 	if image == null or image.is_empty():
 		_fail("Could not inspect albedo texture on %s" % mesh_name)
 		return
+	if image.is_compressed():
+		image = image.duplicate()
+		var decompress_error := image.decompress()
+		if decompress_error != OK:
+			_fail("Could not decompress albedo texture on %s" % mesh_name)
+			return
 	var sample := image.get_pixel(int(image.get_width() / 2), int(image.get_height() / 2))
 	if sample.get_luminance() < 0.12:
 		_fail("Albedo texture on %s is unexpectedly dark" % mesh_name)

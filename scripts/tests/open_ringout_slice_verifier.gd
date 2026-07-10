@@ -980,6 +980,8 @@ func _verify_visual_profile(arena: Node) -> void:
 			print("OK  ambient light: %.2f" % env.ambient_light_energy)
 		if not env.ssao_enabled:
 			_fail("SSAO must be enabled for soft toy contact shadows")
+		elif env.ssao_radius > 2.0 or env.ssao_intensity < 0.95:
+			_fail("SSAO should stay tight and strong enough for contact shadows")
 		if not env.glow_enabled or env.glow_intensity < 0.42:
 			_fail("Glow is too weak for toy edge and pickup highlights")
 		if not env.adjustment_enabled or env.adjustment_saturation < 1.15 or env.adjustment_saturation > 1.24:

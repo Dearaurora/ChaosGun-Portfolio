@@ -114,6 +114,51 @@ def add_tapered_polygon(name, top_points, bottom_points, center_y, height, mater
     return obj
 
 
+def add_irregular_cliff_module(
+    name,
+    godot_pos,
+    top_size,
+    height,
+    material,
+    collection,
+    yaw=0.0,
+    variant=0,
+    bottom_scale=(0.56, 0.48),
+):
+    patterns = (
+        ((-0.50, -0.22), (-0.28, -0.50), (0.18, -0.46), (0.52, -0.14), (0.43, 0.34), (0.05, 0.50), (-0.46, 0.33)),
+        ((-0.48, -0.36), (-0.08, -0.51), (0.42, -0.34), (0.50, 0.08), (0.24, 0.49), (-0.22, 0.43), (-0.53, 0.06)),
+        ((-0.52, -0.10), (-0.34, -0.46), (0.12, -0.52), (0.48, -0.27), (0.46, 0.29), (0.02, 0.48), (-0.42, 0.37)),
+    )
+    pattern = patterns[variant % len(patterns)]
+    width, depth = top_size
+    shift_x = (0.08 if variant % 2 == 0 else -0.07) * width
+    shift_y = (-0.06 if variant % 3 == 0 else 0.05) * depth
+    top_points = [(px * width, py * depth) for px, py in pattern]
+    bottom_points = [
+        (px * width * bottom_scale[0] + shift_x, py * depth * bottom_scale[1] + shift_y)
+        for px, py in pattern
+    ]
+    z0 = -height * 0.5
+    z1 = height * 0.5
+    vertices = [(px, py, z0) for px, py in bottom_points] + [(px, py, z1) for px, py in top_points]
+    count = len(pattern)
+    faces = [tuple(range(count - 1, -1, -1)), tuple(range(count, count * 2))]
+    for index in range(count):
+        next_index = (index + 1) % count
+        faces.append((index, next_index, count + next_index, count + index))
+    mesh = bpy.data.meshes.new(f"{name}Mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = bpos(godot_pos)
+    obj.rotation_euler[2] = yaw
+    collection.objects.link(obj)
+    hero.apply_material(obj, material)
+    hero.apply_bevel(obj, min(0.20, min(width, depth) * 0.08), 2)
+    return obj
+
+
 def add_box(name, godot_pos, godot_size, material, collection, bevel=0.12):
     return hero.add_rounded_box(name, bpos(godot_pos), bsize(godot_size), material, collection, bevel)
 
@@ -210,17 +255,16 @@ def add_central_platform(collection, mats):
         tangent_z = following[1] - previous[1]
         yaw = math.atan2(-tangent_z, tangent_x)
         material = mats["cliff_light"] if facet_index % 3 == 0 else mats["cliff_mid"]
-        facet = hero.add_tapered_box(
+        add_irregular_cliff_module(
             f"V2CentralCliffFacet_{facet_index}",
-            (x, -z, -3.55 - float(facet_index % 3) * 0.18),
+            (x, -3.55 - float(facet_index % 3) * 0.18, z),
             (5.25, 2.35),
-            (3.35, 1.18),
             4.85 + float(facet_index % 2) * 0.32,
             material,
             collection,
-            0.24,
+            yaw,
+            facet_index,
         )
-        facet.rotation_euler[2] = yaw
 
     shoulder_specs = (
         (-20.5, 18.2, 8.2, 4.2, -0.08),
@@ -231,17 +275,17 @@ def add_central_platform(collection, mats):
         (-28.2, 8.5, 6.8, 3.7, math.pi / 2.0),
     )
     for index, (x, z, top_width, top_depth, yaw) in enumerate(shoulder_specs):
-        shoulder = hero.add_tapered_box(
+        add_irregular_cliff_module(
             f"V4CentralCliffShoulder_{index}",
-            (x, -z, -3.05 - float(index % 2) * 0.22),
+            (x, -3.05 - float(index % 2) * 0.22, z),
             (top_width, top_depth),
-            (top_width * 0.54, top_depth * 0.48),
             5.15 + float(index % 3) * 0.32,
             mats["cliff_light" if index % 3 == 1 else "cliff_mid"],
             collection,
-            0.28,
+            yaw,
+            index + 1,
+            (0.52, 0.44),
         )
-        shoulder.rotation_euler[2] = yaw
 
     rim_outline = scale_outline(outline, 0.968)
     for index, start in enumerate(rim_outline):
@@ -480,17 +524,16 @@ def add_side_island(name, center, size, panel_mat, collection, mats, notch=None)
     for facet_index, (offset_x, offset_z, yaw) in enumerate(side_facet_specs):
         if notch and ((notch["side"] == "west" and facet_index == 2) or (notch["side"] == "east" and facet_index == 3)):
             continue
-        facet = hero.add_tapered_box(
+        add_irregular_cliff_module(
             f"{name}V4CliffFacet_{facet_index}",
-            (x + offset_x, -(z + offset_z), -3.15 - float(facet_index % 2) * 0.22),
+            (x + offset_x, -3.15 - float(facet_index % 2) * 0.22, z + offset_z),
             (facet_scale * 0.46, facet_scale * 0.24),
-            (facet_scale * 0.25, facet_scale * 0.12),
             4.75 + float(facet_index % 3) * 0.28,
             mats["cliff_light" if facet_index % 3 == 0 else "cliff_mid"],
             collection,
-            0.24,
+            yaw,
+            facet_index + len(name),
         )
-        facet.rotation_euler[2] = yaw
     if notch_outline:
         add_tapered_polygon(
             f"{name}WarmBand",
@@ -602,32 +645,43 @@ def add_outer_islands(collection, mats):
 
 def add_windmill(collection, mats):
     x, z = (7.0, -31.0)
-    hero.add_cylinder("V4NorthWindmillBase", bpos((x, 0.42, z)), 2.35, 0.72, mats["blue"], collection, bevel=0.18, vertices=32)
-    hero.add_cylinder("V4NorthWindmillBaseTrim", bpos((x, 0.78, z)), 2.05, 0.18, mats["blue_light"], collection, bevel=0.07, vertices=32)
-    add_box("V3NorthWindmillHouse", (x, 1.25, z), (4.1, 2.5, 3.6), mats["cream"], collection, 0.48)
-    add_box("V3NorthWindmillDoor", (x, 1.15, z + 1.84), (1.05, 1.65, 0.16), mats["wood_dark"], collection, 0.14)
-    add_box("V3NorthWindmillSill", (x, 2.18, z + 1.88), (1.48, 0.18, 0.18), mats["gold_dark"], collection, 0.06)
-    hero.add_cone("V3NorthWindmillTower", bpos((x, 2.0, z)), 1.55, 1.02, 3.6, mats["wood"], collection)
-    hero.add_cone("V3NorthWindmillRoof", bpos((x, 4.25, z)), 1.45, 0.18, 1.55, mats["red_dark"], collection)
-    blade_center = bpos((x, 4.05, z + 1.18))
+    hero.add_cylinder("V4NorthWindmillBase", bpos((x, 0.42, z)), 2.58, 0.76, mats["blue"], collection, bevel=0.20, vertices=32)
+    hero.add_cylinder("V4NorthWindmillBaseTrim", bpos((x, 0.82, z)), 2.24, 0.20, mats["blue_light"], collection, bevel=0.08, vertices=32)
+    add_box("V3NorthWindmillHouse", (x, 1.38, z), (4.65, 2.60, 4.05), mats["cream"], collection, 0.56)
+    add_box("V3NorthWindmillDoor", (x, 1.28, z + 2.08), (1.18, 1.82, 0.18), mats["wood_dark"], collection, 0.16)
+    add_box("V3NorthWindmillSill", (x, 2.34, z + 2.12), (1.62, 0.20, 0.20), mats["gold_dark"], collection, 0.07)
+    hero.add_cone("V3NorthWindmillTower", bpos((x, 3.05, z)), 2.02, 1.28, 5.0, mats["cream"], collection)
+    hero.add_cone("V3NorthWindmillRoof", bpos((x, 5.86, z)), 1.92, 0.20, 1.62, mats["red_dark"], collection)
+    hero.add_cylinder(
+        "V8NorthWindmillWindow",
+        bpos((x, 3.35, z + 1.54)),
+        0.58,
+        0.20,
+        mats["blue_light"],
+        collection,
+        rotation=(math.pi / 2.0, 0.0, 0.0),
+        bevel=0.08,
+        vertices=28,
+    )
+    blade_center = bpos((x, 4.68, z + 1.72))
     for index, angle in enumerate((45.0, 135.0)):
         hero.add_rounded_box(
             f"V3NorthWindmillBlade_{index}",
             blade_center,
-            (4.7, 0.24, 0.52),
+            (6.35, 0.28, 0.62),
             mats["orange_light"],
             collection,
-            0.12,
+            0.15,
             (0.0, math.radians(angle), 0.0),
         )
         angle_radians = math.radians(angle)
         for tip_index, direction in enumerate((-1.0, 1.0)):
-            tip_x = blade_center[0] + math.cos(angle_radians) * 2.34 * direction
-            tip_z = blade_center[2] - math.sin(angle_radians) * 2.34 * direction
+            tip_x = blade_center[0] + math.cos(angle_radians) * 3.12 * direction
+            tip_z = blade_center[2] - math.sin(angle_radians) * 3.12 * direction
             hero.add_rounded_box(
                 f"V4NorthWindmillBladeTip_{index}_{tip_index}",
                 (tip_x, blade_center[1], tip_z),
-                (0.82, 0.30, 0.72),
+                (0.96, 0.34, 0.82),
                 mats["gold_light"],
                 collection,
                 0.16,
@@ -636,8 +690,8 @@ def add_windmill(collection, mats):
     hero.add_cylinder(
         "V3NorthWindmillHub",
         blade_center,
-        0.48,
-        0.52,
+        0.60,
+        0.58,
         mats["gold_dark"],
         collection,
         rotation=(math.pi / 2.0, 0.0, 0.0),

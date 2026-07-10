@@ -222,13 +222,13 @@ func _apply_map_visual_overrides() -> void:
 	var light = get_node_or_null("DirectionalLight3D") as DirectionalLight3D
 	if light:
 		light.light_color = Color("#ffd2a3")
-		light.light_energy = 0.98
+		light.light_energy = 1.06
 		light.shadow_enabled = true
-		light.shadow_blur = 4.0
+		light.shadow_blur = 2.6
 		light.rotation_degrees = Vector3(-48, 38, 0)
 
-	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#ffd0b2"), 0.24, 82.0)
-	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#9bbfff"), 0.40, 100.0)
+	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#ffd0b2"), 0.18, 82.0)
+	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#9bbfff"), 0.32, 100.0)
 
 	var env_node = get_node_or_null("WorldEnvironment") as WorldEnvironment
 	if env_node == null:
@@ -247,22 +247,22 @@ func _apply_map_visual_overrides() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 0.70
+	env.tonemap_exposure = 0.76
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.12
-	env.adjustment_saturation = 1.20
+	env.adjustment_saturation = 1.16
 	env.adjustment_brightness = 1.02
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("#f5c0a2")
-	env.ambient_light_energy = 0.18
+	env.ambient_light_energy = 0.14
 	env.fog_enabled = true
 	env.fog_light_color = Color("#c2a0bd")
 	env.fog_density = 0.0018
 	env.fog_sun_scatter = 0.22
 	env.ssao_enabled = true
-	env.ssao_radius = 2.8
-	env.ssao_intensity = 0.78
-	env.ssao_power = 1.35
+	env.ssao_radius = 1.65
+	env.ssao_intensity = 1.05
+	env.ssao_power = 1.55
 	env.glow_enabled = true
 	env.glow_intensity = 0.44
 	env.glow_strength = 0.88
