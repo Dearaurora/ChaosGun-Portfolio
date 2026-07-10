@@ -14,6 +14,7 @@ import build_sunset_toy_sky_islands_hero as hero
 
 SOURCE_PATH = ROOT / "assets" / "source" / "sunset_toy_sky_islands" / "open_ringout_v2_preview.blend"
 GLB_PATH = ROOT / "assets" / "models" / "generated" / "sunset_toy_sky_islands" / "open_ringout_v2_preview.glb"
+TEXTURE_DIR = ROOT / "assets" / "textures" / "generated" / "sunset_toy_sky_islands"
 
 
 def bpos(godot_pos):
@@ -78,24 +79,50 @@ def add_box(name, godot_pos, godot_size, material, collection, bevel=0.12):
     return hero.add_rounded_box(name, bpos(godot_pos), bsize(godot_size), material, collection, bevel)
 
 
+def make_textured_material(name, texture_name, roughness):
+    texture_path = TEXTURE_DIR / f"{texture_name}.png"
+    if not texture_path.exists():
+        raise FileNotFoundError(f"Missing generated texture: {texture_path}")
+    image = bpy.data.images.load(str(texture_path), check_existing=True)
+    material = hero.make_material(name, "#FFFFFF", roughness)
+    bsdf = material.node_tree.nodes.get("Principled BSDF")
+    texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+    texture.image = image
+    texture.interpolation = "Linear"
+    material.node_tree.links.new(texture.outputs["Color"], bsdf.inputs["Base Color"])
+    return material
+
+
 def materials():
     return {
         "deck": hero.make_material("v2_sunset_deck", "#98491B", 0.74),
         "deck_light": hero.make_material("v2_sunset_deck_highlight", "#B98326", 0.78),
-        "deck_panel_a": hero.make_material("v2_sunset_deck_panel_a", "#D0912F", 0.80),
-        "deck_panel_b": hero.make_material("v2_sunset_deck_panel_b", "#C47E25", 0.82),
+        "deck_panel_a": make_textured_material("v3_sunset_deck_panel_a", "deck_wood_light", 0.80),
+        "deck_panel_b": make_textured_material("v3_sunset_deck_panel_b", "deck_wood_mid", 0.82),
         "side": hero.make_material("v2_sunset_warm_side", "#8F391C", 0.82),
         "cliff": hero.make_material("v2_sunset_plum_cliff", "#39265F", 0.92),
         "cliff_mid": hero.make_material("v2_sunset_plum_cliff_mid", "#40295F", 0.94),
         "cliff_light": hero.make_material("v2_sunset_plum_cliff_light", "#482C63", 0.92),
-        "bridge": hero.make_material("v2_sunset_bridge_wood", "#B46F32", 0.82),
-        "bridge_alt": hero.make_material("v2_sunset_bridge_wood_alt", "#CF9142", 0.82),
-        "seam": hero.make_material("v2_sunset_floor_seam", "#713317", 0.92),
+        "bridge": make_textured_material("v3_sunset_bridge_wood", "bridge_wood_mid", 0.82),
+        "bridge_alt": make_textured_material("v3_sunset_bridge_wood_alt", "bridge_wood_light", 0.82),
+        "seam": hero.make_material("v3_sunset_floor_seam", "#95552C", 0.90),
         "rim": hero.make_material("v2_sunset_edge_rim", "#D9902F", 0.68),
         "fastener": hero.make_material("v2_sunset_bridge_fastener", "#493455", 0.68, 0.10),
         "post": hero.make_material("v2_sunset_edge_post", "#493455", 0.72, 0.08),
         "cyan": hero.make_material("v2_sunset_cyan_marker", "#45C9EE", 0.32, emission_hex="#45C9EE", emission_strength=1.45),
         "shadow": hero.make_material("v2_sunset_bridge_shadow", "#281C4C", 0.96),
+        "red": hero.make_material("v3_prop_red", "#C94132", 0.66),
+        "red_light": hero.make_material("v3_prop_red_light", "#EE6948", 0.60),
+        "red_dark": hero.make_material("v3_prop_red_dark", "#772838", 0.78),
+        "orange": hero.make_material("v3_prop_orange", "#D96827", 0.68),
+        "orange_light": hero.make_material("v3_prop_orange_light", "#F49A3C", 0.62),
+        "orange_dark": hero.make_material("v3_prop_orange_dark", "#81372D", 0.80),
+        "gold": hero.make_material("v3_prop_gold", "#D99D28", 0.72),
+        "gold_light": hero.make_material("v3_prop_gold_light", "#F2C04B", 0.64),
+        "gold_dark": hero.make_material("v3_prop_gold_dark", "#80502C", 0.82),
+        "wood": hero.make_material("v3_prop_wood", "#A75C2D", 0.82),
+        "wood_light": hero.make_material("v3_prop_wood_light", "#D18A43", 0.76),
+        "wood_dark": hero.make_material("v3_prop_wood_dark", "#613B35", 0.88),
     }
 
 
@@ -167,11 +194,11 @@ def add_central_platform(collection, mats):
             material = mats["deck_panel_a"] if (x_index + z_index) % 3 == 0 else mats["deck_panel_b"]
             add_box(
                 f"V2CentralPanel_{z_index}_{x_index}",
-                (x, 0.191, z),
-                (8.68, 0.012, 7.68),
+                (x, 0.199, z),
+                (8.68, 0.028, 7.68),
                 material,
                 collection,
-                0.08,
+                0.10,
             )
 
     for index, x in enumerate((-18.0, -9.0, 0.0, 9.0, 18.0)):
@@ -212,14 +239,122 @@ def add_east_bridge(collection, mats):
         add_box(f"V2EastBridgeGem_{index}", (x, 1.08, z), (0.34, 0.12, 0.34), mats["cyan"], collection, 0.08)
 
 
+def add_segmented_bumper(name, godot_pos, length, radius, body_mat, light_mat, dark_mat, collection):
+    add_box(
+        f"{name}Underlay",
+        (godot_pos[0], godot_pos[1] - radius * 0.62, godot_pos[2]),
+        (length * 0.92, 0.34, radius * 1.22),
+        dark_mat,
+        collection,
+        0.16,
+    )
+    hero.add_capsule(name, bpos(godot_pos), length, radius, body_mat, collection)
+    add_box(
+        f"{name}TopHighlight",
+        (godot_pos[0], godot_pos[1] + radius * 0.56, godot_pos[2]),
+        (length * 0.58, 0.10, radius * 0.42),
+        light_mat,
+        collection,
+        0.05,
+    )
+
+    segment_count = max(2, int(round(length / 3.1)))
+    collar_positions = [
+        godot_pos[0] - length * 0.5 + length * float(index) / float(segment_count)
+        for index in range(1, segment_count)
+    ]
+    collar_positions.extend((godot_pos[0] - length * 0.5 + radius, godot_pos[0] + length * 0.5 - radius))
+    for collar_index, x in enumerate(collar_positions):
+        hero.add_torus(
+            f"{name}Collar_{collar_index}",
+            bpos((x, godot_pos[1], godot_pos[2])),
+            radius * 1.01,
+            0.075,
+            dark_mat,
+            collection,
+            rotation=(0.0, math.pi / 2.0, 0.0),
+        )
+
+
+def add_production_crate(name, godot_pos, godot_size, body_mat, light_mat, dark_mat, collection):
+    sx, sy, sz = godot_size
+    x, y, z = godot_pos
+    add_box(f"{name}Body", godot_pos, godot_size, body_mat, collection, min(sx, sy, sz) * 0.16)
+    add_box(
+        f"{name}TopPlate",
+        (x, y + sy * 0.5 + 0.035, z),
+        (sx * 0.72, 0.10, sz * 0.72),
+        light_mat,
+        collection,
+        0.10,
+    )
+    for rail_index, (offset_x, offset_z) in enumerate(((-1, -1), (-1, 1), (1, -1), (1, 1))):
+        add_box(
+            f"{name}CornerRail_{rail_index}",
+            (x + offset_x * (sx * 0.5 - 0.15), y, z + offset_z * (sz * 0.5 - 0.15)),
+            (0.27, sy + 0.14, 0.27),
+            dark_mat,
+            collection,
+            0.08,
+        )
+    add_box(
+        f"{name}TopBandX",
+        (x, y + sy * 0.5 + 0.095, z),
+        (sx * 0.86, 0.10, 0.20),
+        dark_mat,
+        collection,
+        0.05,
+    )
+    add_box(
+        f"{name}TopBandZ",
+        (x, y + sy * 0.5 + 0.095, z),
+        (0.20, 0.10, sz * 0.86),
+        dark_mat,
+        collection,
+        0.05,
+    )
+    for face_index, face_z in enumerate((z - sz * 0.5 - 0.025, z + sz * 0.5 + 0.025)):
+        add_box(
+            f"{name}SideInset_{face_index}",
+            (x, y, face_z),
+            (sx * 0.54, sy * 0.48, 0.07),
+            light_mat,
+            collection,
+            0.09,
+        )
+
+
+def add_west_barricade(collection, mats):
+    add_box("V3WestBarricadeBody", (-13.85, 1.70, 5.60), (7.75, 1.72, 3.05), mats["gold"], collection, 0.46)
+    add_box("V3WestBarricadeTop", (-13.85, 2.60, 5.60), (5.15, 0.18, 2.18), mats["gold_light"], collection, 0.18)
+    add_box("V3WestBarricadeBase", (-13.85, 0.80, 5.60), (7.95, 0.34, 3.18), mats["gold_dark"], collection, 0.18)
+    for index, x in enumerate((-17.25, -10.45)):
+        add_box(f"V3WestBarricadeCushion_{index}", (x, 1.72, 5.60), (1.18, 1.56, 2.48), mats["orange"], collection, 0.36)
+    for index, x in enumerate((-15.95, -13.85, -11.75)):
+        add_box(f"V3WestBarricadeStrap_{index}", (x, 1.72, 5.60), (0.26, 1.88, 3.18), mats["gold_dark"], collection, 0.08)
+
+
+def add_gameplay_props(collection, mats):
+    add_segmented_bumper("V3BumperNorth", (-13.0, 1.75, -16.8), 9.0, 0.92, mats["red"], mats["red_light"], mats["red_dark"], collection)
+    add_segmented_bumper("V3BumperCenterNorth", (5.0, 1.75, -13.5), 7.0, 0.92, mats["red"], mats["red_light"], mats["red_dark"], collection)
+    add_segmented_bumper("V3BumperCenter", (7.0, 1.75, -1.5), 8.0, 1.05, mats["orange"], mats["orange_light"], mats["orange_dark"], collection)
+    add_segmented_bumper("V3BumperSouth", (-4.0, 1.75, 16.7), 13.0, 0.88, mats["orange"], mats["orange_light"], mats["orange_dark"], collection)
+    add_west_barricade(collection, mats)
+    add_production_crate("V3WoodCrate", (-6.0, 1.68, 12.0), (5.0, 1.9, 2.8), mats["wood"], mats["wood_light"], mats["wood_dark"], collection)
+    add_production_crate("V3OrangeCrate", (16.5, 1.72, -13.5), (3.4, 2.5, 3.4), mats["orange"], mats["orange_light"], mats["orange_dark"], collection)
+    add_production_crate("V3TanCrate", (19.0, 1.66, 2.0), (5.2, 2.0, 4.0), mats["gold"], mats["gold_light"], mats["gold_dark"], collection)
+
+
 def build():
     hero.clear_scene()
     SOURCE_PATH.parent.mkdir(parents=True, exist_ok=True)
     GLB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    TEXTURE_DIR.mkdir(parents=True, exist_ok=True)
     collection = hero.make_collection("SUNSET_OPEN_RINGOUT_V2_GAMEPLAY")
     mats = materials()
     add_central_platform(collection, mats)
     add_east_bridge(collection, mats)
+    add_gameplay_props(collection, mats)
 
     bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE_PATH))
     bpy.ops.object.select_all(action="DESELECT")

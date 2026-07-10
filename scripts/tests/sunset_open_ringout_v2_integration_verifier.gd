@@ -18,6 +18,12 @@ const REQUIRED_V2_NODES := [
 	"V2EastBridgeFastener_0_0",
 	"V2EastBridgePost_0",
 	"V2EastBridgeGem_0",
+	"V3BumperNorthBody",
+	"V3BumperCenterBody",
+	"V3WestBarricadeBody",
+	"V3WoodCrateBody",
+	"V3OrangeCrateBody",
+	"V3TanCrateBody",
 ]
 
 const HIDDEN_LEGACY_NODES := [
@@ -35,6 +41,14 @@ const HIDDEN_LEGACY_NODES := [
 	"A1CenterPickupBurstTick_0",
 	"A1EdgeBeacon_00",
 	"center_pickup_glow_disc",
+	"bumper_north_body",
+	"bumper_center_body",
+	"crate_left_a",
+	"crate_wood",
+	"orange_block",
+	"tan_block",
+	"ChunkyCoverClusterWest",
+	"gold_bolt_0",
 	"tile_line_x_0",
 ]
 
@@ -67,6 +81,8 @@ func _initialize() -> void:
 				_fail("Missing V2 node: %s" % node_name)
 		if _contains_collision(v2_root):
 			_fail("V2 gameplay visual layer must remain collision-free")
+		_verify_nonblack_texture(v2_root, "V2CentralPanel_0_0")
+		_verify_nonblack_texture(v2_root, "V2EastBridgePlank_0")
 
 	var legacy_root = _arena.get_node_or_null("OpenRingoutBlenderVisuals/BlenderAuthoredOpenRingoutVisuals")
 	if legacy_root == null:
@@ -103,6 +119,24 @@ func _contains_collision(node: Node) -> bool:
 		if _contains_collision(child):
 			return true
 	return false
+
+
+func _verify_nonblack_texture(root_node: Node, mesh_name: String) -> void:
+	var mesh_instance := root_node.find_child(mesh_name, true, false) as MeshInstance3D
+	if mesh_instance == null:
+		_fail("Missing textured mesh: %s" % mesh_name)
+		return
+	var material := mesh_instance.get_active_material(0) as BaseMaterial3D
+	if material == null or material.albedo_texture == null:
+		_fail("Missing albedo texture on %s" % mesh_name)
+		return
+	var image := material.albedo_texture.get_image()
+	if image == null or image.is_empty():
+		_fail("Could not inspect albedo texture on %s" % mesh_name)
+		return
+	var sample := image.get_pixel(int(image.get_width() / 2), int(image.get_height() / 2))
+	if sample.get_luminance() < 0.12:
+		_fail("Albedo texture on %s is unexpectedly dark" % mesh_name)
 
 
 func _fail(message: String) -> void:

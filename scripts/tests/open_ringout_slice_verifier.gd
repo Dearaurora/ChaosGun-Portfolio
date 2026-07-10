@@ -942,8 +942,8 @@ func _verify_visual_profile(arena: Node) -> void:
 			_fail("SSAO must be enabled for soft toy contact shadows")
 		if not env.glow_enabled or env.glow_intensity < 0.42:
 			_fail("Glow is too weak for toy edge and pickup highlights")
-		if not env.adjustment_enabled or env.adjustment_saturation < 1.22:
-			_fail("Color grading is not locked for the warm party-game look")
+		if not env.adjustment_enabled or env.adjustment_saturation < 1.15 or env.adjustment_saturation > 1.24:
+			_fail("Color grading must stay warm without returning to oversaturation")
 
 	var camera = arena.get_node_or_null("GlobalCamera") as Camera3D
 	if camera == null:

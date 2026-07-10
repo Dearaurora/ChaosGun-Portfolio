@@ -32,6 +32,13 @@ const SUNSET_V2_HIDDEN_LEGACY_PREFIXES := [
 	"tile_line_",
 	"concept_outer_edge_glow_main",
 	"EastCombatLaneFloorInset",
+	"bumper_",
+	"crate_left_",
+	"crate_wood",
+	"orange_block",
+	"tan_block",
+	"ChunkyCoverClusterWest",
+	"gold_bolt_",
 ]
 
 const DRESSING_ASSET_BASE := "res://assets/models/third_party/kenney/curated_food_dojo/"
@@ -190,13 +197,13 @@ func _apply_map_visual_overrides() -> void:
 	var light = get_node_or_null("DirectionalLight3D") as DirectionalLight3D
 	if light:
 		light.light_color = Color("#ffd2a3")
-		light.light_energy = 0.88
+		light.light_energy = 0.98
 		light.shadow_enabled = true
 		light.shadow_blur = 4.0
 		light.rotation_degrees = Vector3(-48, 38, 0)
 
-	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#ffd0b2"), 0.35, 82.0)
-	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#a8c8ff"), 0.28, 92.0)
+	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#ffd0b2"), 0.24, 82.0)
+	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#9bbfff"), 0.40, 100.0)
 
 	var env_node = get_node_or_null("WorldEnvironment") as WorldEnvironment
 	if env_node == null:
@@ -215,14 +222,14 @@ func _apply_map_visual_overrides() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 0.64
+	env.tonemap_exposure = 0.70
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.08
-	env.adjustment_saturation = 1.28
+	env.adjustment_contrast = 1.12
+	env.adjustment_saturation = 1.20
 	env.adjustment_brightness = 1.02
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("#f5c0a2")
-	env.ambient_light_energy = 0.26
+	env.ambient_light_energy = 0.18
 	env.fog_enabled = true
 	env.fog_light_color = Color("#c2a0bd")
 	env.fog_density = 0.0018

@@ -30,6 +30,7 @@ reports/
 /blender_mcp_*.log
 /tools/__pycache__/
 *.pyc
+/assets/models/generated/sunset_toy_sky_islands/open_ringout_v2_preview_*.png
 
 # Local design-session artifacts
 /.superpowers/

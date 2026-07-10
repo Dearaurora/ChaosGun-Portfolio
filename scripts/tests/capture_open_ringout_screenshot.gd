@@ -31,6 +31,7 @@ func _initialize() -> void:
 	await create_timer(0.65).timeout
 	if not _stage_showcase_shots(arena):
 		return
+	_apply_detail_camera_if_requested(arena)
 	await create_timer(0.18).timeout
 	await process_frame
 
@@ -62,6 +63,17 @@ func _resolve_output_path() -> String:
 				return requested
 			push_warning("Ignoring invalid screenshot output path: %s" % requested)
 	return DEFAULT_OUT_PATH
+
+func _apply_detail_camera_if_requested(arena: Node) -> void:
+	if not OS.get_cmdline_user_args().has("--detail"):
+		return
+	var camera := arena.get_node_or_null("GlobalCamera") as Camera3D
+	if camera == null:
+		return
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.position = Vector3(34.0, 43.0, 48.0)
+	camera.look_at(Vector3(0.0, 0.0, 1.0), Vector3.UP)
+	camera.size = 38.0
 
 func _fail(message: String) -> void:
 	push_error(message)
