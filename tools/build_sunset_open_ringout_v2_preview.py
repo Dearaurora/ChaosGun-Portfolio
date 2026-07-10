@@ -31,6 +31,45 @@ def scale_outline(points, factor):
     return [(x * factor, z * factor) for x, z in points]
 
 
+def scale_outline_about(points, center, factor):
+    center_x, center_z = center
+    return [
+        (center_x + (x - center_x) * factor, center_z + (z - center_z) * factor)
+        for x, z in points
+    ]
+
+
+def notched_rect_outline(center, size, radius, notch_side, mouth_center, mouth_width, notch_depth):
+    center_x, center_z = center
+    size_x, size_z = size
+    x_min = center_x - size_x * 0.5
+    x_max = center_x + size_x * 0.5
+    z_min = center_z - size_z * 0.5
+    z_max = center_z + size_z * 0.5
+    mouth_low = mouth_center - mouth_width * 0.5
+    mouth_high = mouth_center + mouth_width * 0.5
+    radius = min(radius, size_x * 0.22, size_z * 0.22)
+    if notch_side == "west":
+        return [
+            (x_min + radius, z_min), (x_max - radius, z_min),
+            (x_max, z_min + radius), (x_max, z_max - radius),
+            (x_max - radius, z_max), (x_min + radius, z_max),
+            (x_min, z_max - radius), (x_min, mouth_high),
+            (x_min + notch_depth, mouth_high), (x_min + notch_depth, mouth_low),
+            (x_min, mouth_low), (x_min, z_min + radius),
+        ]
+    if notch_side == "east":
+        return [
+            (x_min + radius, z_min), (x_max - radius, z_min),
+            (x_max, z_min + radius), (x_max, mouth_low),
+            (x_max - notch_depth, mouth_low), (x_max - notch_depth, mouth_high),
+            (x_max, mouth_high), (x_max, z_max - radius),
+            (x_max - radius, z_max), (x_min + radius, z_max),
+            (x_min, z_max - radius), (x_min, z_min + radius),
+        ]
+    raise ValueError(f"Unsupported notch side: {notch_side}")
+
+
 def smooth_closed_outline(points, iterations=2, corner_ratio=0.18):
     result = list(points)
     for _iteration in range(iterations):
@@ -323,34 +362,114 @@ def add_all_bridges(collection, mats):
     add_bridge_module("V3SouthBridge", (7.0, 20.0), 5.0, 11.0, "z", collection, mats)
 
 
-def add_side_island(name, center, size, panel_mat, collection, mats):
+def add_bridge_socket(name, center, size, notch, collection, mats):
+    x, _z = center
+    sx, _sz = size
+    if notch["side"] == "west":
+        outer_x = x - sx * 0.5
+        inner_x = outer_x + notch["depth"]
+    else:
+        outer_x = x + sx * 0.5
+        inner_x = outer_x - notch["depth"]
+    socket_center_x = (outer_x + inner_x) * 0.5
+    socket_length = abs(inner_x - outer_x)
+    mouth_center = notch["mouth_center"]
+    mouth_width = notch["mouth_width"]
+    add_box(
+        f"{name}V5SocketBed",
+        (socket_center_x, -0.46, mouth_center),
+        (socket_length + 0.35, 0.26, mouth_width - 0.42),
+        mats["shadow"],
+        collection,
+        0.10,
+    )
+    for side_index, side_z in enumerate((mouth_center - mouth_width * 0.5, mouth_center + mouth_width * 0.5)):
+        add_box(
+            f"{name}V5SocketSideBeam_{side_index}",
+            (socket_center_x, 0.04, side_z),
+            (socket_length + 0.42, 0.44, 0.34),
+            mats["gold_dark"],
+            collection,
+            0.10,
+        )
+        add_box(
+            f"{name}V5SocketCap_{side_index}",
+            (inner_x, 0.54, side_z),
+            (0.62, 0.86, 0.62),
+            mats["post"],
+            collection,
+            0.16,
+        )
+    add_box(
+        f"{name}V5SocketBackBeam",
+        (inner_x, -0.10, mouth_center),
+        (0.42, 0.34, mouth_width + 0.18),
+        mats["wood_dark"],
+        collection,
+        0.10,
+    )
+
+
+def add_side_island(name, center, size, panel_mat, collection, mats, notch=None):
     x, z = center
     sx, sz = size
     radius = min(sx, sz) * 0.22
-    hero.add_rounded_tapered_prism(
-        f"{name}Cliff",
-        bpos((x, -4.45, z)),
-        (sx * 0.95, sz * 0.95),
-        (sx * 0.70, sz * 0.70),
-        6.2,
-        radius,
-        radius * 0.68,
-        mats["cliff"],
-        collection,
-        0.16,
-    )
-    hero.add_rounded_tapered_prism(
-        f"{name}CliffMidShelf",
-        bpos((x, -2.35, z)),
-        (sx * 0.975, sz * 0.975),
-        (sx * 0.84, sz * 0.84),
-        2.15,
-        radius * 0.98,
-        radius * 0.82,
-        mats["cliff_mid"],
-        collection,
-        0.18,
-    )
+    notch_outline = None
+    if notch:
+        notch_outline = notched_rect_outline(
+            center,
+            size,
+            radius,
+            notch["side"],
+            notch["mouth_center"],
+            notch["mouth_width"],
+            notch["depth"],
+        )
+        add_tapered_polygon(
+            f"{name}Cliff",
+            scale_outline_about(notch_outline, center, 0.95),
+            scale_outline_about(notch_outline, center, 0.70),
+            -4.45,
+            6.2,
+            mats["cliff"],
+            collection,
+            0.16,
+        )
+        add_tapered_polygon(
+            f"{name}CliffMidShelf",
+            scale_outline_about(notch_outline, center, 0.975),
+            scale_outline_about(notch_outline, center, 0.84),
+            -2.35,
+            2.15,
+            mats["cliff_mid"],
+            collection,
+            0.18,
+        )
+    else:
+        hero.add_rounded_tapered_prism(
+            f"{name}Cliff",
+            bpos((x, -4.45, z)),
+            (sx * 0.95, sz * 0.95),
+            (sx * 0.70, sz * 0.70),
+            6.2,
+            radius,
+            radius * 0.68,
+            mats["cliff"],
+            collection,
+            0.16,
+        )
+        hero.add_rounded_tapered_prism(
+            f"{name}CliffMidShelf",
+            bpos((x, -2.35, z)),
+            (sx * 0.975, sz * 0.975),
+            (sx * 0.84, sz * 0.84),
+            2.15,
+            radius * 0.98,
+            radius * 0.82,
+            mats["cliff_mid"],
+            collection,
+            0.18,
+        )
     facet_scale = min(sx, sz)
     side_facet_specs = (
         (-sx * 0.24, sz * 0.39, 0.0),
@@ -359,6 +478,8 @@ def add_side_island(name, center, size, panel_mat, collection, mats):
         (sx * 0.41, sz * 0.04, math.pi / 2.0),
     )
     for facet_index, (offset_x, offset_z, yaw) in enumerate(side_facet_specs):
+        if notch and ((notch["side"] == "west" and facet_index == 2) or (notch["side"] == "east" and facet_index == 3)):
+            continue
         facet = hero.add_tapered_box(
             f"{name}V4CliffFacet_{facet_index}",
             (x + offset_x, -(z + offset_z), -3.15 - float(facet_index % 2) * 0.22),
@@ -370,35 +491,61 @@ def add_side_island(name, center, size, panel_mat, collection, mats):
             0.24,
         )
         facet.rotation_euler[2] = yaw
-    hero.add_rounded_tapered_prism(
-        f"{name}WarmBand",
-        bpos((x, -1.18, z)),
-        (sx * 1.01, sz * 1.01),
-        (sx * 0.96, sz * 0.96),
-        0.90,
-        radius * 1.03,
-        radius * 0.96,
-        mats["side"],
-        collection,
-        0.10,
-    )
-    hero.add_rounded_tapered_prism(
-        f"{name}Top",
-        bpos((x, -0.30, z)),
-        (sx, sz),
-        (sx * 0.985, sz * 0.985),
-        0.90,
-        radius,
-        radius * 0.98,
-        mats["deck_light"],
-        collection,
-        0.10,
-    )
-    add_box(f"{name}TopInset", (x, 0.18, z), (sx * 0.84, 0.045, sz * 0.82), panel_mat, collection, radius * 0.52)
+    if notch_outline:
+        add_tapered_polygon(
+            f"{name}WarmBand",
+            scale_outline_about(notch_outline, center, 1.01),
+            scale_outline_about(notch_outline, center, 0.96),
+            -1.18,
+            0.90,
+            mats["side"],
+            collection,
+            0.10,
+        )
+        add_tapered_polygon(
+            f"{name}Top",
+            notch_outline,
+            scale_outline_about(notch_outline, center, 0.985),
+            -0.30,
+            0.90,
+            mats["deck_light"],
+            collection,
+            0.10,
+        )
+        inset_outline = scale_outline_about(notch_outline, center, 0.84)
+        add_tapered_polygon(f"{name}TopInset", inset_outline, inset_outline, 0.18, 0.045, panel_mat, collection, 0.04)
+    else:
+        hero.add_rounded_tapered_prism(
+            f"{name}WarmBand",
+            bpos((x, -1.18, z)),
+            (sx * 1.01, sz * 1.01),
+            (sx * 0.96, sz * 0.96),
+            0.90,
+            radius * 1.03,
+            radius * 0.96,
+            mats["side"],
+            collection,
+            0.10,
+        )
+        hero.add_rounded_tapered_prism(
+            f"{name}Top",
+            bpos((x, -0.30, z)),
+            (sx, sz),
+            (sx * 0.985, sz * 0.985),
+            0.90,
+            radius,
+            radius * 0.98,
+            mats["deck_light"],
+            collection,
+            0.10,
+        )
+        add_box(f"{name}TopInset", (x, 0.18, z), (sx * 0.84, 0.045, sz * 0.82), panel_mat, collection, radius * 0.52)
     side_panel_materials = (mats["deck_panel_a"], mats["deck_panel_b"], mats["deck_panel_c"])
     for row_index, z_direction in enumerate((-1.0, 1.0)):
         for column_index, x_direction in enumerate((-1.0, 1.0)):
             panel_index = row_index * 2 + column_index
+            if notch and ((notch["side"] == "west" and x_direction < 0.0) or (notch["side"] == "east" and x_direction > 0.0)):
+                continue
             add_box(
                 f"{name}V4TopPanel_{panel_index}",
                 (x + x_direction * sx * 0.205, 0.208, z + z_direction * sz * 0.198),
@@ -408,7 +555,15 @@ def add_side_island(name, center, size, panel_mat, collection, mats):
                 radius * 0.18,
             )
     add_box(f"{name}V4TopSeamX", (x, 0.232, z), (0.12, 0.028, sz * 0.77), mats["seam"], collection, 0.016)
-    add_box(f"{name}V4TopSeamZ", (x, 0.234, z), (sx * 0.80, 0.028, 0.12), mats["seam"], collection, 0.016)
+    if notch:
+        outer_edge_x = x - sx * 0.40 if notch["side"] == "east" else x + sx * 0.40
+        inner_x = x + sx * 0.5 - notch["depth"] if notch["side"] == "east" else x - sx * 0.5 + notch["depth"]
+        seam_center_x = (outer_edge_x + inner_x) * 0.5
+        add_box(f"{name}V4TopSeamZ", (seam_center_x, 0.234, z), (abs(outer_edge_x - inner_x), 0.028, 0.12), mats["seam"], collection, 0.016)
+    else:
+        add_box(f"{name}V4TopSeamZ", (x, 0.234, z), (sx * 0.80, 0.028, 0.12), mats["seam"], collection, 0.016)
+    if notch:
+        add_bridge_socket(name, center, size, notch, collection, mats)
 
     post_positions = (
         (x - sx * 0.40, z - sz * 0.38),
@@ -423,9 +578,25 @@ def add_side_island(name, center, size, panel_mat, collection, mats):
 
 def add_outer_islands(collection, mats):
     add_side_island("V3NorthIsland", (4.0, -30.0), (22.0, 15.0), mats["deck_panel_a"], collection, mats)
-    add_side_island("V3EastIsland", (38.0, 3.0), (20.0, 18.0), mats["deck_panel_b"], collection, mats)
+    add_side_island(
+        "V3EastIsland",
+        (38.0, 3.0),
+        (20.0, 18.0),
+        mats["deck_panel_b"],
+        collection,
+        mats,
+        {"side": "west", "mouth_center": 2.0, "mouth_width": 8.8, "depth": 7.5},
+    )
     add_side_island("V3SouthIsland", (9.0, 30.0), (24.0, 16.0), mats["deck_panel_a"], collection, mats)
-    add_side_island("V3WestIsland", (-39.0, 2.0), (18.0, 20.0), mats["deck_panel_b"], collection, mats)
+    add_side_island(
+        "V3WestIsland",
+        (-39.0, 2.0),
+        (18.0, 20.0),
+        mats["deck_panel_b"],
+        collection,
+        mats,
+        {"side": "east", "mouth_center": 2.0, "mouth_width": 9.8, "depth": 5.5},
+    )
 
 
 def add_windmill(collection, mats):
@@ -548,8 +719,8 @@ def add_landmarks(collection, mats):
             material,
             collection,
         )
-    add_box("V3WestFlagPole", (-35.5, 2.2, 6.8), (0.20, 4.4, 0.20), mats["cream"], collection, 0.06)
-    add_box("V3WestFlagBanner", (-34.2, 3.65, 6.8), (2.5, 1.05, 0.16), mats["blue"], collection, 0.08)
+    add_box("V3WestFlagPole", (-43.0, 2.2, 7.2), (0.20, 4.4, 0.20), mats["cream"], collection, 0.06)
+    add_box("V3WestFlagBanner", (-41.7, 3.65, 7.2), (2.5, 1.05, 0.16), mats["blue"], collection, 0.08)
     hero.add_torus("V3WestLifeRing", bpos((-44.0, 1.15, 6.8)), 1.05, 0.28, mats["cream"], collection, rotation=(math.pi / 2.0, 0.0, 0.0))
     add_fence_segment("V3NorthFence", (-1.5, -35.8), 7.0, "x", collection, mats)
     add_fence_segment("V3EastFence", (46.5, 5.5), 6.0, "z", collection, mats)

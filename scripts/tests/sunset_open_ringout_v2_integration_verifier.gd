@@ -48,6 +48,9 @@ const REQUIRED_V2_NODES := [
 	"V3EastTreeAV4FoliageMiddle",
 	"V3SouthIslandV4TopPanel_0",
 	"V3SouthBarrelRedV4TopLid",
+	"V3EastIslandV5SocketBed",
+	"V3EastIslandV5SocketSideBeam_0",
+	"V3WestIslandV5SocketBackBeam",
 ]
 
 const HIDDEN_LEGACY_NODES := [
