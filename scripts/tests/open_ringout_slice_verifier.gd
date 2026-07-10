@@ -60,6 +60,7 @@ func _initialize() -> void:
 	_verify_floor_color_logic(arena)
 	_verify_bridge_connector_visibility(arena)
 	_verify_bridge_surface_integrity(arena)
+	_verify_east_west_bridge_topology(arena)
 	_verify_bridge_decor_not_flat_stickers(arena)
 	_verify_party_roster(arena)
 	_verify_open_edges(arena)
@@ -719,6 +720,34 @@ func _verify_bridge_surface_integrity(arena: Node) -> void:
 		else:
 			print("OK  ", mesh_name, " grounded on visual bridge surface")
 
+
+func _verify_east_west_bridge_topology(arena: Node) -> void:
+	print("\n--- East/West Bridge Topology ---")
+	var east_bridge = arena.get_node_or_null("OpenRingoutPlayable/EastBridge") as Node3D
+	var east_deck = arena.get_node_or_null("OpenRingoutPlayable/EastDeck") as Node3D
+	var west_bridge = arena.get_node_or_null("OpenRingoutPlayable/WestBridge") as Node3D
+	var west_deck = arena.get_node_or_null("OpenRingoutPlayable/WestDeck") as Node3D
+	if east_bridge == null or east_deck == null or west_bridge == null or west_deck == null:
+		_fail("East/west bridge topology nodes are missing")
+		return
+	var east_bridge_extent := _platform_x_extent(east_bridge)
+	var east_deck_extent := _platform_x_extent(east_deck)
+	var west_bridge_extent := _platform_x_extent(west_bridge)
+	var west_deck_extent := _platform_x_extent(west_deck)
+	if east_bridge_extent == Vector2.ZERO or east_deck_extent == Vector2.ZERO or west_bridge_extent == Vector2.ZERO or west_deck_extent == Vector2.ZERO:
+		_fail("Could not inspect east/west bridge collision extents")
+		return
+	var east_overlap := east_bridge_extent.y - east_deck_extent.x
+	var west_overlap := west_deck_extent.y - west_bridge_extent.x
+	for check in [["east", east_overlap], ["west", west_overlap]]:
+		var label := check[0] as String
+		var overlap := check[1] as float
+		if overlap < 0.35 or overlap > 0.80:
+			_fail("%s bridge should enter its side island by 0.35-0.80, got %.2f" % [label, overlap])
+		else:
+			print("OK  ", label, " bridge island overlap %.2f" % overlap)
+
+
 func _verify_bridge_decor_not_flat_stickers(arena: Node) -> void:
 	print("\n--- Bridge Decor Sticker Check ---")
 	var blender_root = arena.get_node_or_null("OpenRingoutBlenderVisuals") as Node3D
@@ -852,6 +881,15 @@ func _platform_collision_top_y(platform: Node3D) -> float:
 	var box := shape.shape as BoxShape3D
 	var y_scale := absf(shape.global_transform.basis.get_scale().y)
 	return shape.global_position.y + box.size.y * y_scale * 0.5
+
+func _platform_x_extent(platform: Node3D) -> Vector2:
+	var shape = _find_collision_shape(platform)
+	if shape == null or not (shape.shape is BoxShape3D):
+		return Vector2.ZERO
+	var box := shape.shape as BoxShape3D
+	var x_scale := absf(shape.global_transform.basis.get_scale().x)
+	var half_width := box.size.x * x_scale * 0.5
+	return Vector2(shape.global_position.x - half_width, shape.global_position.x + half_width)
 
 func _platform_art_top_y(platform: Node3D) -> float:
 	var top = platform.get_node_or_null("ArtTop") as MeshInstance3D

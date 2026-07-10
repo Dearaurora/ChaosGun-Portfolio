@@ -121,14 +121,14 @@ func _build_map_layout() -> void:
 	_spawn_platform("MainDeckWestLip", Vector3(-20, -0.98, 9), Vector3(18, 2, 20), playable_root, deck_mat, cliff_mat)
 	_spawn_platform("MainDeckEastLip", Vector3(21, -0.98, -3), Vector3(18, 2, 23), playable_root, deck_mat, cliff_mat)
 	_spawn_platform("NorthDeck", Vector3(4, -1, -30), Vector3(22, 2, 15), playable_root, deck_alt_mat, dark_cliff_mat)
-	_spawn_platform("EastDeck", Vector3(38, -1, 3), Vector3(20, 2, 18), playable_root, deck_alt_mat, dark_cliff_mat)
+	_spawn_platform("EastDeck", Vector3(41.75, -1, 3), Vector3(12.5, 2, 18), playable_root, deck_alt_mat, dark_cliff_mat)
 	_spawn_platform("SouthDeck", Vector3(9, -1, 30), Vector3(24, 2, 16), playable_root, deck_alt_mat, dark_cliff_mat)
-	_spawn_platform("WestDeck", Vector3(-39, -1, 2), Vector3(18, 2, 20), playable_root, deck_alt_mat, dark_cliff_mat)
+	_spawn_platform("WestDeck", Vector3(-41.55, -1, 2), Vector3(12.9, 2, 20), playable_root, deck_alt_mat, dark_cliff_mat)
 
 	_spawn_platform("NorthBridge", Vector3(4, -0.3, -20), Vector3(11, 1.3, 9), playable_root, bridge_mat, cliff_mat)
-	_spawn_platform("EastBridge", Vector3(28, -0.3, 2), Vector3(12, 1.3, 8), playable_root, bridge_mat, cliff_mat)
+	_spawn_platform("EastBridge", Vector3(32.75, -0.3, 2), Vector3(6.5, 1.3, 8), playable_root, bridge_mat, cliff_mat)
 	_spawn_platform("SouthBridge", Vector3(7, -0.3, 20), Vector3(11, 1.3, 9), playable_root, bridge_mat, cliff_mat)
-	_spawn_platform("WestBridge", Vector3(-28, -0.3, 2), Vector3(11, 1.3, 9), playable_root, bridge_mat, cliff_mat)
+	_spawn_platform("WestBridge", Vector3(-32.10, -0.3, 2), Vector3(7.2, 1.3, 9), playable_root, bridge_mat, cliff_mat)
 
 	_build_tile_lines(playable_root)
 	_build_edge_glow(glow_root, glow_mat)
@@ -713,10 +713,10 @@ func _build_edge_glow(parent: Node3D, mat: Material) -> void:
 		["GlowNorthBridgeR", Vector3(10.2, 1.06, -20), Vector3(0.34, 0.12, 8)],
 		["GlowSouthBridgeL", Vector3(0.8, 1.06, 20), Vector3(0.34, 0.12, 8)],
 		["GlowSouthBridgeR", Vector3(13.2, 1.06, 20), Vector3(0.34, 0.12, 8)],
-		["GlowEastBridgeT", Vector3(28, 1.06, -2.5), Vector3(11, 0.12, 0.34)],
-		["GlowEastBridgeB", Vector3(28, 1.06, 6.5), Vector3(11, 0.12, 0.34)],
-		["GlowWestBridgeT", Vector3(-28, 1.06, -2.5), Vector3(10, 0.12, 0.34)],
-		["GlowWestBridgeB", Vector3(-28, 1.06, 6.5), Vector3(10, 0.12, 0.34)],
+		["GlowEastBridgeT", Vector3(32.75, 1.06, -2.5), Vector3(6.2, 0.12, 0.34)],
+		["GlowEastBridgeB", Vector3(32.75, 1.06, 6.5), Vector3(6.2, 0.12, 0.34)],
+		["GlowWestBridgeT", Vector3(-32.10, 1.06, -2.5), Vector3(6.9, 0.12, 0.34)],
+		["GlowWestBridgeB", Vector3(-32.10, 1.06, 6.5), Vector3(6.9, 0.12, 0.34)],
 	]:
 		_spawn_visual_box(edge[0], edge[1], edge[2], parent, mat)
 

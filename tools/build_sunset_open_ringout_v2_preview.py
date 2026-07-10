@@ -356,8 +356,8 @@ def add_bridge_module(prefix, center, length, width, span_axis, collection, mats
 
 
 def add_all_bridges(collection, mats):
-    add_bridge_module("V2EastBridge", (31.8, 2.0), 7.0, 8.0, "x", collection, mats)
-    add_bridge_module("V3WestBridge", (-31.8, 2.0), 6.6, 9.0, "x", collection, mats)
+    add_bridge_module("V2EastBridge", (32.75, 2.0), 6.5, 8.0, "x", collection, mats)
+    add_bridge_module("V3WestBridge", (-32.10, 2.0), 7.2, 9.0, "x", collection, mats)
     add_bridge_module("V3NorthBridge", (4.0, -20.2), 5.2, 11.0, "z", collection, mats)
     add_bridge_module("V3SouthBridge", (7.0, 20.0), 5.0, 11.0, "z", collection, mats)
 
@@ -544,7 +544,8 @@ def add_side_island(name, center, size, panel_mat, collection, mats, notch=None)
     for row_index, z_direction in enumerate((-1.0, 1.0)):
         for column_index, x_direction in enumerate((-1.0, 1.0)):
             panel_index = row_index * 2 + column_index
-            if notch and ((notch["side"] == "west" and x_direction < 0.0) or (notch["side"] == "east" and x_direction > 0.0)):
+            deep_notch = notch and notch["depth"] > sx * 0.20
+            if deep_notch and ((notch["side"] == "west" and x_direction < 0.0) or (notch["side"] == "east" and x_direction > 0.0)):
                 continue
             add_box(
                 f"{name}V4TopPanel_{panel_index}",
@@ -580,22 +581,22 @@ def add_outer_islands(collection, mats):
     add_side_island("V3NorthIsland", (4.0, -30.0), (22.0, 15.0), mats["deck_panel_a"], collection, mats)
     add_side_island(
         "V3EastIsland",
-        (38.0, 3.0),
-        (20.0, 18.0),
+        (41.75, 3.0),
+        (12.5, 18.0),
         mats["deck_panel_b"],
         collection,
         mats,
-        {"side": "west", "mouth_center": 2.0, "mouth_width": 8.8, "depth": 7.5},
+        {"side": "west", "mouth_center": 2.0, "mouth_width": 8.8, "depth": 0.65},
     )
     add_side_island("V3SouthIsland", (9.0, 30.0), (24.0, 16.0), mats["deck_panel_a"], collection, mats)
     add_side_island(
         "V3WestIsland",
-        (-39.0, 2.0),
-        (18.0, 20.0),
+        (-41.55, 2.0),
+        (12.9, 20.0),
         mats["deck_panel_b"],
         collection,
         mats,
-        {"side": "east", "mouth_center": 2.0, "mouth_width": 9.8, "depth": 5.5},
+        {"side": "east", "mouth_center": 2.0, "mouth_width": 9.8, "depth": 0.65},
     )
 
 
@@ -703,8 +704,8 @@ def add_fence_segment(name, center, length, axis, collection, mats):
 
 def add_landmarks(collection, mats):
     add_windmill(collection, mats)
-    add_tree("V3EastTreeA", (36.5, 0.0, -0.5), 1.0, collection, mats)
-    add_tree("V3EastTreeB", (42.0, 0.0, 5.5), 0.82, collection, mats)
+    add_tree("V3EastTreeA", (38.5, 0.0, -0.5), 1.0, collection, mats)
+    add_tree("V3EastTreeB", (43.0, 0.0, 5.5), 0.82, collection, mats)
     add_barrel("V3SouthBarrelRed", (3.8, 1.05, 29.0), mats["red"], collection, mats)
     add_barrel("V3SouthBarrelBlue", (6.0, 1.05, 31.2), mats["blue"], collection, mats)
     add_barrel("V3SouthBarrelGold", (8.2, 1.05, 28.8), mats["gold"], collection, mats)
