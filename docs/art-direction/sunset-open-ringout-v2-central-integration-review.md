@@ -1,6 +1,6 @@
 # Sunset Open Ring-Out V2 Central Integration Review
 
-Gameplay screenshot: `reports/open_ringout_slice_sunset_v2_screenshot.png`
+Gameplay screenshot: `reports/open_ringout_slice_sunset_v3_screenshot.png`
 
 Selected reference: `docs/art-direction/references/sunset-toy-sky-islands-selected.png`
 
@@ -8,21 +8,21 @@ Blender source: `assets/source/sunset_toy_sky_islands/open_ringout_v2_preview.bl
 
 Generated GLB: `assets/models/generated/sunset_toy_sky_islands/open_ringout_v2_preview.glb`
 
-Decision: CENTRAL PLATFORM PASS / FULL-MAP HOLD
+Decision: RUNTIME STRUCTURE PASS / CONCEPT-QUALITY HOLD
 
 ## Review
 
 | Category | Score | Assessment |
 | --- | ---: | --- |
 | Gameplay Alignment | 5/5 | The V2 shell follows the existing central footprint and east bridge without changing collision, spawns, covers, or pickup positions. |
-| Direction Fit | 4/5 | Honey-orange deck panels, warm edge bands, plum cliffs, and toy-like bevels carry the approved sunset sky-island language into gameplay. |
-| Surface Readability | 4/5 | Alternating broad panels and structural seams break up the former single-color field while keeping characters, bullets, and effects readable. |
-| Bridge Language | 4/5 | Alternating wooden planks, dark undershell, posts, and cyan caps are clear at the locked gameplay camera distance. |
+| Direction Fit | 3/5 | The rounded orange deck and plum cliff move toward the reference, but the asset density and authored surface character remain well below it. |
+| Surface Readability | 2/5 | Broad panels and seams are readable, but the surface is still materially flat and lacks production-quality wood, edge wear, and controlled variation. |
+| Bridge Language | 3/5 | Individual planks, support beams, fasteners, posts, and cyan caps read clearly, but the bridge remains a first-pass modular asset. |
 | Combat Readability | 5/5 | Player colors, weapons, covers, center pickup, HUD, and hit effects remain visually dominant over the environment. |
 | Runtime Integration | 5/5 | The visual-only GLB is loaded under a dedicated root; replaced A1 meshes remain available but hidden for reversible iteration. |
-| Full-Map Coherence | 2/5 | The four side islands and three unreplaced bridges still use A1 materials and geometry, so this is intentionally not a final full-map art pass. |
+| Full-Map Coherence | 1/5 | The four side islands, three unreplaced bridges, and most props still use A1 materials and geometry. |
 
-Total: 29/35
+Total: 24/35
 
 ## Approved For Expansion
 
@@ -30,6 +30,8 @@ Total: 29/35
 - Broad modular panel variation instead of a uniform floor color.
 - Wooden bridge planks with restrained alternating tones and cyan endpoint markers.
 - Visual-only replacement architecture that leaves gameplay collision authoritative.
+
+These items are approved as technical modules, not as final-quality art assets.
 
 ## Held Back
 

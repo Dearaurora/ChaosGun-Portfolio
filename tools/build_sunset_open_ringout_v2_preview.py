@@ -1,4 +1,5 @@
 from pathlib import Path
+import math
 import sys
 
 import bpy
@@ -27,6 +28,28 @@ def bsize(godot_size):
 
 def scale_outline(points, factor):
     return [(x * factor, z * factor) for x, z in points]
+
+
+def smooth_closed_outline(points, iterations=2, corner_ratio=0.18):
+    result = list(points)
+    for _iteration in range(iterations):
+        smoothed = []
+        for index, start in enumerate(result):
+            end = result[(index + 1) % len(result)]
+            smoothed.append(
+                (
+                    start[0] * (1.0 - corner_ratio) + end[0] * corner_ratio,
+                    start[1] * (1.0 - corner_ratio) + end[1] * corner_ratio,
+                )
+            )
+            smoothed.append(
+                (
+                    start[0] * corner_ratio + end[0] * (1.0 - corner_ratio),
+                    start[1] * corner_ratio + end[1] * (1.0 - corner_ratio),
+                )
+            )
+        result = smoothed
+    return result
 
 
 def add_tapered_polygon(name, top_points, bottom_points, center_y, height, material, collection, edge_bevel=0.08):
@@ -63,9 +86,13 @@ def materials():
         "deck_panel_b": hero.make_material("v2_sunset_deck_panel_b", "#C47E25", 0.82),
         "side": hero.make_material("v2_sunset_warm_side", "#8F391C", 0.82),
         "cliff": hero.make_material("v2_sunset_plum_cliff", "#39265F", 0.92),
+        "cliff_mid": hero.make_material("v2_sunset_plum_cliff_mid", "#40295F", 0.94),
+        "cliff_light": hero.make_material("v2_sunset_plum_cliff_light", "#482C63", 0.92),
         "bridge": hero.make_material("v2_sunset_bridge_wood", "#B46F32", 0.82),
         "bridge_alt": hero.make_material("v2_sunset_bridge_wood_alt", "#CF9142", 0.82),
         "seam": hero.make_material("v2_sunset_floor_seam", "#713317", 0.92),
+        "rim": hero.make_material("v2_sunset_edge_rim", "#D9902F", 0.68),
+        "fastener": hero.make_material("v2_sunset_bridge_fastener", "#493455", 0.68, 0.10),
         "post": hero.make_material("v2_sunset_edge_post", "#493455", 0.72, 0.08),
         "cyan": hero.make_material("v2_sunset_cyan_marker", "#45C9EE", 0.32, emission_hex="#45C9EE", emission_strength=1.45),
         "shadow": hero.make_material("v2_sunset_bridge_shadow", "#281C4C", 0.96),
@@ -85,11 +112,53 @@ def central_outline():
 
 
 def add_central_platform(collection, mats):
-    outline = central_outline()
-    add_tapered_polygon("V2CentralCliff", scale_outline(outline, 0.98), scale_outline(outline, 0.80), -4.6, 6.4, mats["cliff"], collection, 0.16)
+    outline = scale_outline(smooth_closed_outline(central_outline()), 1.018)
+    add_tapered_polygon("V2CentralCliff", scale_outline(outline, 0.985), scale_outline(outline, 0.78), -4.6, 6.4, mats["cliff"], collection, 0.18)
     add_tapered_polygon("V2CentralWarmBand", scale_outline(outline, 1.018), scale_outline(outline, 0.995), -1.20, 0.95, mats["side"], collection, 0.12)
     add_tapered_polygon("V2CentralTop", outline, scale_outline(outline, 0.992), -0.31, 0.92, mats["deck"], collection, 0.10)
     add_tapered_polygon("V2CentralTopInset", scale_outline(outline, 0.958), scale_outline(outline, 0.958), 0.165, 0.04, mats["deck_light"], collection, 0.025)
+
+    facet_outline = scale_outline(outline, 0.91)
+    facet_step = max(1, len(facet_outline) // 9)
+    for facet_index, point_index in enumerate(range(0, len(facet_outline), facet_step)):
+        x, z = facet_outline[point_index]
+        previous = facet_outline[(point_index - 1) % len(facet_outline)]
+        following = facet_outline[(point_index + 1) % len(facet_outline)]
+        tangent_x = following[0] - previous[0]
+        tangent_z = following[1] - previous[1]
+        yaw = math.atan2(-tangent_z, tangent_x)
+        material = mats["cliff_light"] if facet_index % 3 == 0 else mats["cliff_mid"]
+        facet = hero.add_tapered_box(
+            f"V2CentralCliffFacet_{facet_index}",
+            (x, -z, -4.45 - float(facet_index % 3) * 0.16),
+            (5.2, 2.15),
+            (3.8, 1.45),
+            4.35 + float(facet_index % 2) * 0.28,
+            material,
+            collection,
+            0.18,
+        )
+        facet.rotation_euler[2] = yaw
+
+    rim_outline = scale_outline(outline, 0.968)
+    for index, start in enumerate(rim_outline):
+        end = rim_outline[(index + 1) % len(rim_outline)]
+        delta_x = end[0] - start[0]
+        delta_z = end[1] - start[1]
+        length = math.hypot(delta_x, delta_z)
+        if length < 0.05:
+            continue
+        midpoint = ((start[0] + end[0]) * 0.5, (start[1] + end[1]) * 0.5)
+        yaw = math.atan2(-delta_z, delta_x)
+        hero.add_rounded_box(
+            f"V2CentralEdgeRim_{index}",
+            (midpoint[0], -midpoint[1], 0.285),
+            (length + 0.08, 0.17, 0.085),
+            mats["rim"],
+            collection,
+            0.04,
+            (0.0, 0.0, yaw),
+        )
 
     panel_centers_x = (-13.5, -4.5, 4.5, 13.5)
     panel_centers_z = (-8.0, 0.0, 8.0)
@@ -121,11 +190,23 @@ def add_central_platform(collection, mats):
 
 
 def add_east_bridge(collection, mats):
-    add_box("V2EastBridgeShadow", (31.8, -2.55, 2.0), (7.2, 5.2, 8.0), mats["shadow"], collection, 0.55)
+    add_box("V2EastBridgeShadow", (31.8, -0.72, -1.15), (7.4, 0.58, 0.72), mats["shadow"], collection, 0.24)
+    add_box("V2EastBridgeSupportB", (31.8, -0.72, 5.15), (7.4, 0.58, 0.72), mats["shadow"], collection, 0.24)
     for index in range(6):
         x = 28.9 + index * 1.16
         material = mats["bridge_alt"] if index % 3 == 1 else mats["bridge"]
         add_box(f"V2EastBridgePlank_{index}", (x, -0.17, 2.0), (1.02, 0.70, 7.55), material, collection, 0.16)
+        for side_index, z in enumerate((-1.18, 5.18)):
+            hero.add_cylinder(
+                f"V2EastBridgeFastener_{index}_{side_index}",
+                bpos((x, 0.225, z)),
+                0.11,
+                0.065,
+                mats["fastener"],
+                collection,
+                bevel=0.025,
+                vertices=18,
+            )
     for index, (x, z) in enumerate(((28.25, -2.0), (28.25, 6.0), (35.35, -2.0), (35.35, 6.0))):
         add_box(f"V2EastBridgePost_{index}", (x, 0.52, z), (0.68, 1.02, 0.68), mats["post"], collection, 0.18)
         add_box(f"V2EastBridgeGem_{index}", (x, 1.08, z), (0.34, 0.12, 0.34), mats["cyan"], collection, 0.08)
