@@ -25,6 +25,9 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 	await create_timer(0.4).timeout
+	if OS.get_cmdline_user_args().has("--motion"):
+		_stage_motion_states(stage)
+		await process_frame
 	var image := root.get_texture().get_image()
 	var out_path := _resolve_output_path()
 	var err := image.save_png(out_path)
@@ -89,8 +92,27 @@ func _build_roster(stage: Node3D) -> void:
 		visual.body_color = entry["color"]
 		visual.position = Vector3(float(entry["x"]), 0.0, 0.0)
 		visual.rotation_degrees.y = 25.0
+		visual.set_meta("showcase_weapon", String(entry["weapon"]))
 		stage.add_child(visual)
 		visual.call_deferred("set_weapon_visual", entry["weapon"])
+
+func _stage_motion_states(stage: Node3D) -> void:
+	for child in stage.get_children():
+		if not (child is CharacterVisual):
+			continue
+		var visual := child as CharacterVisual
+		match String(visual.get_meta("showcase_weapon", "")):
+			"pistol":
+				visual.animate_fire(&"pistol")
+			"smg":
+				for _step in range(12):
+					visual.animate_locomotion(Vector3.RIGHT, Vector3.FORWARD, 1.0, 1.0 / 60.0)
+			"ak_rifle":
+				visual.animate_hit(Vector3.RIGHT, 1.0)
+				visual.animate_locomotion(Vector3.ZERO, Vector3.FORWARD, 0.0, 1.0 / 60.0)
+			"sniper":
+				visual.animate_fire(&"sniper")
+				visual.animate_locomotion(Vector3.ZERO, Vector3.FORWARD, 0.0, 1.0 / 60.0)
 
 func _build_camera(stage: Node3D) -> void:
 	var camera := Camera3D.new()

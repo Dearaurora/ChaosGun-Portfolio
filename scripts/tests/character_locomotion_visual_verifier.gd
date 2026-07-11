@@ -25,6 +25,7 @@ func _initialize() -> void:
 	_verify_strafing_blends_smoothly(visual)
 	_verify_backpedal_blends_against_facing(visual)
 	_verify_idle_decays_smoothly(visual)
+	await _verify_action_feedback(visual)
 	await _finish(visual)
 
 func _verify_strafing_blends_smoothly(visual: CharacterVisual) -> void:
@@ -72,6 +73,38 @@ func _verify_idle_decays_smoothly(visual: CharacterVisual) -> void:
 		_fail("Idle should decay locomotion blends toward zero, got %.3f" % after_decay)
 	else:
 		print("OK  idle locomotion decay")
+
+func _verify_action_feedback(visual: CharacterVisual) -> void:
+	if not visual.has_method("animate_fire") or not visual.has_method("animate_respawn") or not visual.has_method("get_motion_debug"):
+		_fail("CharacterVisual must expose fire, respawn, and motion debug feedback")
+		return
+
+	visual.animate_fire(&"sniper")
+	var fire_debug := visual.call("get_motion_debug") as Dictionary
+	if float(fire_debug.get("weapon_kick", 0.0)) < 0.12 or float(fire_debug.get("recoil_pitch", 0.0)) < 0.09:
+		_fail("Sniper fire should create a readable high-recoil impulse")
+	await create_timer(0.25).timeout
+	var decay_debug := visual.call("get_motion_debug") as Dictionary
+	if float(decay_debug.get("weapon_kick", 1.0)) >= float(fire_debug.get("weapon_kick", 0.0)):
+		_fail("Weapon kick should decay after firing")
+
+	visual.animate_hit(Vector3.RIGHT, 1.0)
+	var hit_debug := visual.call("get_motion_debug") as Dictionary
+	if absf(float(hit_debug.get("impact_roll", 0.0))) < 0.10:
+		_fail("Side impact should create directional body roll")
+
+	visual.animate_respawn()
+	var respawn_debug := visual.call("get_motion_debug") as Dictionary
+	var respawn_scale := respawn_debug.get("action_scale", Vector3.ONE) as Vector3
+	if respawn_scale.y < 1.30 or respawn_scale.x > 0.50:
+		_fail("Respawn should begin with a narrow vertical stretch")
+
+	visual.animate_squash(0.65, 1.22, 0.20)
+	await process_frame
+	if visual.scale.y >= visual.scale.x:
+		_fail("Landing squash should deform the complete character assembly")
+	else:
+		print("OK  fire, impact, respawn, and whole-body deformation feedback")
 
 func _fail(message: String) -> void:
 	_failures.append(message)

@@ -21,6 +21,13 @@ var _locomotion_forward_amount: float = 0.0
 var _locomotion_right_amount: float = 0.0
 var _locomotion_speed_ratio: float = 0.0
 var _current_weapon_id: StringName = &"pistol"
+var _action_scale: Vector3 = Vector3.ONE
+var _stride_scale: Vector3 = Vector3.ONE
+var _recoil_pitch: float = 0.0
+var _impact_pitch: float = 0.0
+var _impact_roll: float = 0.0
+var _weapon_kick: float = 0.0
+var _weapon_holder_base_position: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	if not _build_asset_visual():
@@ -311,6 +318,7 @@ func _build_weapon_holder() -> void:
 	_weapon_holder.position = Vector3(0.0, 1.03, -1.45)
 	_weapon_holder.scale = Vector3.ONE
 	add_child(_weapon_holder)
+	_weapon_holder_base_position = _weapon_holder.position
 
 ## 切换枪械可视模型
 func set_weapon_visual(weapon_id: StringName) -> void:
@@ -586,16 +594,38 @@ func animate_stretch(y_scale: float = 1.3, xz_scale: float = 0.7, duration: floa
 	_play_deform(Vector3(xz_scale, y_scale, xz_scale), duration)
 
 func _play_deform(target_scale: Vector3, duration: float) -> void:
-	if _body_mesh == null:
-		return
 	if _deform_tween and _deform_tween.is_running():
 		_deform_tween.kill()
 	
 	_deform_tween = create_tween().set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
 	# 瞬间变形成目标比例
-	_body_mesh.scale = target_scale
+	_action_scale = target_scale
 	# 弹性恢复到正常
-	_deform_tween.tween_property(_body_mesh, "scale", Vector3.ONE, duration)
+	_deform_tween.tween_property(self, "_action_scale", Vector3.ONE, duration)
+
+func animate_fire(weapon_id: StringName = &"pistol") -> void:
+	var kick := 0.055
+	var pitch := 0.045
+	match weapon_id:
+		&"smg":
+			kick = 0.035
+			pitch = 0.028
+		&"ak_rifle":
+			kick = 0.075
+			pitch = 0.060
+		&"sniper":
+			kick = 0.145
+			pitch = 0.115
+	_weapon_kick = maxf(_weapon_kick, kick)
+	_recoil_pitch = maxf(_recoil_pitch, pitch)
+
+func animate_respawn() -> void:
+	if _deform_tween and _deform_tween.is_running():
+		_deform_tween.kill()
+	_action_scale = Vector3(0.36, 1.42, 0.36)
+	_deform_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_deform_tween.tween_property(self, "_action_scale", Vector3(1.10, 0.94, 1.10), 0.18)
+	_deform_tween.tween_property(self, "_action_scale", Vector3.ONE, 0.12)
 
 func animate_movement(is_moving: bool, delta: float) -> void:
 	var move_dir := Vector3.FORWARD if is_moving else Vector3.ZERO
@@ -628,14 +658,17 @@ func animate_locomotion(move_dir: Vector3, facing_dir: Vector3, speed_ratio: flo
 	if _locomotion_speed_ratio > 0.02 or absf(_locomotion_forward_amount) > 0.02 or absf(_locomotion_right_amount) > 0.02:
 		_bounce_time += delta * lerpf(8.0, 13.5, _locomotion_speed_ratio)
 		var step_bob := absf(sin(_bounce_time)) * 0.22 * _locomotion_speed_ratio
+		var stride_pulse := absf(sin(_bounce_time)) * _locomotion_speed_ratio
+		_stride_scale = Vector3(1.0 + stride_pulse * 0.035, 1.0 - stride_pulse * 0.050, 1.0 + stride_pulse * 0.025)
 		position.y = lerpf(position.y, step_bob, pose_blend)
-		rotation.x = lerpf(rotation.x, -_locomotion_forward_amount * 0.08, pose_blend)
-		rotation.z = lerpf(rotation.z, (-_locomotion_right_amount * 0.18) + sin(_bounce_time * 0.5) * 0.025 * _locomotion_speed_ratio, pose_blend)
+		rotation.x = lerpf(rotation.x, -_locomotion_forward_amount * 0.08 + _recoil_pitch + _impact_pitch, pose_blend)
+		rotation.z = lerpf(rotation.z, (-_locomotion_right_amount * 0.18) + sin(_bounce_time * 0.5) * 0.025 * _locomotion_speed_ratio + _impact_roll, pose_blend)
 	else:
 		_bounce_time = 0.0
+		_stride_scale = _stride_scale.lerp(Vector3.ONE, pose_blend)
 		position.y = lerpf(position.y, 0.0, pose_blend)
-		rotation.x = lerpf(rotation.x, 0.0, pose_blend)
-		rotation.z = lerpf(rotation.z, 0.0, pose_blend)
+		rotation.x = lerpf(rotation.x, _recoil_pitch + _impact_pitch, pose_blend)
+		rotation.z = lerpf(rotation.z, _impact_roll, pose_blend)
 
 func get_locomotion_forward_amount() -> float:
 	return _locomotion_forward_amount
@@ -643,10 +676,31 @@ func get_locomotion_forward_amount() -> float:
 func get_locomotion_right_amount() -> float:
 	return _locomotion_right_amount
 
-func animate_hit() -> void:
+func animate_hit(impact_dir: Vector3 = Vector3.ZERO, strength: float = 1.0) -> void:
 	_hit_flash_timer = 0.15
+	var clamped_strength := clampf(strength, 0.35, 1.35)
+	var local_impact := global_basis.inverse() * impact_dir.normalized() if impact_dir.length_squared() > 0.0001 else Vector3.RIGHT
+	_impact_roll = clampf(-local_impact.x * 0.16 * clamped_strength, -0.22, 0.22)
+	_impact_pitch = clampf(local_impact.z * 0.10 * clamped_strength, -0.14, 0.14)
+
+func get_motion_debug() -> Dictionary:
+	return {
+		"action_scale": _action_scale,
+		"stride_scale": _stride_scale,
+		"recoil_pitch": _recoil_pitch,
+		"impact_pitch": _impact_pitch,
+		"impact_roll": _impact_roll,
+		"weapon_kick": _weapon_kick,
+	}
 
 func _process(delta: float) -> void:
+	_recoil_pitch = move_toward(_recoil_pitch, 0.0, delta * 0.72)
+	_impact_pitch = move_toward(_impact_pitch, 0.0, delta * 1.35)
+	_impact_roll = move_toward(_impact_roll, 0.0, delta * 1.75)
+	_weapon_kick = move_toward(_weapon_kick, 0.0, delta * 0.85)
+	scale = Vector3(_action_scale.x * _stride_scale.x, _action_scale.y * _stride_scale.y, _action_scale.z * _stride_scale.z)
+	if _weapon_holder:
+		_weapon_holder.position = _weapon_holder_base_position + Vector3(0.0, 0.0, _weapon_kick)
 	if _hit_flash_timer > 0:
 		_hit_flash_timer -= delta
 		var flash_color = Color.RED if fmod(_hit_flash_timer, 0.1) > 0.05 else body_color

@@ -72,6 +72,8 @@ func _game_config_respawn_points() -> Array[Vector3]:
 func _ready() -> void:
 	lives = _game_config_int("default_lives", lives)
 	gravity_scale = _game_config_float("character_gravity_scale", 20.0)
+	if weapon_manager and not weapon_manager.weapon_fired.is_connected(_on_weapon_fired):
+		weapon_manager.weapon_fired.connect(_on_weapon_fired)
 	# 禁用接触摩擦，水平减速完全由 horizontal_damp 控制，
 	# 避免高重力下法向力过大导致角色走不动。
 	var mat = PhysicsMaterial.new()
@@ -189,6 +191,9 @@ func apply_hit(impulse: Vector3, damage: float = 0.0, attacker: Node3D = null) -
 	if attacker is BaseCharacter:
 		last_hit_by = attacker
 	apply_knockback(impulse)
+	var visual = get_visual()
+	if visual:
+		visual.animate_hit(impulse, clampf(damage / 70.0, 0.45, 1.35))
 	_flash_damage()
 	
 	# 受击音效与震屏/顿帧 (Hitstop & Screenshake)
@@ -269,6 +274,9 @@ func _respawn() -> void:
 	visible = true
 	freeze = false
 	set_physics_process(true)
+	var visual = get_visual()
+	if visual:
+		visual.animate_respawn()
 	_spawn_character_burst("RespawnBurst", Color("#6ee7ff"), 1.15)
 
 	# 回满血量
@@ -387,6 +395,11 @@ func _set_all_meshes_visible(is_vis: bool) -> void:
 ## 获取 CharacterVisual 节点（如果存在）
 func get_visual() -> CharacterVisual:
 	return get_node_or_null("Visual") as CharacterVisual
+
+func _on_weapon_fired(weapon_data: WeaponData) -> void:
+	var visual = get_visual()
+	if visual and weapon_data:
+		visual.animate_fire(weapon_data.weapon_id)
 
 # ============================================================
 #  音效辅助
