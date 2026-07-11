@@ -249,8 +249,7 @@ func _update_lock_indicator() -> void:
 	if indicator == null:
 		return
 	indicator.visible = true
-	indicator.global_position = target.global_position + Vector3.UP * 2.4
-	indicator.rotate_y(0.08)
+	indicator.global_position = target.global_position + Vector3.UP * 0.10
 
 func _ensure_lock_indicator() -> MeshInstance3D:
 	if _lock_indicator and is_instance_valid(_lock_indicator):
@@ -260,16 +259,21 @@ func _ensure_lock_indicator() -> MeshInstance3D:
 		return null
 	var indicator = MeshInstance3D.new()
 	indicator.name = "LockOnTargetIndicator"
-	var mesh = SphereMesh.new()
-	mesh.radius = 0.55
-	mesh.height = 0.18
+	var mesh = TorusMesh.new()
+	mesh.inner_radius = 1.46
+	mesh.outer_radius = 1.58
+	mesh.rings = 32
+	mesh.ring_segments = 8
 	indicator.mesh = mesh
-	indicator.scale = Vector3(1.6, 0.18, 1.6)
 	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.92, 0.18, 0.78)
+	mat.albedo_color = Color(1.0, 0.88, 0.20, 0.52)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.72, 0.10)
+	mat.emission_energy_multiplier = 0.35
 	indicator.material_override = mat
+	indicator.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	scene_root.add_child(indicator)
 	_lock_indicator = indicator
 	return _lock_indicator
