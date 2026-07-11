@@ -85,8 +85,8 @@ func _build_asset_visual() -> bool:
 	_create_marker("LeftHand", Vector3(-0.18, 1.13, -1.40))
 	_create_marker("RightHand", Vector3(0.18, 0.98, -1.34))
 	# These long-gun anchors mirror the authored support and trigger gloves.
-	_create_marker("LeftHandGrip", Vector3(-0.46, 1.29, -1.42))
-	_create_marker("RightHandGrip", Vector3(0.20, 1.28, -1.08))
+	_create_marker("LeftHandGrip", Vector3(-0.10, 1.39, -1.75))
+	_create_marker("RightHandGrip", Vector3(0.14, 1.36, -1.14))
 	_create_marker("LeftFoot", Vector3(-0.39, 0.18, -0.16))
 	_create_marker("RightFoot", Vector3(0.39, 0.18, -0.16))
 	_cache_asset_meshes(_asset_root)
@@ -318,7 +318,7 @@ func _build_limbs() -> void:
 func _build_weapon_holder() -> void:
 	_weapon_holder = Node3D.new()
 	_weapon_holder.name = "WeaponHolder"
-	_weapon_holder.position = Vector3(0.0, 1.03, -1.45)
+	_weapon_holder.position = _weapon_holder_position_for(&"pistol")
 	_weapon_holder.scale = Vector3.ONE
 	add_child(_weapon_holder)
 	_weapon_holder_base_position = _weapon_holder.position
@@ -327,6 +327,8 @@ func _build_weapon_holder() -> void:
 func set_weapon_visual(weapon_id: StringName) -> void:
 	_current_weapon_id = weapon_id
 	_set_weapon_pose_visual(weapon_id)
+	_weapon_holder_base_position = _weapon_holder_position_for(weapon_id)
+	_weapon_holder.position = _weapon_holder_base_position
 	# 清除旧模型
 	for child in _weapon_holder.get_children():
 		_weapon_holder.remove_child(child)
@@ -369,6 +371,18 @@ func set_weapon_visual(weapon_id: StringName) -> void:
 			])
 
 	_build_weapon_readability_proxy(weapon_id)
+
+func _weapon_holder_position_for(weapon_id: StringName) -> Vector3:
+	match weapon_id:
+		&"pistol":
+			return Vector3(0.0, 1.18, -1.24)
+		&"smg":
+			return Vector3(0.0, 1.23, -1.22)
+		&"ak_rifle":
+			return Vector3(0.0, 1.28, -1.20)
+		&"sniper":
+			return Vector3(0.0, 1.31, -1.20)
+	return Vector3(0.0, 1.18, -1.24)
 
 func _set_weapon_pose_visual(weapon_id: StringName) -> void:
 	if _asset_root == null:

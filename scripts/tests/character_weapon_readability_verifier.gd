@@ -37,13 +37,16 @@ func _initialize() -> void:
 
 func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
 	var holder_position := debug.get("holder_position", Vector3.ZERO) as Vector3
+	var expected_positions := {
+		"pistol": Vector3(0.0, 1.18, -1.24),
+		"smg": Vector3(0.0, 1.23, -1.22),
+		"ak_rifle": Vector3(0.0, 1.28, -1.20),
+		"sniper": Vector3(0.0, 1.31, -1.20),
+	}
+	var expected_position := expected_positions.get(weapon_id, Vector3.ZERO) as Vector3
 	var holder_scale := float(debug.get("holder_scale", 0.0))
-	if absf(holder_position.x) > 0.10:
-		_fail("%s weapon holder should be centered between both hands, got x %.2f" % [weapon_id, holder_position.x])
-	if holder_position.z < -1.55 or holder_position.z > -1.35:
-		_fail("%s weapon holder should remain in the chest clearance plane, got z %.2f" % [weapon_id, holder_position.z])
-	if holder_position.y < 0.95 or holder_position.y > 1.12:
-		_fail("%s weapon holder should align with modeled hands, got y %.2f" % [weapon_id, holder_position.y])
+	if holder_position.distance_to(expected_position) > 0.02:
+		_fail("%s weapon holder should use its authored hand-fit position %s, got %s" % [weapon_id, expected_position, holder_position])
 	if holder_scale < 0.95 or holder_scale > 1.05:
 		_fail("%s weapon holder scale should preserve hand contact and silhouette, got %.2f" % [weapon_id, holder_scale])
 	if absf(float(debug.get("asset_rotation_y", 0.0)) - 180.0) > 0.1:
@@ -101,6 +104,9 @@ func _collect_asset_material_stats(node: Node, stats: Dictionary) -> void:
 		_collect_asset_material_stats(child, stats)
 
 func _verify_character_pose_meshes(visual: CharacterVisual, weapon_id: String) -> void:
+	for required_part in ["Body", "HelmetShell", "HelmetCollar", "FaceOpening", "HelmetVisorTop", "LeftBoot", "RightBoot"]:
+		if _find_descendant(visual, required_part) == null:
+			_fail("%s character asset is missing authored part %s" % [weapon_id, required_part])
 	var counts := {"pistol_visible": 0, "long_visible": 0, "pistol_total": 0, "long_total": 0}
 	_count_pose_meshes(visual, counts)
 	if int(counts["pistol_total"]) < 4 or int(counts["long_total"]) < 4:

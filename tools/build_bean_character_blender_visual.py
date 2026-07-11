@@ -139,6 +139,44 @@ def add_rounded_box(name, loc, scale, material, bevel=0.16):
     return add_cube(name, loc, scale, material, bevel)
 
 
+def add_tapered_torso(name, loc, top_size, bottom_size, height, material, bevel=0.18):
+    top_x, top_y = top_size
+    bottom_x, bottom_y = bottom_size
+    bottom_z = -height * 0.5
+    top_z = height * 0.5
+    vertices = [
+        (-bottom_x * 0.5, -bottom_y * 0.5, bottom_z),
+        (bottom_x * 0.5, -bottom_y * 0.5, bottom_z),
+        (bottom_x * 0.5, bottom_y * 0.5, bottom_z),
+        (-bottom_x * 0.5, bottom_y * 0.5, bottom_z),
+        (-top_x * 0.5, -top_y * 0.5, top_z),
+        (top_x * 0.5, -top_y * 0.5, top_z),
+        (top_x * 0.5, top_y * 0.5, top_z),
+        (-top_x * 0.5, top_y * 0.5, top_z),
+    ]
+    faces = [
+        (0, 3, 2, 1),
+        (4, 5, 6, 7),
+        (0, 1, 5, 4),
+        (1, 2, 6, 5),
+        (2, 3, 7, 6),
+        (3, 0, 4, 7),
+    ]
+    mesh = bpy.data.meshes.new(name + "Mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.materials.append(material)
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = loc
+    bpy.context.collection.objects.link(obj)
+    bevel_mod = obj.modifiers.new(name="toy_bevel", type="BEVEL")
+    bevel_mod.width = bevel
+    bevel_mod.segments = 6
+    bevel_mod.affect = "EDGES"
+    normal = obj.modifiers.new(name="weighted_normals", type="WEIGHTED_NORMAL")
+    normal.keep_sharp = True
+    return obj
+
+
 def add_marker(name, loc):
     marker = bpy.data.objects.new(name, None)
     marker.location = loc
@@ -150,20 +188,26 @@ def build_character():
     # Blender +Y maps to Godot -Z during glTF Y-up conversion.
     # The model deliberately uses a small set of broad forms so it remains readable
     # at the gameplay camera distance and can be reposed without retopology.
-    add_rounded_box("Body", (0.0, 0.0, 1.06), (1.66, 1.28, 1.46), MAT_BODY, 0.25)
-    add_uv_sphere("HelmetCollar", (0.0, 0.02, 1.69), (0.90, 0.72, 0.16), MAT_BODY, 24, 10)
-    add_uv_sphere("HelmetShell", (0.0, 0.02, 2.12), (0.84, 0.70, 0.68), MAT_BODY, 24, 12)
-    add_rounded_box("FaceOpening", (0.0, 0.71, 2.10), (1.02, 0.10, 0.50), MAT_FACE, 0.15)
-    add_uv_sphere("EyeLeft", (-0.20, 0.78, 2.10), (0.070, 0.030, 0.13), MAT_EYE, 12, 8)
-    add_uv_sphere("EyeRight", (0.20, 0.78, 2.10), (0.070, 0.030, 0.13), MAT_EYE, 12, 8)
+    add_tapered_torso("Body", (0.0, 0.0, 1.10), (1.58, 1.12), (1.36, 0.96), 1.30, MAT_BODY, 0.20)
+    add_uv_sphere("HelmetCollar", (0.0, 0.02, 1.72), (0.91, 0.67, 0.15), MAT_BODY, 24, 10)
+    add_uv_sphere("HelmetShell", (0.0, -0.02, 2.15), (0.86, 0.72, 0.70), MAT_BODY, 28, 14)
 
-    left_shoulder = (-0.80, 0.08, 1.34)
-    right_shoulder = (0.80, 0.08, 1.34)
+    # A shallow red frame makes the dark face read as an inset visor instead of
+    # a card floating in front of a sphere.
+    add_rounded_box("FaceOpening", (0.0, 0.705, 2.12), (1.04, 0.085, 0.49), MAT_FACE, 0.15)
+    add_rounded_box("HelmetVisorTop", (0.0, 0.725, 2.43), (1.20, 0.16, 0.15), MAT_BODY, 0.07)
+    add_rounded_box("HelmetVisorLeft", (-0.60, 0.72, 2.12), (0.14, 0.16, 0.50), MAT_BODY, 0.06)
+    add_rounded_box("HelmetVisorRight", (0.60, 0.72, 2.12), (0.14, 0.16, 0.50), MAT_BODY, 0.06)
+    add_uv_sphere("EyeLeft", (-0.20, 0.765, 2.12), (0.070, 0.026, 0.13), MAT_EYE, 12, 8)
+    add_uv_sphere("EyeRight", (0.20, 0.765, 2.12), (0.070, 0.026, 0.13), MAT_EYE, 12, 8)
 
-    pistol_left_elbow = (-0.78, 0.74, 1.23)
-    pistol_left_glove = (-0.18, 1.20, 1.22)
-    pistol_right_elbow = (0.78, 0.70, 1.18)
-    pistol_right_glove = (0.18, 1.16, 1.16)
+    left_shoulder = (-0.78, 0.05, 1.46)
+    right_shoulder = (0.78, 0.05, 1.46)
+
+    pistol_left_elbow = (-0.76, 0.60, 1.28)
+    pistol_left_glove = (-0.17, 1.17, 1.20)
+    pistol_right_elbow = (0.76, 0.56, 1.25)
+    pistol_right_glove = (0.17, 1.10, 1.14)
     add_curved_arm("BodyPosePistolArmLeft", left_shoulder, pistol_left_elbow, pistol_left_glove, 0.16, MAT_BODY)
     add_curved_arm("BodyPosePistolArmRight", right_shoulder, pistol_right_elbow, pistol_right_glove, 0.16, MAT_BODY)
     add_uv_sphere("PosePistolGloveLeft", pistol_left_glove, (0.20, 0.18, 0.19), MAT_GLOVE, 16, 10)
@@ -171,21 +215,21 @@ def build_character():
 
     # Long weapons use a low-ready two-point pose: trigger hand near the chest,
     # support hand pushed forward along the fore-end, with clear torso clearance.
-    long_left_elbow = (-0.88, 0.78, 1.24)
-    long_left_glove = (-0.46, 1.42, 1.29)
-    long_right_elbow = (0.72, 0.52, 1.24)
-    long_right_glove = (0.20, 1.08, 1.28)
+    long_left_elbow = (-0.78, 0.72, 1.43)
+    long_left_glove = (-0.10, 1.75, 1.39)
+    long_right_elbow = (0.70, 0.44, 1.42)
+    long_right_glove = (0.14, 1.14, 1.36)
     add_curved_arm("BodyPoseLongArmLeft", left_shoulder, long_left_elbow, long_left_glove, 0.17, MAT_BODY)
     add_curved_arm("BodyPoseLongArmRight", right_shoulder, long_right_elbow, long_right_glove, 0.17, MAT_BODY)
-    add_uv_sphere("PoseLongGloveLeft", long_left_glove, (0.21, 0.19, 0.20), MAT_GLOVE, 16, 10)
-    add_uv_sphere("PoseLongGloveRight", long_right_glove, (0.21, 0.19, 0.20), MAT_GLOVE, 16, 10)
+    add_uv_sphere("PoseLongGloveLeft", long_left_glove, (0.23, 0.27, 0.20), MAT_GLOVE, 18, 10)
+    add_uv_sphere("PoseLongGloveRight", long_right_glove, (0.22, 0.22, 0.19), MAT_GLOVE, 18, 10)
     add_marker("LeftHandGrip", long_left_glove)
     add_marker("RightHandGrip", long_right_glove)
 
-    add_uv_sphere("LeftLeg", (-0.42, 0.0, 0.46), (0.37, 0.37, 0.45), MAT_BODY, 20, 10)
-    add_uv_sphere("RightLeg", (0.42, 0.0, 0.46), (0.37, 0.37, 0.45), MAT_BODY, 20, 10)
-    add_rounded_box("LeftBoot", (-0.42, 0.12, 0.19), (0.56, 0.72, 0.36), MAT_BOOT, 0.16)
-    add_rounded_box("RightBoot", (0.42, 0.12, 0.19), (0.56, 0.72, 0.36), MAT_BOOT, 0.16)
+    add_uv_sphere("LeftLeg", (-0.39, 0.0, 0.49), (0.31, 0.31, 0.42), MAT_BODY, 20, 10)
+    add_uv_sphere("RightLeg", (0.39, 0.0, 0.49), (0.31, 0.31, 0.42), MAT_BODY, 20, 10)
+    add_rounded_box("LeftBoot", (-0.39, 0.13, 0.20), (0.58, 0.74, 0.40), MAT_BOOT, 0.17)
+    add_rounded_box("RightBoot", (0.39, 0.13, 0.20), (0.58, 0.74, 0.40), MAT_BOOT, 0.17)
 
 
 def export_glb():
