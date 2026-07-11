@@ -29,10 +29,13 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 	await create_timer(0.65).timeout
-	var feedback_frame := OS.get_cmdline_user_args().has("--feedback-frame")
+	var ringout_motion_frame := OS.get_cmdline_user_args().has("--ringout-motion")
+	var feedback_frame := OS.get_cmdline_user_args().has("--feedback-frame") or ringout_motion_frame
 	if not _stage_showcase_shots(arena, not feedback_frame):
 		return
-	if feedback_frame:
+	if ringout_motion_frame:
+		_stage_ringout_motion_feedback(arena)
+	elif feedback_frame:
 		_stage_combat_feedback(arena)
 	_apply_detail_camera_if_requested(arena)
 	if OS.get_cmdline_user_args().has("--combat-frame"):
@@ -149,6 +152,29 @@ func _stage_combat_feedback(arena: Node) -> void:
 		visual.animate_hit(Vector3(-10.0, 0.0, 5.0), 1.15)
 	respawn_source.call("_spawn_character_transition", &"respawn", Color("#6ee7ff"), 1.15)
 	ringout_source.call("_spawn_character_transition", &"ringout", Color("#ff4d62"), 1.45)
+
+func _stage_ringout_motion_feedback(arena: Node) -> void:
+	var chars = arena.get("_characters") as Array
+	if chars.size() < 4:
+		return
+	var launched := chars[0] as BaseCharacter
+	var edge_warning := chars[1] as BaseCharacter
+	var falling := chars[2] as BaseCharacter
+	var ringout := chars[3] as BaseCharacter
+	launched.set_process(false)
+	edge_warning.set_process(false)
+	falling.set_process(false)
+	var launched_feedback := launched.get_node_or_null("CombatFeedback") as CharacterCombatFeedback
+	var edge_feedback := edge_warning.get_node_or_null("CombatFeedback") as CharacterCombatFeedback
+	var falling_feedback := falling.get_node_or_null("CombatFeedback") as CharacterCombatFeedback
+	if launched_feedback:
+		launched_feedback.update_motion_feedback(Vector3(18.0, 4.0, -7.0), true, false)
+	if edge_feedback:
+		edge_feedback.update_motion_feedback(Vector3(-10.0, 0.0, -5.0), false, true)
+	if falling_feedback:
+		falling_feedback.update_motion_feedback(Vector3(14.0, -8.0, 5.0), true, true)
+	ringout.call("_spawn_character_transition", &"ringout", Color("#ff4d62"), 1.45)
+	ringout.visible = false
 
 func _pose_character(character: BaseCharacter, pose: Dictionary) -> void:
 	if character == null:

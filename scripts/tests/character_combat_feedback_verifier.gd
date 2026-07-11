@@ -27,6 +27,19 @@ func _initialize() -> void:
 		_fail("Hit feedback must create one directional accent")
 	if _count_prefixed(feedback, "ImpactSlash_") != 3:
 		_fail("Directional hit accent should contain exactly three slashes")
+	feedback.update_motion_feedback(Vector3(18.0, -4.0, 3.0), true, true)
+	var motion_debug := feedback.get_visual_debug()
+	if not bool(motion_debug.get("flight_active", false)):
+		_fail("Recent airborne knockback must activate flight trails")
+	if int(motion_debug.get("flight_streak_count", 0)) != 2:
+		_fail("Knockback flight feedback should use exactly two short streaks")
+	if not bool(motion_debug.get("danger_active", false)):
+		_fail("Missing ground or falling state must activate ringout warning")
+	if _count_prefixed(feedback, "DangerChevron_") != 2:
+		_fail("Ringout warning should use two forward chevrons")
+	feedback.update_motion_feedback(Vector3.ZERO, false, false)
+	if bool(feedback.get_visual_debug().get("flight_active", true)) or bool(feedback.get_visual_debug().get("danger_active", true)):
+		_fail("Motion feedback must clear deterministically")
 
 	var ai_scene := load("res://scenes/characters/ai_character.tscn") as PackedScene
 	var character := ai_scene.instantiate() as BaseCharacter if ai_scene else null
@@ -42,6 +55,8 @@ func _initialize() -> void:
 			character.apply_hit(Vector3.RIGHT * 4.0, 0.0, null)
 			if int(integrated_feedback.get_visual_debug().get("hit_serial", 0)) != 1:
 				_fail("BaseCharacter hits must trigger directional visual feedback")
+			if float(character.get("_knockback_feedback_timer")) <= 0.0:
+				_fail("BaseCharacter knockback must open the visual flight window")
 			character.call("_respawn")
 			if not bool(integrated_feedback.get_visual_debug().get("shield_active", false)):
 				_fail("BaseCharacter respawn must activate the shield visual")

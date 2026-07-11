@@ -36,6 +36,7 @@ var _jump_cooldown: float = 0.0
 var _was_on_floor: bool = true
 var _combat_feedback: CharacterCombatFeedback = null
 var _last_safe_visual_position := Vector3.ZERO
+var _knockback_feedback_timer := 0.0
 
 func _game_config() -> Node:
 	return RuntimeGlobals.game_config()
@@ -107,6 +108,8 @@ func _base_process(delta: float) -> void:
 		if visual:
 			visual.animate_squash(0.6, 1.25, 0.2)
 	_was_on_floor = current_on_floor
+	_knockback_feedback_timer = maxf(0.0, _knockback_feedback_timer - delta)
+	_update_ringout_motion_feedback(current_on_floor)
 
 	if global_position.y > -2.0:
 		_last_safe_visual_position = global_position
@@ -171,6 +174,7 @@ func apply_knockback(impulse: Vector3) -> void:
 	var lift = h_impulse.length() * _game_config_float("knockback_lift_ratio", 0.35)
 	var final_impulse = h_impulse + Vector3.UP * lift
 	apply_central_impulse(final_impulse)
+	_knockback_feedback_timer = 0.52
 	
 	# 受击根据受力方向压扁
 	var visual = get_visual()
@@ -251,6 +255,7 @@ func _die() -> void:
 	is_dead = true
 	if _combat_feedback:
 		_combat_feedback.set_shield_active(false)
+		_combat_feedback.update_motion_feedback(Vector3.ZERO, false, false)
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	_spawn_character_transition(&"ringout", Color("#ff4d62"), 1.45)
@@ -299,6 +304,7 @@ func _respawn() -> void:
 	_invincible_timer = _game_config_float("invincible_duration", 3.0)
 	if _combat_feedback:
 		_combat_feedback.set_shield_active(true)
+		_combat_feedback.update_motion_feedback(Vector3.ZERO, false, false)
 	_play_sfx(_sfx_shield, -4.0)
 
 func _spawn_character_transition(mode: StringName, color: Color, radius: float) -> void:
@@ -325,6 +331,16 @@ func _ensure_combat_feedback() -> void:
 	_combat_feedback = CharacterCombatFeedbackScript.new() as CharacterCombatFeedback
 	_combat_feedback.name = "CombatFeedback"
 	add_child(_combat_feedback)
+
+func _update_ringout_motion_feedback(on_floor: bool) -> void:
+	if _combat_feedback == null:
+		return
+	var horizontal_velocity := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+	var launched := _knockback_feedback_timer > 0.0 and not on_floor
+	var danger := not on_floor and global_position.y < 0.2 and linear_velocity.y < 0.0
+	if on_floor and horizontal_velocity.length() > 6.0:
+		danger = _is_near_edge(horizontal_velocity.normalized())
+	_combat_feedback.update_motion_feedback(linear_velocity, launched, danger)
 
 # ============================================================
 #  Mesh 辅助

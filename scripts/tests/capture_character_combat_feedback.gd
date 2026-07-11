@@ -19,21 +19,28 @@ func _initialize() -> void:
 	_build_floor(stage)
 	_build_lighting(stage)
 	_build_camera(stage)
-	_build_states(stage)
-	_build_labels(stage)
+	var motion_showcase := OS.get_cmdline_user_args().has("--ringout-motion")
+	if motion_showcase:
+		_build_ringout_motion_states(stage)
+	else:
+		_build_states(stage)
+	_build_labels(stage, motion_showcase)
 
 	await process_frame
 	await process_frame
 	await create_timer(0.025).timeout
-	_spawn_transition(stage, -1.7, &"ringout")
-	_spawn_transition(stage, -5.1, &"respawn")
-	var hit_visual := stage.get_node_or_null("Visual_hit") as CharacterVisual
-	var hit_feedback := stage.get_node_or_null("Feedback_hit") as CharacterCombatFeedback
-	var showcase_impact := Vector3(0.8, 0.0, 1.0).normalized()
-	if hit_visual:
-		hit_visual.animate_hit(showcase_impact, 1.1)
-	if hit_feedback:
-		hit_feedback.play_hit(showcase_impact, 1.1)
+	if motion_showcase:
+		_spawn_transition(stage, -5.1, &"ringout")
+	else:
+		_spawn_transition(stage, -1.7, &"ringout")
+		_spawn_transition(stage, -5.1, &"respawn")
+		var hit_visual := stage.get_node_or_null("Visual_hit") as CharacterVisual
+		var hit_feedback := stage.get_node_or_null("Feedback_hit") as CharacterCombatFeedback
+		var showcase_impact := Vector3(0.8, 0.0, 1.0).normalized()
+		if hit_visual:
+			hit_visual.animate_hit(showcase_impact, 1.1)
+		if hit_feedback:
+			hit_feedback.play_hit(showcase_impact, 1.1)
 	await process_frame
 	var image := root.get_texture().get_image()
 	var out_path := _resolve_output_path()
@@ -119,6 +126,27 @@ func _build_states(stage: Node3D) -> void:
 			if mode == &"shield":
 				feedback.call_deferred("set_shield_active", true)
 
+func _build_ringout_motion_states(stage: Node3D) -> void:
+	var entries := [
+		{"x": 5.1, "y": 0.42, "color": Color("#ef4d53"), "state": &"launched", "velocity": Vector3(18.0, 4.0, -7.0), "danger": false},
+		{"x": 1.7, "y": 0.0, "color": Color("#75ca3e"), "state": &"edge", "velocity": Vector3(-10.0, 0.0, -5.0), "danger": true},
+		{"x": -1.7, "y": 0.65, "color": Color("#28a8df"), "state": &"falling", "velocity": Vector3(14.0, -8.0, 5.0), "danger": true},
+	]
+	for entry in entries:
+		var state := entry["state"] as StringName
+		var visual := CharacterVisual.new()
+		visual.name = "Visual_%s" % String(state)
+		visual.body_color = entry["color"]
+		visual.position = Vector3(float(entry["x"]), float(entry["y"]), 0.0)
+		visual.rotation_degrees.y = 18.0
+		stage.add_child(visual)
+		visual.call_deferred("set_weapon_visual", &"pistol")
+		var feedback := CharacterCombatFeedback.new()
+		feedback.name = "Feedback_%s" % String(state)
+		feedback.position = Vector3(float(entry["x"]), float(entry["y"]), 0.0)
+		stage.add_child(feedback)
+		feedback.call_deferred("update_motion_feedback", entry["velocity"], state != &"edge", bool(entry["danger"]))
+
 func _spawn_transition(stage: Node3D, x: float, mode: StringName) -> void:
 	var transition_scene := load("res://scenes/effects/character_transition_burst.tscn") as PackedScene
 	if transition_scene == null:
@@ -129,10 +157,10 @@ func _spawn_transition(stage: Node3D, x: float, mode: StringName) -> void:
 	transition.position = Vector3(x, 0.0, 0.0)
 	stage.add_child(transition)
 
-func _build_labels(stage: Node3D) -> void:
+func _build_labels(stage: Node3D, motion_showcase: bool = false) -> void:
 	var canvas := CanvasLayer.new()
 	stage.add_child(canvas)
-	var names := ["HIT", "RESPAWN SHIELD", "RING-OUT", "RESPAWN"]
+	var names := ["LAUNCHED", "EDGE WARNING", "FALLING", "RING-OUT"] if motion_showcase else ["HIT", "RESPAWN SHIELD", "RING-OUT", "RESPAWN"]
 	for i in range(names.size()):
 		var label := Label.new()
 		label.text = names[i]
