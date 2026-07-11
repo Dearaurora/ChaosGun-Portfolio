@@ -29,11 +29,16 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 	await create_timer(0.65).timeout
-	if not _stage_showcase_shots(arena):
+	var feedback_frame := OS.get_cmdline_user_args().has("--feedback-frame")
+	if not _stage_showcase_shots(arena, not feedback_frame):
 		return
+	if feedback_frame:
+		_stage_combat_feedback(arena)
 	_apply_detail_camera_if_requested(arena)
 	if OS.get_cmdline_user_args().has("--combat-frame"):
 		await process_frame
+	elif feedback_frame:
+		await create_timer(0.065).timeout
 	else:
 		await create_timer(0.18).timeout
 	await process_frame
@@ -101,7 +106,7 @@ func _configure_showcase_roster() -> bool:
 	]
 	return true
 
-func _stage_showcase_shots(arena: Node) -> bool:
+func _stage_showcase_shots(arena: Node, fire_shots: bool = true) -> bool:
 	var chars = arena.get("_characters") as Array
 	if chars.size() < 4:
 		_fail("Open Ring-Out screenshot staging expected 4 characters, found %d" % chars.size())
@@ -118,11 +123,32 @@ func _stage_showcase_shots(arena: Node) -> bool:
 			_fail("Open Ring-Out screenshot staging character %d is not a BaseCharacter" % i)
 			return false
 		_pose_character(character, poses[i])
-	_fire_forward(chars[0] as BaseCharacter)
-	_fire_forward(chars[1] as BaseCharacter)
-	_fire_forward(chars[2] as BaseCharacter)
-	_fire_forward(chars[3] as BaseCharacter)
+	if fire_shots:
+		_fire_forward(chars[0] as BaseCharacter)
+		_fire_forward(chars[1] as BaseCharacter)
+		_fire_forward(chars[2] as BaseCharacter)
+		_fire_forward(chars[3] as BaseCharacter)
 	return true
+
+func _stage_combat_feedback(arena: Node) -> void:
+	var chars = arena.get("_characters") as Array
+	if chars.size() < 4:
+		return
+	var shielded := chars[0] as BaseCharacter
+	var hit_character := chars[1] as BaseCharacter
+	var respawn_source := chars[2] as BaseCharacter
+	var ringout_source := chars[3] as BaseCharacter
+	var shield := shielded.get_node_or_null("CombatFeedback") as CharacterCombatFeedback
+	if shield:
+		shield.set_shield_active(true)
+	var hit_feedback := hit_character.get_node_or_null("CombatFeedback") as CharacterCombatFeedback
+	if hit_feedback:
+		hit_feedback.play_hit(Vector3(-10.0, 0.0, 5.0), 1.15)
+	var visual := hit_character.get_visual()
+	if visual:
+		visual.animate_hit(Vector3(-10.0, 0.0, 5.0), 1.15)
+	respawn_source.call("_spawn_character_transition", &"respawn", Color("#6ee7ff"), 1.15)
+	ringout_source.call("_spawn_character_transition", &"ringout", Color("#ff4d62"), 1.45)
 
 func _pose_character(character: BaseCharacter, pose: Dictionary) -> void:
 	if character == null:

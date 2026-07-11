@@ -2,6 +2,8 @@ extends RigidBody3D
 class_name BaseCharacter
 
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
+const CharacterCombatFeedbackScript = preload("res://scripts/effects/character_combat_feedback.gd")
+const CharacterTransitionBurstScene: PackedScene = preload("res://scenes/effects/character_transition_burst.tscn")
 
 @onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
 @onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
@@ -32,6 +34,8 @@ var _respawn_timer: float = 0.0
 var _invincible_timer: float = 0.0
 var _jump_cooldown: float = 0.0
 var _was_on_floor: bool = true
+var _combat_feedback: CharacterCombatFeedback = null
+var _last_safe_visual_position := Vector3.ZERO
 
 func _game_config() -> Node:
 	return RuntimeGlobals.game_config()
@@ -77,6 +81,8 @@ func _ready() -> void:
 	if weapon_manager and not weapon_manager.weapon_switched.is_connected(_on_weapon_muzzle_switched):
 		weapon_manager.weapon_switched.connect(_on_weapon_muzzle_switched)
 	_sync_weapon_muzzle(&"pistol")
+	_last_safe_visual_position = global_position
+	_ensure_combat_feedback()
 	# 禁用接触摩擦，水平减速完全由 horizontal_damp 控制，
 	# 避免高重力下法向力过大导致角色走不动。
 	var mat = PhysicsMaterial.new()
@@ -102,16 +108,16 @@ func _base_process(delta: float) -> void:
 			visual.animate_squash(0.6, 1.25, 0.2)
 	_was_on_floor = current_on_floor
 
-	# 无敌盾倒计时 + 闪烁效果
+	if global_position.y > -2.0:
+		_last_safe_visual_position = global_position
+
 	if is_invincible:
 		_invincible_timer -= delta
 		if _invincible_timer <= 0.0:
 			is_invincible = false
 			_set_all_meshes_visible(true)
-		else:
-			# 半透明闪烁：每 0.15 秒切换可见性
-			var flicker = fmod(_invincible_timer, 0.3) > 0.15
-			_set_all_meshes_visible(flicker)
+			if _combat_feedback:
+				_combat_feedback.set_shield_active(false)
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	# 模拟全局阻尼，但仅作用于水平面（X/Z）
@@ -197,7 +203,8 @@ func apply_hit(impulse: Vector3, damage: float = 0.0, attacker: Node3D = null) -
 	var visual = get_visual()
 	if visual:
 		visual.animate_hit(impulse, clampf(damage / 70.0, 0.45, 1.35))
-	_flash_damage()
+	if _combat_feedback:
+		_combat_feedback.play_hit(impulse, clampf(damage / 70.0, 0.45, 1.35))
 	
 	# 受击音效与震屏/顿帧 (Hitstop & Screenshake)
 	if damage >= 50.0:  # 狙击枪重击
@@ -242,9 +249,11 @@ func _die() -> void:
 	last_hit_by = null
 	lives -= 1
 	is_dead = true
+	if _combat_feedback:
+		_combat_feedback.set_shield_active(false)
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
-	_spawn_character_burst("RingoutBurst", Color("#ff6a3d"), 1.45)
+	_spawn_character_transition(&"ringout", Color("#ff4d62"), 1.45)
 
 	# 隐藏角色
 	visible = false
@@ -280,7 +289,7 @@ func _respawn() -> void:
 	var visual = get_visual()
 	if visual:
 		visual.animate_respawn()
-	_spawn_character_burst("RespawnBurst", Color("#6ee7ff"), 1.15)
+	_spawn_character_transition(&"respawn", Color("#6ee7ff"), 1.15)
 
 	# 回满血量
 	current_hp = max_hp
@@ -288,89 +297,34 @@ func _respawn() -> void:
 	# 启动无敌盾
 	is_invincible = true
 	_invincible_timer = _game_config_float("invincible_duration", 3.0)
+	if _combat_feedback:
+		_combat_feedback.set_shield_active(true)
 	_play_sfx(_sfx_shield, -4.0)
 
-func _spawn_character_burst(effect_name: String, color: Color, radius: float) -> void:
+func _spawn_character_transition(mode: StringName, color: Color, radius: float) -> void:
 	var scene_root = RuntimeGlobals.active_scene(get_tree())
 	if scene_root == null:
 		return
 
-	var effect_pos = global_position
-	if effect_pos.y < _game_config_float("fall_threshold", -120.0) + 2.0:
-		effect_pos.y = 1.25
-
-	var burst = Node3D.new()
-	burst.name = effect_name
+	var effect_pos := global_position
+	if mode == &"ringout" and effect_pos.y < -2.0:
+		effect_pos = _last_safe_visual_position
+	var burst := CharacterTransitionBurstScene.instantiate() as Node3D
+	if burst == null:
+		return
+	burst.name = "RespawnBurst" if mode == &"respawn" else "RingoutBurst"
+	burst.call("configure", mode, color, radius)
 	scene_root.add_child(burst)
 	burst.global_position = effect_pos
 
-	var disc = MeshInstance3D.new()
-	disc.name = "BurstDisc"
-	var disc_mesh = CylinderMesh.new()
-	disc_mesh.top_radius = radius
-	disc_mesh.bottom_radius = radius
-	disc_mesh.height = 0.08
-	disc_mesh.radial_segments = 30
-	disc_mesh.material = _effect_material(Color(color.r, color.g, color.b, 0.42), color, 2.6)
-	disc.mesh = disc_mesh
-	burst.add_child(disc)
 
-	for i in range(8):
-		var angle = TAU * float(i) / 8.0
-		var spark = MeshInstance3D.new()
-		spark.name = "BurstSpark"
-		var spark_mesh = SphereMesh.new()
-		spark_mesh.radius = 0.18
-		spark_mesh.height = 0.18
-		spark_mesh.material = _effect_material(color.lerp(Color.WHITE, 0.35), color, 2.0)
-		spark.mesh = spark_mesh
-		spark.position = Vector3(cos(angle) * radius * 0.55, 0.35, sin(angle) * radius * 0.55)
-		burst.add_child(spark)
-
-	var tween = burst.create_tween()
-	tween.tween_property(burst, "scale", Vector3.ONE * 1.75, 0.22).set_ease(Tween.EASE_OUT)
-	tween.tween_callback(burst.queue_free)
-
-func _effect_material(albedo: Color, emission: Color, energy: float) -> StandardMaterial3D:
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = albedo
-	mat.roughness = 0.5
-	if albedo.a < 1.0:
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	if energy > 0.0:
-		mat.emission_enabled = true
-		mat.emission = emission
-		mat.emission_energy_multiplier = energy
-	return mat
-
-# ============================================================
-#  受击闪白
-# ============================================================
-var _original_colors: Array = []
-var _flash_tween: Tween = null
-
-func _flash_damage() -> void:
-	var meshes = _get_all_meshes()
-	if meshes.is_empty():
+func _ensure_combat_feedback() -> void:
+	_combat_feedback = get_node_or_null("CombatFeedback") as CharacterCombatFeedback
+	if _combat_feedback:
 		return
-	if _flash_tween and _flash_tween.is_running():
-		_flash_tween.kill()
-	else:
-		_original_colors.clear()
-		for m in meshes:
-			var mat = m.get_active_material(0)
-			if mat and mat is StandardMaterial3D:
-				_original_colors.append({"mat": mat, "color": mat.albedo_color, "emission": mat.emission})
-	# 闪白
-	for entry in _original_colors:
-		entry["mat"].albedo_color = Color.WHITE
-		entry["mat"].emission = Color.WHITE
-	_flash_tween = create_tween()
-	_flash_tween.tween_callback(func():
-		for entry in _original_colors:
-			entry["mat"].albedo_color = entry["color"]
-			entry["mat"].emission = entry["emission"]
-	).set_delay(0.1)
+	_combat_feedback = CharacterCombatFeedbackScript.new() as CharacterCombatFeedback
+	_combat_feedback.name = "CombatFeedback"
+	add_child(_combat_feedback)
 
 # ============================================================
 #  Mesh 辅助

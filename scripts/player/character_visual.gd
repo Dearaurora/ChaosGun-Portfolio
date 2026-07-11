@@ -688,7 +688,7 @@ func get_locomotion_right_amount() -> float:
 	return _locomotion_right_amount
 
 func animate_hit(impact_dir: Vector3 = Vector3.ZERO, strength: float = 1.0) -> void:
-	_hit_flash_timer = 0.15
+	_hit_flash_timer = 0.12
 	var clamped_strength := clampf(strength, 0.35, 1.35)
 	var local_impact := global_basis.inverse() * impact_dir.normalized() if impact_dir.length_squared() > 0.0001 else Vector3.RIGHT
 	_impact_roll = clampf(-local_impact.x * 0.16 * clamped_strength, -0.22, 0.22)
@@ -714,7 +714,8 @@ func _process(delta: float) -> void:
 		_weapon_holder.position = _weapon_holder_base_position + Vector3(0.0, 0.0, _weapon_kick)
 	if _hit_flash_timer > 0:
 		_hit_flash_timer -= delta
-		var flash_color = Color.RED if fmod(_hit_flash_timer, 0.1) > 0.05 else body_color
+		var flash_weight := clampf(_hit_flash_timer / 0.12, 0.0, 1.0) * 0.72
+		var flash_color := body_color.lerp(Color("#fff0cf"), flash_weight)
 		for mesh_instance in _body_color_meshes:
 			_apply_body_color_to_mesh(mesh_instance, flash_color)
 	else:
