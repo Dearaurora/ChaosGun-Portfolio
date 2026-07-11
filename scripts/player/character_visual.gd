@@ -95,8 +95,10 @@ func _cache_asset_meshes(node: Node) -> void:
 		if child is MeshInstance3D:
 			var mesh_instance := child as MeshInstance3D
 			var lower_name = String(mesh_instance.name).to_lower()
-			if lower_name.contains("body"):
+			if lower_name == "body":
 				_body_mesh = mesh_instance
+				_body_color_meshes.append(mesh_instance)
+			elif lower_name.contains("body"):
 				_body_color_meshes.append(mesh_instance)
 			elif lower_name.contains("belly") or lower_name.contains("hand"):
 				_body_color_meshes.append(mesh_instance)
@@ -313,6 +315,7 @@ func _build_weapon_holder() -> void:
 ## 切换枪械可视模型
 func set_weapon_visual(weapon_id: StringName) -> void:
 	_current_weapon_id = weapon_id
+	_set_weapon_pose_visual(weapon_id)
 	# 清除旧模型
 	for child in _weapon_holder.get_children():
 		_weapon_holder.remove_child(child)
@@ -355,6 +358,22 @@ func set_weapon_visual(weapon_id: StringName) -> void:
 			])
 
 	_build_weapon_readability_proxy(weapon_id)
+
+func _set_weapon_pose_visual(weapon_id: StringName) -> void:
+	if _asset_root == null:
+		return
+	var wants_pistol := weapon_id == &"pistol"
+	_set_weapon_pose_mesh_visibility(_asset_root, wants_pistol)
+
+func _set_weapon_pose_mesh_visibility(node: Node, wants_pistol: bool) -> void:
+	if node is MeshInstance3D:
+		var lower_name := String(node.name).to_lower()
+		if lower_name.contains("posepistol"):
+			(node as MeshInstance3D).visible = wants_pistol
+		elif lower_name.contains("poselong"):
+			(node as MeshInstance3D).visible = not wants_pistol
+	for child in node.get_children():
+		_set_weapon_pose_mesh_visibility(child, wants_pistol)
 
 func _build_weapon_asset_visual(weapon_id: StringName) -> bool:
 	var model_path := _weapon_model_path(weapon_id)
@@ -498,6 +517,7 @@ func get_weapon_readability_debug() -> Dictionary:
 		"uses_proxy": proxy != null,
 		"asset_scale": _weapon_asset_scale(_current_weapon_id),
 		"asset_rotation_y": asset.rotation_degrees.y if asset else 0.0,
+		"weapon_pose": "pistol" if _current_weapon_id == &"pistol" else "long",
 		"has_magazine": bool(profile.get("has_magazine", false)),
 		"has_stock": bool(profile.get("has_stock", false)),
 		"has_scope": bool(profile.get("has_scope", false)),

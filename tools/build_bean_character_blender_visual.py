@@ -136,6 +136,13 @@ def add_cube(name, loc, scale, material, bevel=0.08, rot=(0, 0, 0)):
     return obj
 
 
+def add_marker(name, loc):
+    marker = bpy.data.objects.new(name, None)
+    marker.location = loc
+    bpy.context.collection.objects.link(marker)
+    return marker
+
+
 def build_character():
     # Blender +Y maps to Godot -Z during glTF Y-up conversion.
     add_profile_body("Body", MAT_BODY)
@@ -145,15 +152,27 @@ def build_character():
     add_uv_sphere("EyeRight", (0.18, 0.84, 1.60), (0.072, 0.025, 0.13), MAT_EYE, 16, 10)
 
     left_shoulder = (-0.86, 0.34, 1.38)
-    left_elbow = (-0.90, 1.02, 1.12)
-    left_hand = (-0.22, 1.43, 1.15)
     right_shoulder = (0.86, 0.34, 1.38)
-    right_elbow = (0.90, 1.00, 1.04)
-    right_hand = (0.22, 1.39, 0.99)
-    add_curved_arm("BodyArmLeft", left_shoulder, left_elbow, left_hand, 0.18, MAT_BODY)
-    add_curved_arm("BodyArmRight", right_shoulder, right_elbow, right_hand, 0.18, MAT_BODY)
-    add_uv_sphere("LeftHandGrip", left_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
-    add_uv_sphere("RightHandGrip", right_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
+
+    pistol_left_elbow = (-0.86, 0.96, 1.12)
+    pistol_left_hand = (-0.13, 1.39, 1.11)
+    pistol_right_elbow = (0.86, 0.94, 1.04)
+    pistol_right_hand = (0.13, 1.36, 0.99)
+    add_curved_arm("BodyPosePistolArmLeft", left_shoulder, pistol_left_elbow, pistol_left_hand, 0.18, MAT_BODY)
+    add_curved_arm("BodyPosePistolArmRight", right_shoulder, pistol_right_elbow, pistol_right_hand, 0.18, MAT_BODY)
+    add_uv_sphere("BodyPosePistolHandLeft", pistol_left_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
+    add_uv_sphere("BodyPosePistolHandRight", pistol_right_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
+
+    long_left_elbow = (-0.88, 1.10, 1.12)
+    long_left_hand = (-0.12, 1.70, 1.12)
+    long_right_elbow = (0.88, 0.98, 1.04)
+    long_right_hand = (0.16, 1.40, 0.99)
+    add_curved_arm("BodyPoseLongArmLeft", left_shoulder, long_left_elbow, long_left_hand, 0.18, MAT_BODY)
+    add_curved_arm("BodyPoseLongArmRight", right_shoulder, long_right_elbow, long_right_hand, 0.18, MAT_BODY)
+    add_uv_sphere("BodyPoseLongHandLeft", long_left_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
+    add_uv_sphere("BodyPoseLongHandRight", long_right_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
+    add_marker("LeftHandGrip", pistol_left_hand)
+    add_marker("RightHandGrip", pistol_right_hand)
 
     add_uv_sphere("BodyFootCuffLeft", (-0.39, 0.10, 0.23), (0.31, 0.33, 0.20), MAT_BODY, 24, 10)
     add_uv_sphere("BodyFootCuffRight", (0.39, 0.10, 0.23), (0.31, 0.33, 0.20), MAT_BODY, 24, 10)

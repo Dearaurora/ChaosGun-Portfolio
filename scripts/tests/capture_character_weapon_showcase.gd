@@ -79,10 +79,10 @@ func _build_lighting(stage: Node3D) -> void:
 
 func _build_roster(stage: Node3D) -> void:
 	var entries := [
-		{"x": 5.4, "weapon": &"pistol", "color": Color("#ef4d53")},
-		{"x": 1.8, "weapon": &"smg", "color": Color("#75ca3e")},
-		{"x": -1.8, "weapon": &"ak_rifle", "color": Color("#f2bd31")},
-		{"x": -5.4, "weapon": &"sniper", "color": Color("#28a8df")},
+		{"x": 5.05, "weapon": &"pistol", "color": Color("#ef4d53")},
+		{"x": 1.68, "weapon": &"smg", "color": Color("#75ca3e")},
+		{"x": -1.68, "weapon": &"ak_rifle", "color": Color("#f2bd31")},
+		{"x": -5.05, "weapon": &"sniper", "color": Color("#28a8df")},
 	]
 	for entry in entries:
 		var visual := CharacterVisual.new()

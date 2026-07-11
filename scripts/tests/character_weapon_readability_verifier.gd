@@ -26,6 +26,7 @@ func _initialize() -> void:
 		profiles[String(weapon_id)] = debug
 		_verify_weapon_pose(debug, String(weapon_id))
 		_verify_weapon_asset(visual, String(weapon_id))
+		_verify_character_pose_meshes(visual, String(weapon_id))
 		_verify_no_torso_intersection(visual, String(weapon_id))
 
 	_verify_weapon_silhouette_steps(profiles)
@@ -95,6 +96,32 @@ func _collect_asset_material_stats(node: Node, stats: Dictionary) -> void:
 				colors.append(mat.albedo_color)
 	for child in node.get_children():
 		_collect_asset_material_stats(child, stats)
+
+func _verify_character_pose_meshes(visual: CharacterVisual, weapon_id: String) -> void:
+	var counts := {"pistol_visible": 0, "long_visible": 0, "pistol_total": 0, "long_total": 0}
+	_count_pose_meshes(visual, counts)
+	if int(counts["pistol_total"]) < 4 or int(counts["long_total"]) < 4:
+		_fail("%s character asset should contain complete pistol and long-gun pose sets" % weapon_id)
+	var wants_pistol := weapon_id == "pistol"
+	if wants_pistol and (int(counts["pistol_visible"]) < 4 or int(counts["long_visible"]) != 0):
+		_fail("pistol should show only the close-grip arm pose")
+	if not wants_pistol and (int(counts["long_visible"]) < 4 or int(counts["pistol_visible"]) != 0):
+		_fail("%s should show only the long-gun support pose" % weapon_id)
+
+func _count_pose_meshes(node: Node, counts: Dictionary) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		var lower_name := String(mesh_instance.name).to_lower()
+		if lower_name.contains("posepistol"):
+			counts["pistol_total"] = int(counts["pistol_total"]) + 1
+			if mesh_instance.visible:
+				counts["pistol_visible"] = int(counts["pistol_visible"]) + 1
+		elif lower_name.contains("poselong"):
+			counts["long_total"] = int(counts["long_total"]) + 1
+			if mesh_instance.visible:
+				counts["long_visible"] = int(counts["long_visible"]) + 1
+	for child in node.get_children():
+		_count_pose_meshes(child, counts)
 
 func _verify_no_torso_intersection(visual: CharacterVisual, weapon_id: String) -> void:
 	var torso := _find_descendant(visual, "Body") as MeshInstance3D
