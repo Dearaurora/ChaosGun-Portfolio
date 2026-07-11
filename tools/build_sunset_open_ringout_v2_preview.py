@@ -712,6 +712,16 @@ def add_tree(name, godot_pos, scale, collection, mats):
 def add_barrel(name, godot_pos, body_mat, collection, mats):
     hero.add_cylinder(name, bpos(godot_pos), 0.95, 1.65, body_mat, collection, bevel=0.16, vertices=28)
     hero.add_cylinder(
+        f"{name}V5BottomFoot",
+        bpos((godot_pos[0], godot_pos[1] - 0.82, godot_pos[2])),
+        0.84,
+        0.12,
+        mats["wood_dark"],
+        collection,
+        bevel=0.04,
+        vertices=28,
+    )
+    hero.add_cylinder(
         f"{name}V4TopLid",
         bpos((godot_pos[0], godot_pos[1] + 0.86, godot_pos[2])),
         0.82,
@@ -731,6 +741,14 @@ def add_barrel(name, godot_pos, body_mat, collection, mats):
         bevel=0.03,
         vertices=16,
     )
+    hero.add_torus(
+        f"{name}V5LidInset",
+        bpos((godot_pos[0], godot_pos[1] + 0.95, godot_pos[2])),
+        0.54,
+        0.055,
+        mats["wood_dark"],
+        collection,
+    )
     for band_index, y_offset in enumerate((-0.52, 0.52)):
         hero.add_torus(
             f"{name}Band_{band_index}",
@@ -740,6 +758,22 @@ def add_barrel(name, godot_pos, body_mat, collection, mats):
             mats["tire"],
             collection,
         )
+    add_box(
+        f"{name}V5LabelFrame",
+        (godot_pos[0], godot_pos[1], godot_pos[2] - 0.94),
+        (0.72, 0.66, 0.08),
+        mats["wood_dark"],
+        collection,
+        0.10,
+    )
+    add_box(
+        f"{name}V5Label",
+        (godot_pos[0], godot_pos[1] + 0.02, godot_pos[2] - 0.99),
+        (0.48, 0.36, 0.05),
+        mats["cream"],
+        collection,
+        0.06,
+    )
 
 
 def add_fence_segment(name, center, length, axis, collection, mats):
@@ -772,6 +806,14 @@ def add_landmarks(collection, mats):
             1.05,
             0.30,
             material,
+            collection,
+        )
+        hero.add_torus(
+            f"V3WestTireV5Sidewall_{index}",
+            bpos((-41.5, y + 0.035, 0.5)),
+            1.05,
+            0.16,
+            mats["gold_dark"] if index == 1 else mats["red_dark"],
             collection,
         )
     add_box("V3WestFlagPole", (-43.0, 2.2, 7.2), (0.20, 4.4, 0.20), mats["cream"], collection, 0.06)
@@ -894,25 +936,29 @@ def add_backdrop(collection, mats):
 
 
 def add_segmented_bumper(name, godot_pos, length, radius, body_mat, light_mat, dark_mat, collection):
-    add_box(
-        f"{name}Underlay",
-        (godot_pos[0], godot_pos[1] - radius * 0.62, godot_pos[2]),
-        (length * 0.92, 0.34, radius * 1.22),
-        dark_mat,
-        collection,
-        0.16,
-    )
+    for foot_index, offset in enumerate((-0.28, 0.28)):
+        add_box(
+            f"{name}V5Foot_{foot_index}",
+            (godot_pos[0] + length * offset, godot_pos[1] - radius * 0.70, godot_pos[2]),
+            (length * 0.20, 0.30, radius * 1.16),
+            dark_mat,
+            collection,
+            0.15,
+        )
     hero.add_capsule(name, bpos(godot_pos), length, radius, body_mat, collection)
-    add_box(
-        f"{name}TopHighlight",
-        (godot_pos[0], godot_pos[1] + radius * 0.56, godot_pos[2]),
-        (length * 0.58, 0.10, radius * 0.42),
-        light_mat,
-        collection,
-        0.05,
-    )
 
     segment_count = max(2, int(round(length / 3.1)))
+    segment_length = length / float(segment_count)
+    for segment_index in range(segment_count):
+        segment_x = godot_pos[0] - length * 0.5 + segment_length * (float(segment_index) + 0.5)
+        add_box(
+            f"{name}V5TopPad_{segment_index}",
+            (segment_x, godot_pos[1] + radius * 0.57, godot_pos[2]),
+            (segment_length * 0.52, 0.08, radius * 0.34),
+            light_mat,
+            collection,
+            0.06,
+        )
     collar_positions = [
         godot_pos[0] - length * 0.5 + length * float(index) / float(segment_count)
         for index in range(1, segment_count)
@@ -927,6 +973,18 @@ def add_segmented_bumper(name, godot_pos, length, radius, body_mat, light_mat, d
             dark_mat,
             collection,
             rotation=(0.0, math.pi / 2.0, 0.0),
+        )
+    for end_index, direction in enumerate((-1.0, 1.0)):
+        hero.add_cylinder(
+            f"{name}V5EndPlate_{end_index}",
+            bpos((godot_pos[0] + direction * (length * 0.5 - 0.08), godot_pos[1], godot_pos[2])),
+            radius * 0.68,
+            0.12,
+            light_mat,
+            collection,
+            rotation=(0.0, math.pi / 2.0, 0.0),
+            bevel=0.04,
+            vertices=24,
         )
 
 
@@ -969,12 +1027,37 @@ def add_production_crate(name, godot_pos, godot_size, body_mat, light_mat, dark_
     )
     for face_index, face_z in enumerate((z - sz * 0.5 - 0.025, z + sz * 0.5 + 0.025)):
         add_box(
-            f"{name}SideInset_{face_index}",
+            f"{name}V5SideInsetFrame_{face_index}",
             (x, y, face_z),
-            (sx * 0.54, sy * 0.48, 0.07),
-            light_mat,
+            (sx * 0.56, sy * 0.52, 0.065),
+            dark_mat,
             collection,
             0.09,
+        )
+        add_box(
+            f"{name}V5SideInsetPanel_{face_index}",
+            (x, y, face_z + (-0.045 if face_index == 0 else 0.045)),
+            (sx * 0.43, sy * 0.36, 0.045),
+            light_mat,
+            collection,
+            0.08,
+        )
+        add_box(
+            f"{name}V5SideLatch_{face_index}",
+            (x, y, face_z + (-0.08 if face_index == 0 else 0.08)),
+            (sx * 0.13, sy * 0.11, 0.045),
+            dark_mat,
+            collection,
+            0.04,
+        )
+    for cap_index, (offset_x, offset_z) in enumerate(((-1, -1), (-1, 1), (1, -1), (1, 1))):
+        add_box(
+            f"{name}V5CornerCap_{cap_index}",
+            (x + offset_x * (sx * 0.5 - 0.16), y + sy * 0.5 + 0.09, z + offset_z * (sz * 0.5 - 0.16)),
+            (0.36, 0.15, 0.36),
+            light_mat,
+            collection,
+            0.08,
         )
 
 
@@ -986,6 +1069,8 @@ def add_west_barricade(collection, mats):
         add_box(f"V3WestBarricadeCushion_{index}", (x, 1.72, 5.60), (1.18, 1.56, 2.48), mats["orange"], collection, 0.36)
     for index, x in enumerate((-15.95, -13.85, -11.75)):
         add_box(f"V3WestBarricadeStrap_{index}", (x, 1.72, 5.60), (0.26, 1.88, 3.18), mats["gold_dark"], collection, 0.08)
+    for index, x in enumerate((-16.65, -13.85, -11.05)):
+        add_box(f"V3WestBarricadeV5Panel_{index}", (x, 1.78, 4.02), (1.58, 0.72, 0.10), mats["gold_light"], collection, 0.14)
 
 
 def add_gameplay_props(collection, mats):
