@@ -6,6 +6,7 @@ import bpy
 
 
 OUT_PATH = Path("assets/models/generated/characters/bean_character.glb")
+SOURCE_PATH = Path("assets/source/characters/bean_character.blend")
 
 
 def clear_scene():
@@ -23,13 +24,11 @@ def mat(name, color, roughness=0.82, metallic=0.0):
     return material
 
 
-MAT_BODY = mat("bean_body_recolor", (0.95, 0.18, 0.18, 1.0), 0.82)
-MAT_VISOR_RIM = mat("bean_visor_rim", (0.08, 0.11, 0.16, 1.0), 0.68)
-MAT_VISOR_GLASS = mat("bean_visor_glass", (0.74, 0.93, 1.0, 1.0), 0.34)
-MAT_HIGHLIGHT = mat("bean_visor_highlight", (1.0, 1.0, 1.0, 1.0), 0.28)
-MAT_FOOT = mat("bean_soft_feet", (0.035, 0.045, 0.06, 1.0), 0.76)
-MAT_FACE = mat("bean_recessed_face", (0.075, 0.045, 0.085, 1.0), 0.72)
-MAT_EYE = mat("bean_warm_eyes", (1.0, 0.57, 0.12, 1.0), 0.40)
+MAT_BODY = mat("character_body_recolor", (0.95, 0.18, 0.18, 1.0), 0.78)
+MAT_BOOT = mat("character_boot_rubber", (0.12, 0.07, 0.17, 1.0), 0.72)
+MAT_GLOVE = mat("character_glove_rubber", (0.18, 0.10, 0.22, 1.0), 0.76)
+MAT_FACE = mat("character_recessed_face", (0.075, 0.045, 0.085, 1.0), 0.70)
+MAT_EYE = mat("character_warm_eyes", (1.0, 0.57, 0.12, 1.0), 0.40)
 _eye_bsdf = MAT_EYE.node_tree.nodes.get("Principled BSDF")
 if "Emission Color" in _eye_bsdf.inputs:
     _eye_bsdf.inputs["Emission Color"].default_value = (1.0, 0.30, 0.035, 1.0)
@@ -136,6 +135,10 @@ def add_cube(name, loc, scale, material, bevel=0.08, rot=(0, 0, 0)):
     return obj
 
 
+def add_rounded_box(name, loc, scale, material, bevel=0.16):
+    return add_cube(name, loc, scale, material, bevel)
+
+
 def add_marker(name, loc):
     marker = bpy.data.objects.new(name, None)
     marker.location = loc
@@ -145,43 +148,50 @@ def add_marker(name, loc):
 
 def build_character():
     # Blender +Y maps to Godot -Z during glTF Y-up conversion.
-    add_profile_body("Body", MAT_BODY)
+    # The model deliberately uses a small set of broad forms so it remains readable
+    # at the gameplay camera distance and can be reposed without retopology.
+    add_rounded_box("Body", (0.0, 0.0, 1.06), (1.66, 1.28, 1.46), MAT_BODY, 0.25)
+    add_uv_sphere("HelmetCollar", (0.0, 0.02, 1.69), (0.90, 0.72, 0.16), MAT_BODY, 24, 10)
+    add_uv_sphere("HelmetShell", (0.0, 0.02, 2.12), (0.84, 0.70, 0.68), MAT_BODY, 24, 12)
+    add_rounded_box("FaceOpening", (0.0, 0.71, 2.10), (1.02, 0.10, 0.50), MAT_FACE, 0.15)
+    add_uv_sphere("EyeLeft", (-0.20, 0.78, 2.10), (0.070, 0.030, 0.13), MAT_EYE, 12, 8)
+    add_uv_sphere("EyeRight", (0.20, 0.78, 2.10), (0.070, 0.030, 0.13), MAT_EYE, 12, 8)
 
-    add_cube("FaceOpening", (0, 0.785, 1.60), (0.96, 0.075, 0.48), MAT_FACE, 0.16)
-    add_uv_sphere("EyeLeft", (-0.18, 0.84, 1.60), (0.072, 0.025, 0.13), MAT_EYE, 16, 10)
-    add_uv_sphere("EyeRight", (0.18, 0.84, 1.60), (0.072, 0.025, 0.13), MAT_EYE, 16, 10)
+    left_shoulder = (-0.80, 0.08, 1.34)
+    right_shoulder = (0.80, 0.08, 1.34)
 
-    left_shoulder = (-0.86, 0.34, 1.38)
-    right_shoulder = (0.86, 0.34, 1.38)
+    pistol_left_elbow = (-0.78, 0.74, 1.23)
+    pistol_left_glove = (-0.18, 1.20, 1.22)
+    pistol_right_elbow = (0.78, 0.70, 1.18)
+    pistol_right_glove = (0.18, 1.16, 1.16)
+    add_curved_arm("BodyPosePistolArmLeft", left_shoulder, pistol_left_elbow, pistol_left_glove, 0.16, MAT_BODY)
+    add_curved_arm("BodyPosePistolArmRight", right_shoulder, pistol_right_elbow, pistol_right_glove, 0.16, MAT_BODY)
+    add_uv_sphere("PosePistolGloveLeft", pistol_left_glove, (0.20, 0.18, 0.19), MAT_GLOVE, 16, 10)
+    add_uv_sphere("PosePistolGloveRight", pistol_right_glove, (0.20, 0.18, 0.19), MAT_GLOVE, 16, 10)
 
-    pistol_left_elbow = (-0.86, 0.96, 1.12)
-    pistol_left_hand = (-0.13, 1.39, 1.11)
-    pistol_right_elbow = (0.86, 0.94, 1.04)
-    pistol_right_hand = (0.13, 1.36, 0.99)
-    add_curved_arm("BodyPosePistolArmLeft", left_shoulder, pistol_left_elbow, pistol_left_hand, 0.18, MAT_BODY)
-    add_curved_arm("BodyPosePistolArmRight", right_shoulder, pistol_right_elbow, pistol_right_hand, 0.18, MAT_BODY)
-    add_uv_sphere("BodyPosePistolHandLeft", pistol_left_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
-    add_uv_sphere("BodyPosePistolHandRight", pistol_right_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
+    # Long weapons use a low-ready two-point pose: trigger hand near the chest,
+    # support hand pushed forward along the fore-end, with clear torso clearance.
+    long_left_elbow = (-0.88, 0.78, 1.24)
+    long_left_glove = (-0.46, 1.42, 1.29)
+    long_right_elbow = (0.72, 0.52, 1.24)
+    long_right_glove = (0.20, 1.08, 1.28)
+    add_curved_arm("BodyPoseLongArmLeft", left_shoulder, long_left_elbow, long_left_glove, 0.17, MAT_BODY)
+    add_curved_arm("BodyPoseLongArmRight", right_shoulder, long_right_elbow, long_right_glove, 0.17, MAT_BODY)
+    add_uv_sphere("PoseLongGloveLeft", long_left_glove, (0.21, 0.19, 0.20), MAT_GLOVE, 16, 10)
+    add_uv_sphere("PoseLongGloveRight", long_right_glove, (0.21, 0.19, 0.20), MAT_GLOVE, 16, 10)
+    add_marker("LeftHandGrip", long_left_glove)
+    add_marker("RightHandGrip", long_right_glove)
 
-    long_left_elbow = (-0.88, 1.10, 1.12)
-    long_left_hand = (-0.12, 1.70, 1.12)
-    long_right_elbow = (0.88, 0.98, 1.04)
-    long_right_hand = (0.16, 1.40, 0.99)
-    add_curved_arm("BodyPoseLongArmLeft", left_shoulder, long_left_elbow, long_left_hand, 0.18, MAT_BODY)
-    add_curved_arm("BodyPoseLongArmRight", right_shoulder, long_right_elbow, long_right_hand, 0.18, MAT_BODY)
-    add_uv_sphere("BodyPoseLongHandLeft", long_left_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
-    add_uv_sphere("BodyPoseLongHandRight", long_right_hand, (0.21, 0.18, 0.21), MAT_BODY, 22, 12)
-    add_marker("LeftHandGrip", pistol_left_hand)
-    add_marker("RightHandGrip", pistol_right_hand)
-
-    add_uv_sphere("BodyFootCuffLeft", (-0.39, 0.10, 0.23), (0.31, 0.33, 0.20), MAT_BODY, 24, 10)
-    add_uv_sphere("BodyFootCuffRight", (0.39, 0.10, 0.23), (0.31, 0.33, 0.20), MAT_BODY, 24, 10)
-    add_uv_sphere("LeftFoot", (-0.39, 0.20, 0.13), (0.38, 0.43, 0.13), MAT_FOOT, 24, 10)
-    add_uv_sphere("RightFoot", (0.39, 0.20, 0.13), (0.38, 0.43, 0.13), MAT_FOOT, 24, 10)
+    add_uv_sphere("LeftLeg", (-0.42, 0.0, 0.46), (0.37, 0.37, 0.45), MAT_BODY, 20, 10)
+    add_uv_sphere("RightLeg", (0.42, 0.0, 0.46), (0.37, 0.37, 0.45), MAT_BODY, 20, 10)
+    add_rounded_box("LeftBoot", (-0.42, 0.12, 0.19), (0.56, 0.72, 0.36), MAT_BOOT, 0.16)
+    add_rounded_box("RightBoot", (0.42, 0.12, 0.19), (0.56, 0.72, 0.36), MAT_BOOT, 0.16)
 
 
 def export_glb():
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SOURCE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE_PATH))
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.export_scene.gltf(
         filepath=str(OUT_PATH),

@@ -84,6 +84,9 @@ func _build_asset_visual() -> bool:
 	_create_marker("FaceVisor", Vector3(0, 1.58, -0.84))
 	_create_marker("LeftHand", Vector3(-0.18, 1.13, -1.40))
 	_create_marker("RightHand", Vector3(0.18, 0.98, -1.34))
+	# These long-gun anchors mirror the authored support and trigger gloves.
+	_create_marker("LeftHandGrip", Vector3(-0.46, 1.29, -1.42))
+	_create_marker("RightHandGrip", Vector3(0.20, 1.28, -1.08))
 	_create_marker("LeftFoot", Vector3(-0.39, 0.18, -0.16))
 	_create_marker("RightFoot", Vector3(0.39, 0.18, -0.16))
 	_cache_asset_meshes(_asset_root)
@@ -105,7 +108,7 @@ func _cache_asset_meshes(node: Node) -> void:
 			if lower_name == "body":
 				_body_mesh = mesh_instance
 				_body_color_meshes.append(mesh_instance)
-			elif lower_name.contains("body"):
+			elif lower_name.contains("body") or lower_name.contains("helmet") or lower_name.contains("leg"):
 				_body_color_meshes.append(mesh_instance)
 			elif lower_name.contains("belly") or lower_name.contains("hand"):
 				_body_color_meshes.append(mesh_instance)
