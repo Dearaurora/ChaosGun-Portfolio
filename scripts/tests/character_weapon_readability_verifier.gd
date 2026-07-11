@@ -19,6 +19,7 @@ func _initialize() -> void:
 		return
 
 	var profiles := {}
+	var muzzle_positions := {}
 	for weapon_id in [&"pistol", &"smg", &"ak_rifle", &"sniper"]:
 		visual.set_weapon_visual(weapon_id)
 		await process_frame
@@ -28,8 +29,10 @@ func _initialize() -> void:
 		_verify_weapon_asset(visual, String(weapon_id))
 		_verify_character_pose_meshes(visual, String(weapon_id))
 		_verify_no_torso_intersection(visual, String(weapon_id))
+		muzzle_positions[String(weapon_id)] = visual.get_weapon_muzzle_local_position(weapon_id)
 
 	_verify_weapon_silhouette_steps(profiles)
+	_verify_muzzle_positions(muzzle_positions)
 	await _finish(visual)
 
 func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
@@ -191,6 +194,19 @@ func _verify_weapon_silhouette_steps(profiles: Dictionary) -> void:
 		_fail("Sniper silhouette should have a scope marker")
 	else:
 		print("OK  readable held-weapon silhouette steps")
+
+func _verify_muzzle_positions(positions: Dictionary) -> void:
+	var pistol := positions["pistol"] as Vector3
+	var smg := positions["smg"] as Vector3
+	var ak := positions["ak_rifle"] as Vector3
+	var sniper := positions["sniper"] as Vector3
+	if not (pistol.z > smg.z and smg.z > ak.z and ak.z > sniper.z):
+		_fail("Muzzle anchors should advance with authored weapon length")
+	for weapon_id in positions:
+		var point := positions[weapon_id] as Vector3
+		if point.y < 1.18 or point.y > 1.36 or point.z > -2.55:
+			_fail("%s muzzle anchor is not aligned with its authored barrel: %s" % [weapon_id, point])
+	print("OK  authored per-weapon muzzle anchor progression")
 
 func _fail(message: String) -> void:
 	_failures.append(message)

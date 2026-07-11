@@ -74,6 +74,9 @@ func _ready() -> void:
 	gravity_scale = _game_config_float("character_gravity_scale", 20.0)
 	if weapon_manager and not weapon_manager.weapon_fired.is_connected(_on_weapon_fired):
 		weapon_manager.weapon_fired.connect(_on_weapon_fired)
+	if weapon_manager and not weapon_manager.weapon_switched.is_connected(_on_weapon_muzzle_switched):
+		weapon_manager.weapon_switched.connect(_on_weapon_muzzle_switched)
+	_sync_weapon_muzzle(&"pistol")
 	# 禁用接触摩擦，水平减速完全由 horizontal_damp 控制，
 	# 避免高重力下法向力过大导致角色走不动。
 	var mat = PhysicsMaterial.new()
@@ -400,6 +403,15 @@ func _on_weapon_fired(weapon_data: WeaponData) -> void:
 	var visual = get_visual()
 	if visual and weapon_data:
 		visual.animate_fire(weapon_data.weapon_id)
+
+func _on_weapon_muzzle_switched(weapon_data: WeaponData) -> void:
+	if weapon_data:
+		_sync_weapon_muzzle(weapon_data.weapon_id)
+
+func _sync_weapon_muzzle(weapon_id: StringName) -> void:
+	var visual = get_visual()
+	if visual and weapon_point and visual.has_method("get_weapon_muzzle_local_position"):
+		weapon_point.position = visual.get_weapon_muzzle_local_position(weapon_id)
 
 # ============================================================
 #  音效辅助

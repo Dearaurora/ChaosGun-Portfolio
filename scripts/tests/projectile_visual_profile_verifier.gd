@@ -44,9 +44,6 @@ func _verify_short_readable_projectile(projectile: Projectile, label: String) ->
 	var body_radius := float(profile.get("body_radius", 0.0))
 	var trail_length := float(profile.get("trail_length", 99.0))
 	var trail_alpha := float(profile.get("trail_alpha", 1.0))
-	var trajectory_length := float(profile.get("trajectory_length", -1.0))
-	var trajectory_width := float(profile.get("trajectory_width", 0.0))
-	var outline_alpha := float(profile.get("outline_alpha", 0.0))
 	if body_length < 0.70 or body_length > 1.45:
 		_fail("%s bullet body should be large enough to dodge-read, length %.2f" % [label, body_length])
 	if body_radius < 0.14 or body_radius > 0.34:
@@ -55,12 +52,6 @@ func _verify_short_readable_projectile(projectile: Projectile, label: String) ->
 		_fail("%s bullet trail should be short, got %.2f" % [label, trail_length])
 	if trail_alpha > 0.46:
 		_fail("%s trail alpha should stay low enough not to cover combat, alpha %.2f" % [label, trail_alpha])
-	if trajectory_length < 1.15 or trajectory_length > 2.85:
-		_fail("%s trajectory ribbon should be long enough to read without becoming a beam, length %.2f" % [label, trajectory_length])
-	if trajectory_width < 0.14 or trajectory_width > 0.44:
-		_fail("%s trajectory ribbon needs screen-readable width, got %.2f" % [label, trajectory_width])
-	if outline_alpha < 0.52:
-		_fail("%s trajectory needs a dark readable underlay, alpha %.2f" % [label, outline_alpha])
 
 	var core := _find_mesh(projectile, "BulletCore")
 	var rim := _find_mesh(projectile, "BulletRim")
@@ -74,12 +65,10 @@ func _verify_short_readable_projectile(projectile: Projectile, label: String) ->
 		_fail("%s missing dark BulletRim mesh" % label)
 	if trail == null:
 		_fail("%s missing ShortTrail mesh" % label)
-	if trajectory_underlay == null:
-		_fail("%s missing TrajectoryUnderlay mesh" % label)
-	if trajectory_core == null:
-		_fail("%s missing TrajectoryCore mesh" % label)
-	if lead_spark == null:
-		_fail("%s missing LeadSpark mesh" % label)
+	if trajectory_underlay != null or trajectory_core != null:
+		_fail("%s should not stack a second trajectory ribbon over the shot tracer" % label)
+	if lead_spark != null or _find_mesh(projectile, "BulletHotCenter") != null:
+		_fail("%s should not add white lead dots or hot-center clutter" % label)
 
 	var placeholder := projectile.get_node_or_null("MeshInstance3D")
 	if placeholder is MeshInstance3D and (placeholder as MeshInstance3D).visible:
@@ -87,8 +76,8 @@ func _verify_short_readable_projectile(projectile: Projectile, label: String) ->
 
 	if core:
 		var core_mat := core.material_override as StandardMaterial3D
-		if core_mat == null or not core_mat.emission_enabled or core_mat.emission_energy_multiplier < 2.5:
-			_fail("%s core should be bright and readable" % label)
+		if core_mat == null or not core_mat.emission_enabled or core_mat.emission_energy_multiplier < 1.0:
+			_fail("%s core should stay colored and readable without additive overexposure" % label)
 	if rim:
 		var rim_mat := rim.material_override as StandardMaterial3D
 		if rim_mat == null:
@@ -101,22 +90,6 @@ func _verify_short_readable_projectile(projectile: Projectile, label: String) ->
 		var trail_mat := trail.material_override as StandardMaterial3D
 		if trail_mat == null or trail_mat.albedo_color.a > 0.46:
 			_fail("%s trail material should be translucent" % label)
-	if trajectory_underlay:
-		var underlay_mat := trajectory_underlay.material_override as StandardMaterial3D
-		if underlay_mat == null:
-			_fail("%s trajectory underlay should have a material" % label)
-		else:
-			var underlay_color := underlay_mat.albedo_color
-			if underlay_color.r + underlay_color.g + underlay_color.b > 0.50 or underlay_color.a < 0.52:
-				_fail("%s trajectory underlay should be a visible dark outline" % label)
-	if trajectory_core:
-		var trajectory_mat := trajectory_core.material_override as StandardMaterial3D
-		if trajectory_mat == null or not trajectory_mat.emission_enabled or trajectory_mat.albedo_color.a > 0.72:
-			_fail("%s trajectory core should be bright but translucent" % label)
-	if lead_spark:
-		var spark_mat := lead_spark.material_override as StandardMaterial3D
-		if spark_mat == null or not spark_mat.emission_enabled or spark_mat.emission_energy_multiplier < 4.8:
-			_fail("%s lead spark should punch through the party camera" % label)
 
 func _verify_weapon_silhouette_differences(pistol: Projectile, smg: Projectile, ak: Projectile, sniper: Projectile) -> void:
 	var pistol_profile := pistol.call("get_visual_profile_debug") as Dictionary
@@ -130,12 +103,7 @@ func _verify_weapon_silhouette_differences(pistol: Projectile, smg: Projectile, 
 		_fail("Sniper bullet should have the longest readable dash")
 	if float(sniper_profile["trail_length"]) > 1.25:
 		_fail("Sniper trail should still stay shorter than a beam")
-	if float(sniper_profile.get("trajectory_length", -1.0)) <= float(ak_profile.get("trajectory_length", -1.0)):
-		_fail("Sniper trajectory should read as the longest fast shot")
-	if float(ak_profile.get("trajectory_width", 0.0)) <= float(smg_profile.get("trajectory_width", 0.0)):
-		_fail("Rifle trajectory should be wider than SMG spray")
-	else:
-		print("OK  weapon-specific compact projectile silhouettes")
+	print("OK  weapon-specific compact projectile silhouettes without duplicate ribbons")
 
 func _find_mesh(node: Node, mesh_name: String) -> MeshInstance3D:
 	if node is MeshInstance3D and node.name == mesh_name:

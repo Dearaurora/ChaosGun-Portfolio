@@ -32,7 +32,10 @@ func _initialize() -> void:
 	if not _stage_showcase_shots(arena):
 		return
 	_apply_detail_camera_if_requested(arena)
-	await create_timer(0.18).timeout
+	if OS.get_cmdline_user_args().has("--combat-frame"):
+		await process_frame
+	else:
+		await create_timer(0.18).timeout
 	await process_frame
 
 	var viewport_texture := root.get_texture()

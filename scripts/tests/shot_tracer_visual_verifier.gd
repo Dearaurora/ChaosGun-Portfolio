@@ -65,8 +65,8 @@ func _verify_mesh_layers(tracer: Node3D) -> void:
 		_fail("Shot tracer missing TracerUnderlay")
 	if core == null:
 		_fail("Shot tracer missing TracerCore")
-	if lead == null:
-		_fail("Shot tracer missing TracerLead")
+	if lead != null:
+		_fail("Shot tracer should not add a detached lead dot")
 
 	if underlay:
 		var mat := underlay.material_override as StandardMaterial3D
@@ -76,10 +76,6 @@ func _verify_mesh_layers(tracer: Node3D) -> void:
 		var mat := core.material_override as StandardMaterial3D
 		if mat == null or not mat.emission_enabled or mat.albedo_color.a > 0.74:
 			_fail("TracerCore should be bright and translucent")
-	if lead:
-		var mat := lead.material_override as StandardMaterial3D
-		if mat == null or not mat.emission_enabled or mat.emission_energy_multiplier < 5.0:
-			_fail("TracerLead should be the brightest point")
 
 func _find_mesh(node: Node, mesh_name: String) -> MeshInstance3D:
 	if node is MeshInstance3D and node.name == mesh_name:

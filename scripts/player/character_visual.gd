@@ -558,6 +558,17 @@ func _weapon_asset_scale(weapon_id: StringName) -> float:
 		_:
 			return 1.0
 
+func get_weapon_muzzle_local_position(weapon_id: StringName = _current_weapon_id) -> Vector3:
+	match weapon_id:
+		&"smg":
+			return Vector3(0.0, 1.28, -2.78)
+		&"ak_rifle":
+			return Vector3(0.0, 1.26, -3.08)
+		&"sniper":
+			return Vector3(0.0, 1.24, -3.13)
+		_:
+			return Vector3(0.0, 1.31, -2.64)
+
 func _build_gun_parts(mat: StandardMaterial3D, parts: Array) -> void:
 	for part in parts:
 		var mesh_inst = MeshInstance3D.new()

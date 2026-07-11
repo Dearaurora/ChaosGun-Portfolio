@@ -29,6 +29,7 @@ func _initialize() -> void:
 	await process_frame
 
 	var fired := weapon.try_fire(fire_point, Vector3.RIGHT, shooter)
+	var muzzle := scene_root.find_child("MuzzleFlash", true, false)
 	await process_frame
 
 	if not fired:
@@ -47,10 +48,18 @@ func _initialize() -> void:
 		var lifetime := float(debug.get("lifetime", 0.0))
 		if length < 2.0 or length > 3.6:
 			_fail("AK shot tracer should be a short muzzle direction cue, got length %.2f" % length)
-		if width < 0.18 or width > 0.32:
+		if width < 0.12 or width > 0.22:
 			_fail("AK shot tracer width should stay readable but not replace the projectile, got %.2f" % width)
 		if lifetime > 0.085:
 			_fail("AK shot tracer should fade quickly so dodgeable bullets remain the main read, got %.3f" % lifetime)
+	if muzzle == null or not muzzle.has_method("get_visual_debug"):
+		_fail("Weapon fire should spawn a configured MuzzleFlash")
+	else:
+		var muzzle_debug := muzzle.call("get_visual_debug") as Dictionary
+		if String(muzzle_debug.get("weapon_id", "")) != "ak_rifle":
+			_fail("Muzzle flash should inherit the firing weapon profile")
+		if muzzle.global_position.distance_to(fire_point.global_position) > 0.01:
+			_fail("Muzzle flash should originate at the authored fire point")
 
 	await _finish([scene_root])
 

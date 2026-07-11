@@ -75,11 +75,11 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	_spawn_shot_tracer(scene_root, fire_point.global_position, final_dir, projectile_color, weapon_data.weapon_id)
 
 	# 枪口焰
-	var flash = MuzzleFlashScene.instantiate()
+	var flash = MuzzleFlashScene.instantiate() as Node3D
+	if flash and flash.has_method("configure"):
+		flash.call("configure", final_dir, projectile_color, weapon_data.weapon_id)
 	scene_root.add_child(flash)
 	flash.global_position = fire_point.global_position
-	flash.scale = Vector3.ONE * randf_range(0.8, 1.3)
-	fire_point.get_tree().create_timer(0.06).timeout.connect(flash.queue_free)
 
 	# 射击音效
 	if weapon_data.shoot_sound and not RuntimeGlobals.runtime_audio_disabled():
@@ -144,13 +144,13 @@ func _update_spread(delta: float) -> void:
 func _projectile_color_for_weapon(weapon_id: StringName) -> Color:
 	match weapon_id:
 		&"smg":
-			return Color("#65ff49")
+			return Color("#55d93c")
 		&"ak_rifle":
-			return Color("#ffb13b")
+			return Color("#e96525")
 		&"sniper":
-			return Color("#5ce3ff")
+			return Color("#35c8e8")
 		_:
-			return Color("#ff6b72")
+			return Color("#f04455")
 
 func _spawn_shot_tracer(scene_root: Node, start_position: Vector3, direction: Vector3, color: Color, weapon_id: StringName) -> void:
 	if scene_root == null:
@@ -164,25 +164,25 @@ func _shot_tracer_profile_for_weapon(weapon_id: StringName) -> Dictionary:
 	match weapon_id:
 		&"smg":
 			return {
-				"length": 2.1,
-				"width": 0.15,
-				"lifetime": 0.060,
+				"length": 1.20,
+				"width": 0.10,
+				"lifetime": 0.040,
 			}
 		&"ak_rifle":
 			return {
-				"length": 3.2,
-				"width": 0.24,
-				"lifetime": 0.075,
+				"length": 2.00,
+				"width": 0.17,
+				"lifetime": 0.055,
 			}
 		&"sniper":
 			return {
-				"length": 3.6,
-				"width": 0.18,
-				"lifetime": 0.080,
+				"length": 2.80,
+				"width": 0.14,
+				"lifetime": 0.070,
 			}
 		_:
 			return {
-				"length": 2.6,
-				"width": 0.21,
-				"lifetime": 0.070,
+				"length": 1.55,
+				"width": 0.15,
+				"lifetime": 0.052,
 			}

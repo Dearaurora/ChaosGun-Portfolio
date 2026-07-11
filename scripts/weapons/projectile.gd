@@ -61,14 +61,6 @@ func _physics_process(delta: float) -> void:
 		var pulse := 0.94 + sin(Time.get_ticks_msec() * 0.018) * 0.04
 		_trail.scale.z = trail_length * pulse
 		_trail.position.z = body_length * 0.48 + _trail.scale.z * 0.5
-	if _trajectory_core:
-		var trajectory_length := _profile_float("trajectory_length", 1.55)
-		var trajectory_body_length := _profile_float("body_length", 0.72)
-		var pulse := 0.97 + sin(Time.get_ticks_msec() * 0.022) * 0.025
-		_trajectory_core.scale.z = trajectory_length * 0.88 * pulse
-		_trajectory_core.position.z = trajectory_body_length * 0.44 + _trajectory_core.scale.z * 0.5
-	if _trajectory_underlay and _trajectory_core:
-		_trajectory_underlay.scale.z = max(_trajectory_underlay.scale.z, _trajectory_core.scale.z + 0.12)
 
 func _on_body_entered(body: Node3D) -> void:
 	if _hit:
@@ -119,24 +111,9 @@ func _rebuild_projectile_visual() -> void:
 	var trail_length := _profile_float("trail_length", 0.62)
 	var trail_width := _profile_float("trail_width", body_radius * 0.72)
 	var trail_alpha := _profile_float("trail_alpha", 0.34)
-	var trajectory_length := _profile_float("trajectory_length", 1.55)
-	var trajectory_width := _profile_float("trajectory_width", body_radius * 1.25)
-	var trajectory_alpha := _profile_float("trajectory_alpha", 0.58)
-	var outline_alpha := _profile_float("outline_alpha", 0.62)
-
 	var rim_color := Color("#141826")
-	_trajectory_underlay = _add_box_mesh(
-		"TrajectoryUnderlay",
-		Vector3(0.0, -0.045, body_length * 0.42 + trajectory_length * 0.5),
-		Vector3(trajectory_width + 0.105, 0.025, trajectory_length + 0.18),
-		_make_projectile_material(rim_color, rim_color, 0.0, outline_alpha, false)
-	)
-	_trajectory_core = _add_box_mesh(
-		"TrajectoryCore",
-		Vector3(0.0, -0.018, body_length * 0.44 + trajectory_length * 0.44),
-		Vector3(trajectory_width, 0.018, trajectory_length * 0.88),
-		_make_projectile_material(projectile_color.lerp(Color.WHITE, 0.08), projectile_color, 3.2, trajectory_alpha, true)
-	)
+	_trajectory_underlay = null
+	_trajectory_core = null
 	_rim = _add_blob_mesh(
 		"BulletRim",
 		Vector3(0.0, -0.018, 0.0),
@@ -147,21 +124,9 @@ func _rebuild_projectile_visual() -> void:
 		"BulletCore",
 		Vector3(0.0, 0.028, -0.035),
 		Vector3(body_radius, body_radius * 0.40, body_length * 0.48),
-		_make_projectile_material(projectile_color.lerp(Color.WHITE, 0.18), projectile_color, 3.4, 0.96, true)
+		_make_projectile_material(projectile_color, projectile_color, 1.15, 0.96, false)
 	)
-	var hot_center := _add_blob_mesh(
-		"BulletHotCenter",
-		Vector3(0.0, 0.055, -body_length * 0.22),
-		Vector3(body_radius * 0.46, body_radius * 0.18, body_length * 0.18),
-		_make_projectile_material(Color.WHITE, projectile_color, 4.6, 0.88, true)
-	)
-	hot_center.visible = true
-	_lead_spark = _add_blob_mesh(
-		"LeadSpark",
-		Vector3(0.0, 0.075, -body_length * 0.44),
-		Vector3(body_radius * 0.54, body_radius * 0.26, body_radius * 0.54),
-		_make_projectile_material(Color.WHITE, projectile_color, 5.4, 0.92, true)
-	)
+	_lead_spark = null
 
 	_trail = MeshInstance3D.new()
 	_trail.name = "ShortTrail"
@@ -170,7 +135,7 @@ func _rebuild_projectile_visual() -> void:
 	_trail.mesh = trail_mesh
 	_trail.position = Vector3(0.0, 0.0, body_length * 0.48 + trail_length * 0.5)
 	_trail.scale = Vector3(trail_width, body_radius * 0.18, trail_length)
-	_trail.material_override = _make_projectile_material(projectile_color, projectile_color, 2.2, trail_alpha, true)
+	_trail.material_override = _make_projectile_material(projectile_color, projectile_color, 1.7, trail_alpha, true)
 	_visual_root.add_child(_trail)
 
 func set_projectile_color(color: Color) -> void:
@@ -238,10 +203,6 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 				"trail_length": 0.64,
 				"trail_width": 0.12,
 				"trail_alpha": 0.30,
-				"trajectory_length": 1.35,
-				"trajectory_width": 0.22,
-				"trajectory_alpha": 0.54,
-				"outline_alpha": 0.56,
 			}
 		&"ak_rifle":
 			return {
@@ -250,10 +211,6 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 				"trail_length": 0.88,
 				"trail_width": 0.18,
 				"trail_alpha": 0.34,
-				"trajectory_length": 2.05,
-				"trajectory_width": 0.34,
-				"trajectory_alpha": 0.60,
-				"outline_alpha": 0.64,
 			}
 		&"sniper":
 			return {
@@ -262,10 +219,6 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 				"trail_length": 1.16,
 				"trail_width": 0.11,
 				"trail_alpha": 0.38,
-				"trajectory_length": 2.65,
-				"trajectory_width": 0.24,
-				"trajectory_alpha": 0.58,
-				"outline_alpha": 0.62,
 			}
 		_:
 			return {
@@ -274,21 +227,15 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 				"trail_length": 0.75,
 				"trail_width": 0.16,
 				"trail_alpha": 0.32,
-				"trajectory_length": 1.65,
-				"trajectory_width": 0.28,
-				"trajectory_alpha": 0.58,
-				"outline_alpha": 0.62,
 			}
 
 func _spawn_hit_effect() -> void:
-
-	var hit = HitEffectScene.instantiate()
+	var hit = HitEffectScene.instantiate() as Node3D
+	if hit and hit.has_method("configure"):
+		hit.call("configure", projectile_color, _visual_weapon_id)
 	var scene_root = RuntimeGlobals.active_scene(get_tree())
 	if scene_root == null:
 		return
 	scene_root.add_child(hit)
 	hit.global_position = global_position
-	var tw = hit.create_tween()
-	tw.tween_property(hit, "scale", Vector3.ZERO, 0.25).set_ease(Tween.EASE_IN)
-	tw.tween_callback(hit.queue_free)
 

@@ -13,9 +13,9 @@ func setup(start_position: Vector3, direction: Vector3, color: Color, profile: D
 	else:
 		position = start_position
 	_color = color
-	_length = clampf(float(profile.get("length", _length)), 1.6, 12.0)
-	_width = clampf(float(profile.get("width", _width)), 0.12, 0.42)
-	_lifetime = clampf(float(profile.get("lifetime", _lifetime)), 0.06, 0.16)
+	_length = clampf(float(profile.get("length", _length)), 1.0, 6.0)
+	_width = clampf(float(profile.get("width", _width)), 0.08, 0.32)
+	_lifetime = clampf(float(profile.get("lifetime", _lifetime)), 0.035, 0.10)
 
 	var aim_dir := direction
 	aim_dir.y = 0.0
@@ -56,22 +56,16 @@ func _build_visual() -> void:
 		"TracerCore",
 		Vector3(0.0, 0.012, -_length * 0.52),
 		Vector3(_width * 1.08, 0.020, _length * 0.90),
-		_make_material(_color.lerp(Color.WHITE, 0.10), _color, 4.6, 0.70, true)
-	)
-	_add_sphere(
-		"TracerLead",
-		Vector3(0.0, 0.055, -_length * 0.98),
-		Vector3(_width * 0.92, _width * 0.34, _width * 0.92),
-		_make_material(Color.WHITE, _color, 5.8, 0.94, true)
+		_make_material(_color, _color, 2.8, 0.66, true)
 	)
 
 func _start_lifetime() -> void:
 	_timer_started = true
-	var hold := _lifetime * 0.34
+	var hold := _lifetime * 0.28
 	var fade := maxf(0.02, _lifetime - hold)
 	var tw := create_tween()
 	tw.tween_interval(hold)
-	tw.tween_property(self, "scale", Vector3(1.0, 0.45, 0.72), fade).set_ease(Tween.EASE_IN)
+	tw.tween_property(self, "scale", Vector3(1.0, 0.58, 0.78), fade).set_ease(Tween.EASE_IN)
 	tw.tween_callback(queue_free)
 
 func _add_box(mesh_name: String, pos: Vector3, visual_scale: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
