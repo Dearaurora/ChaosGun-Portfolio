@@ -2,13 +2,16 @@ extends Area3D
 class_name WeaponPickup
 
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
+const WEAPON_MODEL_ROOT := "res://assets/models/generated/weapons/"
 
 var weapon_data: WeaponData
-var _rotation_speed: float = 2.8
+var _rotation_speed: float = 0.85
 var _base_y: float = 1.5
 var _visual_root: Node3D = null
 var _icon_root: Node3D = null
 var _accent_color: Color = Color("#38aeea")
+var _uses_external_pedestal := false
+var _premium_presentation := false
 
 signal picked_up()
 
@@ -17,6 +20,23 @@ func setup(data: WeaponData) -> void:
 	_base_y = position.y
 	_accent_color = _weapon_color(data.weapon_id)
 	_build_visual(data.weapon_id)
+	_play_materialize_intro()
+
+func configure_spawn_presentation(spawn_kind: String) -> void:
+	_uses_external_pedestal = true
+	_premium_presentation = spawn_kind == "fixed"
+	var base := get_node_or_null("ToyPickupVisual/PickupBase") as MeshInstance3D
+	var glow := get_node_or_null("ToyPickupVisual/PickupGlow") as MeshInstance3D
+	var trim := get_node_or_null("ToyPickupVisual/PickupTrim") as MeshInstance3D
+	if base:
+		base.visible = false
+	if glow:
+		glow.visible = false
+	if trim:
+		trim.visible = false
+	if _icon_root:
+		_icon_root.position.y = 0.96 if _premium_presentation else 0.80
+		_icon_root.scale = Vector3.ONE * (1.12 if _premium_presentation else 1.0)
 
 func _ready() -> void:
 	add_to_group("weapon_pickup")
@@ -26,7 +46,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _icon_root:
 		_icon_root.rotate_y(_rotation_speed * delta)
-	var float_offset = sin(Time.get_ticks_msec() * 0.003) * 0.3
+	var float_offset = sin(Time.get_ticks_msec() * 0.0026) * 0.14
 	position.y = _base_y + float_offset
 
 func _on_body_entered(body: Node3D) -> void:
@@ -34,9 +54,27 @@ func _on_body_entered(body: Node3D) -> void:
 	if not wm:
 		return
 	wm.equip_weapon(weapon_data)
+	_animate_pickup_to_character(body)
 	_spawn_pickup_burst()
 	picked_up.emit()
 	queue_free()
+
+func _animate_pickup_to_character(body: Node3D) -> void:
+	if _icon_root == null:
+		return
+	var scene_root := RuntimeGlobals.active_scene(get_tree())
+	if scene_root == null:
+		return
+	var collect_visual := _icon_root
+	_icon_root = null
+	collect_visual.name = "PickupCollectVisual"
+	collect_visual.reparent(scene_root, true)
+	var target_position := body.global_position + Vector3.UP * 1.35
+	var tween := collect_visual.create_tween().set_parallel(true)
+	tween.tween_property(collect_visual, "global_position", target_position, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(collect_visual, "scale", Vector3.ONE * 0.18, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.tween_property(collect_visual, "rotation:y", collect_visual.rotation.y + PI * 0.75, 0.12)
+	tween.chain().tween_callback(collect_visual.queue_free)
 
 func _build_visual(weapon_id: StringName) -> void:
 	var legacy = get_node_or_null("MeshInstance3D") as MeshInstance3D
@@ -50,14 +88,28 @@ func _build_visual(weapon_id: StringName) -> void:
 	for child in _visual_root.get_children():
 		child.queue_free()
 
-	_add_cylinder(_visual_root, "PickupBase", Vector3(0, -0.48, 0), 1.55, 0.20, _mat(Color("#56616b"), Color("#56616b"), 0.0), 28)
-	_add_cylinder(_visual_root, "PickupGlow", Vector3(0, -0.31, 0), 1.18, 0.08, _mat(Color(_accent_color.r, _accent_color.g, _accent_color.b, 0.58), _accent_color, 1.8), 28)
+	_add_cylinder(_visual_root, "PickupBase", Vector3(0, -0.48, 0), 1.55, 0.24, _mat(Color("#303545"), Color("#303545"), 0.0), 32)
+	_add_cylinder(_visual_root, "PickupGlow", Vector3(0, -0.30, 0), 1.12, 0.09, _mat(Color(_accent_color.r, _accent_color.g, _accent_color.b, 0.46), _accent_color, 0.65), 32)
+	var trim := MeshInstance3D.new()
+	trim.name = "PickupTrim"
+	var trim_mesh := TorusMesh.new()
+	trim_mesh.inner_radius = 1.26
+	trim_mesh.outer_radius = 1.42
+	trim_mesh.rings = 32
+	trim_mesh.ring_segments = 8
+	trim.mesh = trim_mesh
+	trim.position.y = -0.25
+	trim.material_override = _mat(Color("#687386"), Color("#687386"), 0.0)
+	_visual_root.add_child(trim)
 
 	_icon_root = Node3D.new()
 	_icon_root.name = "PickupWeaponIcon"
 	_icon_root.position = Vector3(0, 0.44, 0)
-	_icon_root.rotation_degrees = Vector3(0, 28, 0)
+	_icon_root.rotation_degrees = Vector3(0, 24, 0)
 	_visual_root.add_child(_icon_root)
+
+	if _build_weapon_asset(weapon_id):
+		return
 
 	match weapon_id:
 		&"smg":
@@ -79,6 +131,41 @@ func _build_visual(weapon_id: StringName) -> void:
 			_add_box(_icon_root, "PistolBody", Vector3(0.0, 0.0, 0), Vector3(1.10, 0.28, 0.38), _accent_color)
 			_add_box(_icon_root, "PistolBarrel", Vector3(0.62, 0.02, 0), Vector3(0.52, 0.16, 0.22), Color("#dff6ff"))
 			_add_box(_icon_root, "PistolGrip", Vector3(-0.25, -0.36, 0), Vector3(0.28, 0.62, 0.24), Color("#202833"))
+
+func _build_weapon_asset(weapon_id: StringName) -> bool:
+	var model_path := WEAPON_MODEL_ROOT + String(weapon_id) + ".glb"
+	var packed_scene := load(model_path) as PackedScene
+	if packed_scene == null:
+		return false
+	var asset := packed_scene.instantiate() as Node3D
+	if asset == null:
+		return false
+	asset.name = "WeaponAsset"
+	asset.rotation_degrees = Vector3(0.0, 90.0, 0.0)
+	asset.scale = Vector3.ONE * _weapon_asset_scale(weapon_id)
+	_icon_root.add_child(asset)
+	return true
+
+func _weapon_asset_scale(weapon_id: StringName) -> float:
+	match weapon_id:
+		&"pistol":
+			return 1.82
+		&"smg":
+			return 1.58
+		&"ak_rifle":
+			return 1.42
+		&"sniper":
+			return 1.28
+		_:
+			return 1.0
+
+func _play_materialize_intro() -> void:
+	if _icon_root == null:
+		return
+	_icon_root.scale = Vector3(0.32, 1.45, 0.32)
+	var tween := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_icon_root, "scale", Vector3(1.08, 0.94, 1.08), 0.16)
+	tween.tween_property(_icon_root, "scale", Vector3.ONE, 0.08)
 
 func _add_box(parent: Node3D, name: String, pos: Vector3, size: Vector3, color: Color) -> MeshInstance3D:
 	var mesh_instance = MeshInstance3D.new()
@@ -113,20 +200,24 @@ func _spawn_pickup_burst() -> void:
 	burst.name = "PickupBurst"
 	scene_root.add_child(burst)
 	burst.global_position = global_position + Vector3.UP * 0.15
-	_add_cylinder(burst, "BurstDisc", Vector3.ZERO, 1.25, 0.08, _mat(Color(_accent_color.r, _accent_color.g, _accent_color.b, 0.40), _accent_color, 2.4), 28)
-	for i in range(6):
-		var angle = TAU * float(i) / 6.0
-		var sparkle = MeshInstance3D.new()
-		sparkle.name = "Sparkle"
-		var mesh = SphereMesh.new()
-		mesh.radius = 0.18
-		mesh.height = 0.18
-		mesh.material = _mat(_accent_color.lerp(Color.WHITE, 0.35), _accent_color, 2.0)
-		sparkle.mesh = mesh
-		sparkle.position = Vector3(cos(angle) * 0.72, 0.25, sin(angle) * 0.72)
-		burst.add_child(sparkle)
+	var ring := MeshInstance3D.new()
+	ring.name = "PickupBurstRing"
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.88
+	torus.outer_radius = 1.12
+	torus.rings = 28
+	torus.ring_segments = 8
+	ring.mesh = torus
+	ring.material_override = _mat(Color(_accent_color.r, _accent_color.g, _accent_color.b, 0.72), _accent_color, 1.0)
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	burst.add_child(ring)
+	for i in range(4):
+		var angle := TAU * float(i) / 4.0
+		var shard := _add_box(burst, "PickupShard_%d" % i, Vector3(cos(angle) * 0.72, 0.25, sin(angle) * 0.72), Vector3(0.12, 0.34, 0.42), _accent_color.lerp(Color.WHITE, 0.35))
+		shard.rotation.y = -angle
+		shard.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var tween = burst.create_tween()
-	tween.tween_property(burst, "scale", Vector3.ONE * 1.8, 0.18).set_ease(Tween.EASE_OUT)
+	tween.tween_property(burst, "scale", Vector3.ONE * 1.55, 0.16).set_ease(Tween.EASE_OUT)
 	tween.tween_callback(burst.queue_free)
 
 func _weapon_color(weapon_id: StringName) -> Color:

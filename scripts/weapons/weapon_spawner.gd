@@ -2,6 +2,7 @@ extends Node
 class_name WeaponSpawner
 
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
+const WeaponSpawnPedestalScript = preload("res://scripts/weapons/weapon_spawn_pedestal.gd")
 
 @export var initial_delay: float = 20.0
 @export var stay_duration: float = 30.0
@@ -19,6 +20,7 @@ var random_stay_duration: float = 4.5
 
 var _active_pickups: Array[Node3D] = []
 var _pickup_scene: PackedScene
+var _spawn_pedestals: Array[WeaponSpawnPedestal] = []
 
 func _ready() -> void:
 	_pickup_scene = load("res://scenes/weapons/weapon_pickup.tscn")
@@ -26,9 +28,14 @@ func _ready() -> void:
 
 func _start_spawn_timer_after_scene_config() -> void:
 	await get_tree().process_frame
+	_ensure_spawn_pedestals()
 	_start_spawn_timer()
 
 func _start_spawn_timer() -> void:
+	if initial_delay > 0.22:
+		get_tree().create_timer(initial_delay - 0.22).timeout.connect(_prewarm_initial_pedestals)
+	else:
+		_prewarm_initial_pedestals()
 	if _uses_controlled_spawn_mode():
 		get_tree().create_timer(initial_delay).timeout.connect(_start_controlled_spawn_cycle)
 	else:
@@ -40,6 +47,7 @@ func _uses_controlled_spawn_mode() -> bool:
 func _start_controlled_spawn_cycle() -> void:
 	_fill_fixed_pickups()
 	_try_spawn_random_pickup()
+	_cool_inactive_pedestals()
 	_schedule_next_random_pickup()
 
 func _schedule_next_random_pickup() -> void:
@@ -117,14 +125,27 @@ func _spawn_pickup_at(
 	var factory = factories.pick_random() as Callable
 	var weapon_data = factory.call() as WeaponData
 
+	var pedestal := _pedestal_for_position(spawn_position)
+	if pedestal:
+		pedestal.set_state(WeaponSpawnPedestal.VisualState.PREWARM, _weapon_color(weapon_data.weapon_id))
+
 	scene_root.add_child(pickup)
 	pickup.global_position = spawn_position
 	pickup.setup(weapon_data)
+	if pickup.has_method("configure_spawn_presentation") and pedestal:
+		pickup.call("configure_spawn_presentation", spawn_kind)
 	if cluster_id >= 0:
 		pickup.set_meta("spawn_cluster_id", cluster_id)
 	pickup.set_meta("spawn_kind", spawn_kind)
 	if fixed_spawn_index >= 0:
 		pickup.set_meta("fixed_spawn_index", fixed_spawn_index)
+	if pedestal:
+		pickup.set_meta("spawn_pedestal_id", pedestal.get_instance_id())
+		get_tree().create_timer(0.20).timeout.connect(
+			func() -> void:
+				if is_instance_valid(pedestal) and is_instance_valid(pickup):
+					pedestal.set_state(WeaponSpawnPedestal.VisualState.ACTIVE, _weapon_color(weapon_data.weapon_id))
+		)
 	pickup.picked_up.connect(_on_picked_up.bind(pickup))
 	_active_pickups.append(pickup)
 	var pickup_id = pickup.get_instance_id()
@@ -222,6 +243,7 @@ func _spawn_point_is_occupied(point: Vector3) -> bool:
 func _on_picked_up(pickup: Node3D) -> void:
 	var spawn_kind := String(pickup.get_meta("spawn_kind", "pooled"))
 	var fixed_spawn_index := int(pickup.get_meta("fixed_spawn_index", -1))
+	_set_pedestal_cooling(pickup)
 	_remove_pickup(pickup)
 	_schedule_refill(spawn_kind, fixed_spawn_index)
 
@@ -232,6 +254,7 @@ func _on_expired(pickup_id: int) -> void:
 	if is_instance_valid(pickup):
 		spawn_kind = String(pickup.get_meta("spawn_kind", "pooled"))
 		fixed_spawn_index = int(pickup.get_meta("fixed_spawn_index", -1))
+		_set_pedestal_cooling(pickup)
 		pickup.queue_free()
 	_remove_pickup(pickup)
 	_schedule_refill(spawn_kind, fixed_spawn_index)
@@ -254,3 +277,60 @@ func _prune_invalid_pickups() -> void:
 		func(pickup: Node3D) -> bool:
 			return is_instance_valid(pickup)
 	)
+
+func _ensure_spawn_pedestals() -> void:
+	if not _uses_controlled_spawn_mode() or not _spawn_pedestals.is_empty():
+		return
+	var scene_root := RuntimeGlobals.active_scene(get_tree())
+	if scene_root == null:
+		return
+	for index in range(fixed_spawn_points.size()):
+		_create_pedestal(scene_root, fixed_spawn_points[index] as Vector3, true, "CenterWeaponPedestal_%d" % index)
+	for index in range(random_spawn_points.size()):
+		_create_pedestal(scene_root, random_spawn_points[index] as Vector3, false, "OuterWeaponPedestal_%d" % index)
+
+func _create_pedestal(scene_root: Node, spawn_position: Vector3, premium: bool, pedestal_name: String) -> void:
+	var pedestal := WeaponSpawnPedestalScript.new() as WeaponSpawnPedestal
+	pedestal.name = pedestal_name
+	scene_root.add_child(pedestal)
+	pedestal.global_position = spawn_position
+	pedestal.configure(premium)
+	_spawn_pedestals.append(pedestal)
+
+func _prewarm_initial_pedestals() -> void:
+	for pedestal in _spawn_pedestals:
+		if is_instance_valid(pedestal):
+			pedestal.set_state(WeaponSpawnPedestal.VisualState.PREWARM, Color("#8fe8ff"))
+
+func _pedestal_for_position(spawn_position: Vector3) -> WeaponSpawnPedestal:
+	for pedestal in _spawn_pedestals:
+		if is_instance_valid(pedestal) and pedestal.global_position.distance_to(spawn_position) < 0.6:
+			return pedestal
+	return null
+
+func _set_pedestal_cooling(pickup: Node3D) -> void:
+	if not pickup.has_meta("spawn_pedestal_id"):
+		return
+	var pedestal := instance_from_id(int(pickup.get_meta("spawn_pedestal_id"))) as WeaponSpawnPedestal
+	if is_instance_valid(pedestal):
+		pedestal.set_state(WeaponSpawnPedestal.VisualState.COOLING, Color("#6a7382"))
+
+func _cool_inactive_pedestals() -> void:
+	var active_pedestal_ids: Dictionary = {}
+	for pickup in _active_pickups:
+		if is_instance_valid(pickup) and pickup.has_meta("spawn_pedestal_id"):
+			active_pedestal_ids[int(pickup.get_meta("spawn_pedestal_id"))] = true
+	for pedestal in _spawn_pedestals:
+		if is_instance_valid(pedestal) and not active_pedestal_ids.has(pedestal.get_instance_id()):
+			pedestal.set_state(WeaponSpawnPedestal.VisualState.COOLING, Color("#6a7382"))
+
+func _weapon_color(weapon_id: StringName) -> Color:
+	match weapon_id:
+		&"smg":
+			return Color("#79d946")
+		&"ak_rifle":
+			return Color("#ff9b23")
+		&"sniper":
+			return Color("#31bde8")
+		_:
+			return Color("#ff6b72")

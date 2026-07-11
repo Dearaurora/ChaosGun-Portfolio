@@ -220,8 +220,8 @@ func _verify_weapon_pickup_visual(arena: Node) -> void:
 		_fail("Pickup visual missing base")
 	if pickup.get_node_or_null("ToyPickupVisual/PickupGlow") == null:
 		_fail("Pickup visual missing glow")
-	if pickup.get_node_or_null("ToyPickupVisual/PickupWeaponIcon/SMGBody") == null:
-		_fail("Pickup visual missing SMG body icon")
+	if pickup.get_node_or_null("ToyPickupVisual/PickupWeaponIcon/WeaponAsset") == null:
+		_fail("Pickup visual missing generated SMG weapon asset")
 	var legacy = pickup.get_node_or_null("MeshInstance3D") as MeshInstance3D
 	if legacy and legacy.visible:
 		_fail("Legacy pickup cube is still visible")
@@ -261,6 +261,26 @@ func _verify_runtime_weapon_pickup_spawn(arena: Node) -> void:
 		_fail("Runtime pickups did not include the guaranteed center pickup")
 	else:
 		print("OK  runtime pickups: ", active_pickups.size())
+	var pedestals := get_nodes_in_group("weapon_spawn_pedestal")
+	var owned_pedestals: Array[Node] = []
+	for pedestal in pedestals:
+		if _host != null and _host.is_ancestor_of(pedestal):
+			owned_pedestals.append(pedestal)
+	if owned_pedestals.size() != 5:
+		_fail("Expected one premium and four outer weapon pedestals, got %d" % owned_pedestals.size())
+	else:
+		print("OK  persistent weapon pedestals: ", owned_pedestals.size())
+		var active_pedestals := 0
+		var cooling_pedestals := 0
+		for pedestal in owned_pedestals:
+			var debug := pedestal.call("get_visual_debug") as Dictionary
+			var state := int(debug.get("state", -1))
+			if state == WeaponSpawnPedestal.VisualState.ACTIVE:
+				active_pedestals += 1
+			elif state == WeaponSpawnPedestal.VisualState.COOLING:
+				cooling_pedestals += 1
+		if active_pedestals != 2 or cooling_pedestals != 3:
+			_fail("Weapon pedestal states should be two active and three cooling, got %d/%d" % [active_pedestals, cooling_pedestals])
 
 func _verify_ringout_hud(arena: Node) -> void:
 	print("\n--- Ringout HUD ---")
