@@ -123,17 +123,8 @@ func _ground_project(direction: Vector3) -> Vector3:
 func _handle_fire_input() -> void:
 	if not weapon_manager:
 		return
-	var fire_mode = weapon_manager.get_current_fire_mode()
 	var fire_action = input_prefix + "fire"
-	var should_fire = false
-
-	match fire_mode:
-		WeaponData.FireMode.SEMI_AUTO, WeaponData.FireMode.BOLT_ACTION:
-			should_fire = Input.is_action_just_pressed(fire_action)
-		WeaponData.FireMode.FULL_AUTO:
-			should_fire = Input.is_action_pressed(fire_action)
-
-	if should_fire:
+	if Input.is_action_pressed(fire_action):
 		var fire_dir = _get_fire_dir_for_current_mode()
 		_face_dir = Vector3(fire_dir.x, 0.0, fire_dir.z).normalized()
 		weapon_manager.try_fire(weapon_point, fire_dir, self)
