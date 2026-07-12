@@ -255,7 +255,17 @@ def build_character():
     subdivision.render_levels = 1
     visor_cutter = rounded_box("VisorOpeningCutter", (0, 0.58, 2.16), (1.00, 0.52, 0.54), RED, 0.15)
     parts.append(boolean_cut(helmet, visor_cutter))
-    parts.append(rounded_box("NeckGuard", (0, 0.01, 1.84), (1.48, 1.06, 0.24), RED, 0.11))
+    neck_transition = loft("NeckTransition", [
+        (1.78, 1.25, 0.88, -0.01),
+        (1.84, 1.36, 0.96, -0.01),
+        (1.91, 1.42, 1.01, -0.02),
+        (1.98, 1.36, 0.97, -0.03),
+        (2.04, 1.26, 0.89, -0.04),
+    ], 1.0, RED, segments=40)
+    neck_subdivision = neck_transition.modifiers.new("neck_surface", "SUBSURF")
+    neck_subdivision.levels = 1
+    neck_subdivision.render_levels = 1
+    parts.append(neck_transition)
     parts.append(rounded_box("FaceRecess", (0, 0.46, 2.16), (0.90, 0.11, 0.48), FACE, 0.13))
     for x in (-0.18, 0.18):
         parts.append(rounded_box("EyeL" if x < 0 else "EyeR", (x, 0.53, 2.17), (0.095, 0.045, 0.27), EYE, 0.045))
