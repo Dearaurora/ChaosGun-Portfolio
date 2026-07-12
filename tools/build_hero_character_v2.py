@@ -182,41 +182,92 @@ def sphere(name, location, scale, mat, segments=32, rings=18):
     return obj
 
 
+def fuse(name, objects, mat, voxel_size=0.045, smooth_iterations=5):
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in objects:
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        for modifier in list(obj.modifiers):
+            bpy.ops.object.modifier_apply(modifier=modifier.name)
+    bpy.context.view_layer.objects.active = objects[0]
+    bpy.ops.object.join()
+    fused = bpy.context.object
+    fused.name = name
+    fused.data.remesh_voxel_size = voxel_size
+    bpy.ops.object.voxel_remesh()
+    fused.data.materials.clear()
+    fused.data.materials.append(mat)
+    smooth = fused.modifiers.new("sculpt_surface", "SMOOTH")
+    smooth.factor = 0.34
+    smooth.iterations = smooth_iterations
+    bpy.ops.object.modifier_apply(modifier=smooth.name)
+    for polygon in fused.data.polygons:
+        polygon.use_smooth = True
+    return fused
+
+
+def boolean_cut(target, cutter):
+    bpy.ops.object.select_all(action="DESELECT")
+    target.select_set(True)
+    bpy.context.view_layer.objects.active = target
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    cutter.select_set(True)
+    bpy.context.view_layer.objects.active = cutter
+    for modifier in list(cutter.modifiers):
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
+    cutter.select_set(False)
+    bpy.context.view_layer.objects.active = target
+    boolean = target.modifiers.new("visor_opening", "BOOLEAN")
+    boolean.operation = "DIFFERENCE"
+    boolean.solver = "EXACT"
+    boolean.object = cutter
+    bpy.ops.object.modifier_apply(modifier=boolean.name)
+    bpy.data.objects.remove(cutter, do_unlink=True)
+    for polygon in target.data.polygons:
+        polygon.use_smooth = True
+    return target
+
+
 def build_character():
     parts = []
-    torso = loft("Torso", [
-        (0.78, 1.52, 1.02), (0.88, 1.62, 1.08), (1.25, 1.70, 1.12),
-        (1.72, 1.66, 1.12), (1.92, 1.54, 1.04),
+    torso = loft("BodySculpt", [
+        (0.84, 1.48, 0.98), (0.92, 1.56, 1.04), (1.30, 1.58, 1.07),
+        (1.70, 1.52, 1.04), (1.91, 1.42, 0.98),
     ], 1.0, RED)
     parts.append(torso)
 
-    # Helmet uses overlapping custom volumes to create a hood, brow, cheek walls,
-    # and a deep face opening instead of a visor card attached to a sphere.
-    parts.append(sphere("HelmetCrown", (0, -0.02, 2.36), (0.90, 0.72, 0.78), RED, 40, 24))
-    parts.append(rounded_box("HelmetBrow", (0, 0.665, 2.46), (1.35, 0.22, 0.22), RED, 0.10))
-    parts.append(rounded_box("HelmetCheekL", (-0.64, 0.62, 2.12), (0.22, 0.26, 0.66), RED, 0.10))
-    parts.append(rounded_box("HelmetCheekR", (0.64, 0.62, 2.12), (0.22, 0.26, 0.66), RED, 0.10))
-    parts.append(rounded_box("FaceRecess", (0, 0.705, 2.16), (1.12, 0.15, 0.60), FACE, 0.18))
-    parts.append(rounded_box("NeckGuard", (0, 0.02, 1.88), (1.56, 1.10, 0.30), RED, 0.13))
-    for x in (-0.22, 0.22):
-        parts.append(rounded_box("EyeL" if x < 0 else "EyeR", (x, 0.805, 2.17), (0.105, 0.06, 0.30), EYE, 0.05))
+    # Cut the visor opening into one helmet shell so the face sits behind real
+    # shell thickness instead of being framed by attached bars.
+    helmet = sphere("HelmetSculpt", (0, -0.03, 2.38), (0.78, 0.65, 0.70), RED, 48, 28)
+    visor_cutter = rounded_box("VisorOpeningCutter", (0, 0.58, 2.16), (1.00, 0.52, 0.54), RED, 0.15)
+    parts.append(boolean_cut(helmet, visor_cutter))
+    parts.append(rounded_box("NeckGuard", (0, 0.01, 1.84), (1.48, 1.06, 0.24), RED, 0.11))
+    parts.append(rounded_box("FaceRecess", (0, 0.46, 2.16), (0.90, 0.11, 0.48), FACE, 0.13))
+    for x in (-0.18, 0.18):
+        parts.append(rounded_box("EyeL" if x < 0 else "EyeR", (x, 0.53, 2.17), (0.095, 0.045, 0.27), EYE, 0.045))
 
     # Neutral arms have visible shoulder, elbow, wrist, and cuff transitions.
     for side, sign in (("L", -1), ("R", 1)):
-        shoulder = (sign * 0.78, 0.0, 1.67)
-        elbow = (sign * 1.02, 0.01, 1.22)
-        wrist = (sign * 1.10, 0.10, 0.92)
-        parts.append(bent_arm("Arm" + side, shoulder, elbow, wrist, (0.27, 0.225, 0.18), RED))
-        parts.append(rounded_box("Cuff" + side, wrist, (0.42, 0.42, 0.18), PURPLE, 0.08, (0, sign * 0.10, 0)))
-        palm = (sign * 1.12, 0.12, 0.72)
-        parts.append(sphere("GlovePalm" + side, palm, (0.25, 0.22, 0.31), PURPLE, 24, 14))
-        parts.append(sphere("GloveThumb" + side, (sign * 0.96, 0.28, 0.72), (0.13, 0.12, 0.20), PURPLE, 20, 12))
+        shoulder = (sign * 0.66, 0.0, 1.57)
+        elbow = (sign * 0.92, 0.01, 1.23)
+        wrist = (sign * 1.04, 0.10, 0.91)
+        parts.append(bent_arm("Arm" + side, shoulder, elbow, wrist, (0.25, 0.215, 0.17), RED))
+        palm = (sign * 1.05, 0.12, 0.70)
+        glove_group = [
+            rounded_box("CuffBase" + side, wrist, (0.37, 0.38, 0.17), PURPLE, 0.075, (0, sign * 0.08, 0)),
+            sphere("GlovePalmBase" + side, palm, (0.225, 0.20, 0.29), PURPLE, 28, 16),
+            sphere("GloveThumbBase" + side, (sign * 0.90, 0.25, 0.72), (0.115, 0.105, 0.18), PURPLE, 22, 14),
+        ]
+        parts.append(fuse("Glove" + side, glove_group, PURPLE, 0.032, 4))
 
     for side, sign in (("L", -1), ("R", 1)):
-        parts.append(capsule("Leg" + side, (sign * 0.37, 0, 0.77), (sign * 0.37, 0.02, 0.35), 0.27, 0.25, RED))
-        parts.append(rounded_box("BootShaft" + side, (sign * 0.37, 0.02, 0.31), (0.57, 0.68, 0.50), PURPLE, 0.14))
-        parts.append(rounded_box("BootToe" + side, (sign * 0.37, 0.23, 0.16), (0.60, 0.86, 0.30), PURPLE, 0.14))
-        parts.append(rounded_box("BootSole" + side, (sign * 0.37, 0.24, 0.055), (0.62, 0.90, 0.11), FACE, 0.045))
+        parts.append(capsule("Leg" + side, (sign * 0.34, 0, 0.88), (sign * 0.34, 0.02, 0.40), 0.245, 0.225, RED))
+        boot_group = [
+            rounded_box("BootShaftBase" + side, (sign * 0.34, 0.01, 0.32), (0.52, 0.61, 0.47), PURPLE, 0.13),
+            rounded_box("BootToeBase" + side, (sign * 0.34, 0.20, 0.17), (0.55, 0.76, 0.28), PURPLE, 0.13),
+        ]
+        parts.append(fuse("Boot" + side, boot_group, PURPLE, 0.035, 4))
+        parts.append(rounded_box("BootSole" + side, (sign * 0.34, 0.21, 0.055), (0.57, 0.79, 0.10), FACE, 0.04))
     return parts
 
 
@@ -234,7 +285,7 @@ def preview(parts):
     for part in parts:
         part.select_set(False)
     original = list(parts)
-    for column, angle in ((-2.7, math.radians(-55)), (0.0, 0.0), (2.7, math.radians(35))):
+    for column, angle in ((0.0, 0.0),):
         for source in original:
             obj = source.copy()
             obj.data = source.data.copy()
@@ -268,7 +319,10 @@ def preview(parts):
     scene.render.image_settings.file_format = "PNG"
     scene.render.filepath = str(PREVIEW)
     scene.render.film_transparent = False
-    scene.world.color = (0.82, 0.82, 0.82)
+    scene.world.use_nodes = True
+    background = scene.world.node_tree.nodes.get("Background")
+    background.inputs["Color"].default_value = (0.78, 0.78, 0.78, 1.0)
+    background.inputs["Strength"].default_value = 0.75
     bpy.ops.render.render(write_still=True)
 
 
