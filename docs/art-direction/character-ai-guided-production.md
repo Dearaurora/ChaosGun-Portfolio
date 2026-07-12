@@ -2,31 +2,40 @@
 
 ## Production decision
 
-The approved character is produced with a hybrid workflow:
+The approved character now uses a multiview-first hybrid workflow:
 
-1. A clean neutral reference image defines the silhouette and proportions.
-2. TripoSR creates a local, open-source 3D reconstruction used only as a volume reference.
-3. Blender generates the production character as clean, named, multipart geometry.
-4. Godot switches authored pistol and long-gun pose sets at runtime.
+1. One approved turnaround defines the front, side, back, and three-quarter silhouette.
+2. Hunyuan3D-2mv reconstructs one consistent high-resolution volume from the clean views.
+3. Blender converts that volume into a reviewable art base: normalize scale, reduce density, rebuild the face opening, add the face panel and eyes, and assign the suit materials.
+4. The reviewed base is retopologized and rigged only after its silhouette is accepted.
 
-The AI reconstruction is not shipped as the playable mesh. Its fused topology is unsuitable for reliable posing, hand placement, material control, and later animation.
+Single-view reconstruction and procedural primitive assembly are no longer the primary production route. They remain useful for diagnostics and isolated props, but they did not preserve the approved character silhouette reliably enough.
+
+## Current asset roles
+
+- `assets/source/characters/reference/character_turnaround_v1.png`: approved visual target.
+- `assets/source/characters/reference/turnaround_v1_mv/`: clean reconstruction views.
+- `assets/source/characters/cloud_reconstruction_mv_v1/hero_multiview_candidate.glb`: untouched multiview reconstruction source.
+- `assets/source/characters/hero_character_cloud_v1.blend`: cleaned Blender art base.
+- `assets/models/generated/characters/hero_character_cloud_v1.glb`: reviewable Godot import candidate.
+- `tools/build_hero_character_cloud_cleanup.py`: reproducible cleanup, export, and preview build.
+
+## Verified result
+
+- Reconstruction source: 272,484 polygons.
+- Cleaned body target: 45,000 polygons.
+- Exported character total: 45,628 polygons across the body, face panel, and two eyes.
+- Blender GLB round-trip: passed.
+- Godot 4.6.2 scene import: passed.
 
 ## Runtime contract
 
-- The body, helmet shell, helmet collar, inset face, visor frame, legs, and boots remain independent named parts.
-- Pistol and long-gun arms and gloves are separate visibility sets.
-- Pistol, SMG, AK rifle, and sniper rifle remain independent GLB assets.
-- Each weapon has an authored holder position and muzzle anchor.
+- The face panel and eyes remain independent named meshes.
+- The body keeps distinct suit and rubber material regions.
+- Weapon assets remain independent GLBs with authored holder and muzzle anchors.
+- The character must expose separate pistol and long-gun hand targets before runtime integration.
 - Held weapon bounds must remain in front of the torso depth plane.
 
-## Source assets
+## Current limitation
 
-- `assets/source/characters/reference/character_ai_input_v1.png`: neutral reconstruction input.
-- `assets/source/characters/ai_reconstruction_v1/0/mesh.obj`: TripoSR volume reference.
-- `assets/source/characters/ai_reconstruction_v1/character_ai_candidate_v1.blend`: reviewed AI candidate.
-- `assets/source/characters/bean_character.blend`: clean production source.
-- `assets/models/generated/characters/bean_character.glb`: runtime export.
-
-## Current scope
-
-This pass establishes the production silhouette, character part hierarchy, weapon separation, and plausible two-point long-gun handling. Finger articulation, deformation rigging, and weapon-specific animation are later polish work and should build on this asset contract rather than replace it.
+`hero_character_cloud_v1.glb` is an art-base candidate, not the final playable mesh. Its body is still a fused triangulated reconstruction, its material borders need retopology cleanup, and it has no skeleton, deformation loops, hand targets, or weapon sockets. It must not replace the current runtime character until those steps and the combat-pose checks pass.
