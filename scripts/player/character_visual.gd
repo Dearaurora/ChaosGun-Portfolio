@@ -85,8 +85,8 @@ func _build_asset_visual() -> bool:
 	_create_marker("LeftHand", Vector3(-0.18, 1.13, -1.40))
 	_create_marker("RightHand", Vector3(0.18, 0.98, -1.34))
 	# These long-gun anchors mirror the authored support and trigger gloves.
-	_create_marker("LeftHandGrip", Vector3(-0.10, 1.39, -1.75))
-	_create_marker("RightHandGrip", Vector3(0.14, 1.36, -1.14))
+	_create_marker("LeftHandGrip", Vector3(-0.09, 1.23, -2.02))
+	_create_marker("RightHandGrip", Vector3(0.14, 1.23, -1.12))
 	_create_marker("LeftFoot", Vector3(-0.39, 0.18, -0.16))
 	_create_marker("RightFoot", Vector3(0.39, 0.18, -0.16))
 	_cache_asset_meshes(_asset_root)

@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import bpy
+from mathutils import Vector
 
 
 OUT_PATH = Path("assets/models/generated/characters/bean_character.glb")
@@ -118,6 +119,38 @@ def add_curved_arm(name, shoulder, elbow, wrist, radius, material):
     return obj
 
 
+def add_limb_segment(name, start, end, radius, material):
+    start_vec = Vector(start)
+    end_vec = Vector(end)
+    direction = end_vec - start_vec
+    midpoint = (start_vec + end_vec) * 0.5
+    bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=radius, depth=direction.length, location=midpoint)
+    obj = bpy.context.object
+    obj.name = name
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = Vector((0.0, 0.0, 1.0)).rotation_difference(direction.normalized())
+    obj.data.materials.append(material)
+    bevel = obj.modifiers.new(name="limb_rounding", type="BEVEL")
+    bevel.width = radius * 0.48
+    bevel.segments = 5
+    for polygon in obj.data.polygons:
+        polygon.use_smooth = True
+    return obj
+
+
+def add_segmented_arm(name, shoulder, elbow, wrist, radius, material):
+    add_uv_sphere(name + "Shoulder", shoulder, (radius * 1.08,) * 3, material, 16, 10)
+    add_limb_segment(name + "Upper", shoulder, elbow, radius, material)
+    add_uv_sphere(name + "Elbow", elbow, (radius * 1.02,) * 3, material, 16, 10)
+    add_limb_segment(name + "Fore", elbow, wrist, radius * 0.94, material)
+
+
+def add_grip_hand(name, palm, palm_size, material, thumb_offset, rotation=(0.0, 0.0, 0.0)):
+    add_cube(name + "Palm", palm, palm_size, material, bevel=0.10, rot=rotation)
+    thumb = tuple(palm[index] + thumb_offset[index] for index in range(3))
+    add_uv_sphere(name + "Thumb", thumb, (0.105, 0.14, 0.10), material, 14, 8)
+
+
 def add_cube(name, loc, scale, material, bevel=0.08, rot=(0, 0, 0)):
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc, rotation=rot)
     obj = bpy.context.object
@@ -188,7 +221,8 @@ def build_character():
     # Blender +Y maps to Godot -Z during glTF Y-up conversion.
     # The model deliberately uses a small set of broad forms so it remains readable
     # at the gameplay camera distance and can be reposed without retopology.
-    add_tapered_torso("Body", (0.0, 0.0, 1.10), (1.58, 1.12), (1.36, 0.96), 1.30, MAT_BODY, 0.20)
+    add_tapered_torso("Body", (0.0, -0.01, 1.10), (1.66, 1.16), (1.46, 1.02), 1.30, MAT_BODY, 0.23)
+    add_rounded_box("BodyLowerHem", (0.0, 0.0, 0.51), (1.52, 1.08, 0.20), MAT_BODY, 0.10)
     add_uv_sphere("HelmetCollar", (0.0, 0.02, 1.72), (0.91, 0.67, 0.15), MAT_BODY, 24, 10)
     add_uv_sphere("HelmetShell", (0.0, -0.02, 2.15), (0.86, 0.72, 0.70), MAT_BODY, 28, 14)
 
@@ -204,25 +238,27 @@ def build_character():
     left_shoulder = (-0.78, 0.05, 1.46)
     right_shoulder = (0.78, 0.05, 1.46)
 
-    pistol_left_elbow = (-0.76, 0.60, 1.28)
-    pistol_left_glove = (-0.17, 1.17, 1.20)
-    pistol_right_elbow = (0.76, 0.56, 1.25)
-    pistol_right_glove = (0.17, 1.10, 1.14)
-    add_curved_arm("BodyPosePistolArmLeft", left_shoulder, pistol_left_elbow, pistol_left_glove, 0.16, MAT_BODY)
-    add_curved_arm("BodyPosePistolArmRight", right_shoulder, pistol_right_elbow, pistol_right_glove, 0.16, MAT_BODY)
-    add_uv_sphere("PosePistolGloveLeft", pistol_left_glove, (0.20, 0.18, 0.19), MAT_GLOVE, 16, 10)
-    add_uv_sphere("PosePistolGloveRight", pistol_right_glove, (0.20, 0.18, 0.19), MAT_GLOVE, 16, 10)
+    pistol_left_elbow = (-0.66, 0.55, 1.27)
+    pistol_left_glove = (-0.13, 1.12, 1.20)
+    pistol_right_elbow = (0.66, 0.50, 1.24)
+    pistol_right_glove = (0.13, 1.08, 1.16)
+    add_segmented_arm("BodyPosePistolArmLeft", left_shoulder, pistol_left_elbow, pistol_left_glove, 0.17, MAT_BODY)
+    add_segmented_arm("BodyPosePistolArmRight", right_shoulder, pistol_right_elbow, pistol_right_glove, 0.17, MAT_BODY)
+    add_grip_hand("PosePistolGloveLeft", pistol_left_glove, (0.28, 0.30, 0.32), MAT_GLOVE, (0.13, 0.08, -0.05))
+    add_grip_hand("PosePistolGloveRight", pistol_right_glove, (0.28, 0.30, 0.32), MAT_GLOVE, (-0.13, 0.08, -0.05))
 
     # Long weapons use a low-ready two-point pose: trigger hand near the chest,
     # support hand pushed forward along the fore-end, with clear torso clearance.
-    long_left_elbow = (-0.78, 0.72, 1.43)
-    long_left_glove = (-0.10, 1.75, 1.39)
-    long_right_elbow = (0.70, 0.44, 1.42)
-    long_right_glove = (0.14, 1.14, 1.36)
-    add_curved_arm("BodyPoseLongArmLeft", left_shoulder, long_left_elbow, long_left_glove, 0.17, MAT_BODY)
-    add_curved_arm("BodyPoseLongArmRight", right_shoulder, long_right_elbow, long_right_glove, 0.17, MAT_BODY)
-    add_uv_sphere("PoseLongGloveLeft", long_left_glove, (0.23, 0.27, 0.20), MAT_GLOVE, 18, 10)
-    add_uv_sphere("PoseLongGloveRight", long_right_glove, (0.22, 0.22, 0.19), MAT_GLOVE, 18, 10)
+    long_left_elbow = (-0.70, 0.76, 1.05)
+    long_left_glove = (-0.09, 2.02, 1.23)
+    long_right_elbow = (0.72, 0.38, 0.98)
+    long_right_glove = (0.14, 1.12, 1.23)
+    add_segmented_arm("BodyPoseLongArmLeft", left_shoulder, long_left_elbow, long_left_glove, 0.18, MAT_BODY)
+    add_segmented_arm("BodyPoseLongArmRight", right_shoulder, long_right_elbow, long_right_glove, 0.18, MAT_BODY)
+    # The support palm is broad horizontally and sits below the fore-end. The
+    # trigger palm is vertical so it reads as wrapping the pistol grip.
+    add_grip_hand("PoseLongGloveLeft", long_left_glove, (0.38, 0.38, 0.22), MAT_GLOVE, (0.16, 0.02, 0.02))
+    add_grip_hand("PoseLongGloveRight", long_right_glove, (0.30, 0.26, 0.38), MAT_GLOVE, (-0.13, 0.06, -0.04))
     add_marker("LeftHandGrip", long_left_glove)
     add_marker("RightHandGrip", long_right_glove)
 
