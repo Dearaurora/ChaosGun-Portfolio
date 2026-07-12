@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "assets/source/characters/hero_character_v2.blend"
 RUNTIME = ROOT / "assets/models/generated/characters/hero_character_v2.glb"
 PREVIEW = ROOT / "reports/hero_character_v2_preview.png"
+PREVIEW_3Q = ROOT / "reports/hero_character_v2_three_quarter.png"
 
 
 def material(name, color, roughness=0.68):
@@ -36,14 +37,16 @@ def clear():
 
 def loft(name, rings, depth_scale, mat, segments=32, bevel=0.0):
     vertices = []
-    for z, width, depth in rings:
+    for ring in rings:
+        z, width, depth = ring[:3]
+        y_offset = ring[3] if len(ring) > 3 else 0.0
         for i in range(segments):
             angle = math.tau * i / segments
             # Slightly square the ellipse without introducing hard corners.
             c = math.cos(angle)
             s = math.sin(angle)
             x = math.copysign(abs(c) ** 0.78, c) * width * 0.5
-            y = math.copysign(abs(s) ** 0.78, s) * depth * depth_scale * 0.5
+            y = y_offset + math.copysign(abs(s) ** 0.78, s) * depth * depth_scale * 0.5
             vertices.append((x, y, z))
     faces = []
     for ring in range(len(rings) - 1):
@@ -231,14 +234,25 @@ def boolean_cut(target, cutter):
 def build_character():
     parts = []
     torso = loft("BodySculpt", [
-        (0.84, 1.48, 0.98), (0.92, 1.56, 1.04), (1.30, 1.58, 1.07),
-        (1.70, 1.52, 1.04), (1.91, 1.42, 0.98),
+        (0.84, 1.40, 0.96), (0.92, 1.46, 1.01), (1.30, 1.47, 1.04),
+        (1.70, 1.40, 1.01), (1.91, 1.31, 0.95),
     ], 1.0, RED)
     parts.append(torso)
 
     # Cut the visor opening into one helmet shell so the face sits behind real
     # shell thickness instead of being framed by attached bars.
-    helmet = sphere("HelmetSculpt", (0, -0.03, 2.38), (0.78, 0.65, 0.70), RED, 48, 28)
+    helmet = loft("HelmetSculpt", [
+        (1.88, 1.34, 0.98, -0.04),
+        (2.08, 1.46, 1.10, -0.02),
+        (2.36, 1.50, 1.18, -0.04),
+        (2.60, 1.43, 1.16, -0.08),
+        (2.78, 1.22, 1.02, -0.12),
+        (2.91, 0.82, 0.72, -0.15),
+        (2.98, 0.28, 0.28, -0.16),
+    ], 1.0, RED, segments=48)
+    subdivision = helmet.modifiers.new("helmet_surface", "SUBSURF")
+    subdivision.levels = 1
+    subdivision.render_levels = 1
     visor_cutter = rounded_box("VisorOpeningCutter", (0, 0.58, 2.16), (1.00, 0.52, 0.54), RED, 0.15)
     parts.append(boolean_cut(helmet, visor_cutter))
     parts.append(rounded_box("NeckGuard", (0, 0.01, 1.84), (1.48, 1.06, 0.24), RED, 0.11))
@@ -248,7 +262,7 @@ def build_character():
 
     # Neutral arms have visible shoulder, elbow, wrist, and cuff transitions.
     for side, sign in (("L", -1), ("R", 1)):
-        shoulder = (sign * 0.66, 0.0, 1.57)
+        shoulder = (sign * 0.61, 0.0, 1.57)
         elbow = (sign * 0.92, 0.01, 1.23)
         wrist = (sign * 1.04, 0.10, 0.91)
         parts.append(bent_arm("Arm" + side, shoulder, elbow, wrist, (0.25, 0.215, 0.17), RED))
@@ -285,6 +299,9 @@ def preview(parts):
     for part in parts:
         part.select_set(False)
     original = list(parts)
+    preview_parts = []
+    preview_pivot = bpy.data.objects.new("PreviewTurntable", None)
+    bpy.context.collection.objects.link(preview_pivot)
     for column, angle in ((0.0, 0.0),):
         for source in original:
             obj = source.copy()
@@ -292,6 +309,8 @@ def preview(parts):
             obj.location.x += column
             obj.rotation_euler.z = angle
             bpy.context.collection.objects.link(obj)
+            obj.parent = preview_pivot
+            preview_parts.append(obj)
     for source in original:
         bpy.data.objects.remove(source, do_unlink=True)
 
@@ -324,6 +343,9 @@ def preview(parts):
     background.inputs["Color"].default_value = (0.78, 0.78, 0.78, 1.0)
     background.inputs["Strength"].default_value = 0.75
     bpy.ops.render.render(write_still=True)
+    preview_pivot.rotation_euler.z = math.radians(-35)
+    scene.render.filepath = str(PREVIEW_3Q)
+    bpy.ops.render.render(write_still=True)
 
 
 if __name__ == "__main__":
@@ -334,3 +356,4 @@ if __name__ == "__main__":
     preview(character_parts)
     print("Built", RUNTIME)
     print("Rendered", PREVIEW)
+    print("Rendered", PREVIEW_3Q)
