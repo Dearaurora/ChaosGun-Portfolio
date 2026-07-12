@@ -214,6 +214,8 @@ def boolean_cut(target, cutter):
     target.select_set(True)
     bpy.context.view_layer.objects.active = target
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    for modifier in list(target.modifiers):
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
     cutter.select_set(True)
     bpy.context.view_layer.objects.active = cutter
     for modifier in list(cutter.modifiers):
@@ -233,16 +235,17 @@ def boolean_cut(target, cutter):
 
 def build_character():
     parts = []
-    torso = loft("BodySculpt", [
-        (0.84, 1.40, 0.96), (0.92, 1.46, 1.01), (1.30, 1.47, 1.04),
-        (1.70, 1.40, 1.01), (1.91, 1.31, 0.95),
-    ], 1.0, RED)
-    parts.append(torso)
-
-    # Cut the visor opening into one helmet shell so the face sits behind real
-    # shell thickness instead of being framed by attached bars.
-    helmet = loft("HelmetSculpt", [
-        (1.88, 1.34, 0.98, -0.04),
+    # One continuous red shell runs from the coat hem through the neck pinch and
+    # into the helmet crown. This preserves the reference's uninterrupted body
+    # curve while a dense ring pair creates the subtle collar crease.
+    outer_suit = loft("OuterSuitSculpt", [
+        (0.84, 1.40, 0.96, 0.00),
+        (0.92, 1.46, 1.01, 0.00),
+        (1.30, 1.47, 1.04, 0.00),
+        (1.66, 1.40, 1.01, -0.01),
+        (1.79, 1.31, 0.94, -0.02),
+        (1.88, 1.25, 0.89, -0.03),
+        (1.94, 1.34, 0.97, -0.03),
         (2.08, 1.46, 1.10, -0.02),
         (2.36, 1.50, 1.18, -0.04),
         (2.60, 1.43, 1.16, -0.08),
@@ -250,22 +253,11 @@ def build_character():
         (2.91, 0.82, 0.72, -0.15),
         (2.98, 0.28, 0.28, -0.16),
     ], 1.0, RED, segments=48)
-    subdivision = helmet.modifiers.new("helmet_surface", "SUBSURF")
+    subdivision = outer_suit.modifiers.new("outer_suit_surface", "SUBSURF")
     subdivision.levels = 1
     subdivision.render_levels = 1
     visor_cutter = rounded_box("VisorOpeningCutter", (0, 0.58, 2.16), (1.00, 0.52, 0.54), RED, 0.15)
-    parts.append(boolean_cut(helmet, visor_cutter))
-    neck_transition = loft("NeckTransition", [
-        (1.78, 1.25, 0.88, -0.01),
-        (1.84, 1.36, 0.96, -0.01),
-        (1.91, 1.42, 1.01, -0.02),
-        (1.98, 1.36, 0.97, -0.03),
-        (2.04, 1.26, 0.89, -0.04),
-    ], 1.0, RED, segments=40)
-    neck_subdivision = neck_transition.modifiers.new("neck_surface", "SUBSURF")
-    neck_subdivision.levels = 1
-    neck_subdivision.render_levels = 1
-    parts.append(neck_transition)
+    parts.append(boolean_cut(outer_suit, visor_cutter))
     parts.append(rounded_box("FaceRecess", (0, 0.46, 2.16), (0.90, 0.11, 0.48), FACE, 0.13))
     for x in (-0.18, 0.18):
         parts.append(rounded_box("EyeL" if x < 0 else "EyeR", (x, 0.53, 2.17), (0.095, 0.045, 0.27), EYE, 0.045))
