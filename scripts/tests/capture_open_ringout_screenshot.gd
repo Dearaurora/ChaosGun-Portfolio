@@ -120,6 +120,13 @@ func _stage_showcase_shots(arena: Node, fire_shots: bool = true) -> bool:
 		{"pos": Vector3(-15.0, 1.15, 11.0), "look": Vector3(3.0, 1.15, 20.0), "weapon": &"sniper"},
 		{"pos": Vector3(12.0, 1.15, 12.0), "look": Vector3(26.0, 1.15, 24.0), "weapon": &"ak_rifle"},
 	]
+	if OS.get_cmdline_user_args().has("--expanded-weapons"):
+		poses = [
+			{"pos": Vector3(-16.5, 1.15, -8.5), "look": Vector3(8.0, 1.15, 5.0), "weapon": &"gatling"},
+			{"pos": Vector3(17.5, 1.15, -7.0), "look": Vector3(32.0, 1.15, 8.0), "weapon": &"shotgun"},
+			{"pos": Vector3(-15.0, 1.15, 11.0), "look": Vector3(3.0, 1.15, 20.0), "weapon": &"smg"},
+			{"pos": Vector3(12.0, 1.15, 12.0), "look": Vector3(26.0, 1.15, 24.0), "weapon": &"ak_rifle"},
+		]
 	for i in range(4):
 		var character := chars[i] as BaseCharacter
 		if character == null:
@@ -210,6 +217,10 @@ func _equip_showcase_weapon(character: BaseCharacter, weapon_id: String) -> void
 			character.weapon_manager.equip_weapon(WeaponData.create_ak_rifle())
 		"sniper":
 			character.weapon_manager.equip_weapon(WeaponData.create_sniper())
+		"gatling":
+			character.weapon_manager.equip_weapon(WeaponData.create_gatling())
+		"shotgun":
+			character.weapon_manager.equip_weapon(WeaponData.create_shotgun())
 		_:
 			if character.weapon_manager.sidearm:
 				character.weapon_manager.current_weapon = character.weapon_manager.sidearm

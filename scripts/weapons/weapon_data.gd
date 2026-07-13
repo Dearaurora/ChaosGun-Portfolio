@@ -20,6 +20,12 @@ enum FireMode {SEMI_AUTO, FULL_AUTO, BOLT_ACTION}
 @export var stun_duration: float = 0.0 ## 射击硬直（秒）
 @export var recoil_force: float = 0.0 ## 后坐力（射击时推自己后退）
 @export var damage: float = 10.0 ## 每发子弹伤害
+@export var projectiles_per_shot: int = 1
+@export var pellet_spread_degrees: float = 0.0
+@export var close_range_knockback_multiplier: float = 1.0
+@export var knockback_falloff_start: float = 0.0
+@export var knockback_falloff_end: float = 0.0
+@export var far_range_knockback_multiplier: float = 1.0
 @export var projectile_scene: PackedScene
 @export var shoot_sound: AudioStream = null
 @export var has_infinite_ammo: bool = true
@@ -59,7 +65,7 @@ static func create_smg() -> WeaponData:
 	d.fire_mode = FireMode.FULL_AUTO
 	d.fire_rate = 12.0
 	d.bullet_speed = 55.0
-	d.knockback_power = 60.0
+	d.knockback_power = 72.0
 	d.base_spread = 1.0
 	d.max_spread = 3.0
 	d.spread_increase_per_shot = 0.2
@@ -124,6 +130,66 @@ static func create_sniper() -> WeaponData:
 	d.has_infinite_ammo = false
 	return d
 
+static func create_gatling() -> WeaponData:
+	var d = WeaponData.new()
+	d.weapon_name = "Gatling"
+	d.weapon_id = &"gatling"
+	d.fire_mode = FireMode.FULL_AUTO
+	d.fire_rate = 18.0
+	d.bullet_speed = 58.0
+	d.knockback_power = 62.0
+	d.base_spread = 1.25
+	d.max_spread = 4.5
+	d.spread_increase_per_shot = 0.12
+	d.spread_recovery_speed = 22.0
+	d.magazine_size = 200
+	d.switch_time = 0.42
+	d.bullet_radius = 0.26
+	d.bullet_lifetime = 1.35
+	d.stun_duration = 0.0
+	d.recoil_force = 1.5
+	d.damage = 5.0
+	d.projectile_scene = load("res://scenes/weapons/gatling_projectile.tscn")
+	d.shoot_sound = load("res://assets/audio/sfx/shoot_smg.ogg")
+	d.has_infinite_ammo = false
+	return d
+
+static func create_shotgun() -> WeaponData:
+	var d = WeaponData.new()
+	d.weapon_name = "Shotgun"
+	d.weapon_id = &"shotgun"
+	d.fire_mode = FireMode.SEMI_AUTO
+	d.fire_rate = 1.0
+	d.bullet_speed = 62.0
+	d.knockback_power = 28.0
+	d.base_spread = 0.0
+	d.max_spread = 0.0
+	d.spread_increase_per_shot = 0.0
+	d.spread_recovery_speed = 15.0
+	d.magazine_size = 10
+	d.switch_time = 0.38
+	d.bullet_radius = 0.32
+	d.bullet_lifetime = 0.85
+	d.stun_duration = 0.08
+	d.recoil_force = 10.0
+	d.damage = 5.0
+	d.projectiles_per_shot = 5
+	d.pellet_spread_degrees = 12.0
+	d.close_range_knockback_multiplier = 2.2
+	d.knockback_falloff_start = 5.0
+	d.knockback_falloff_end = 26.0
+	d.far_range_knockback_multiplier = 0.55
+	d.projectile_scene = load("res://scenes/weapons/shotgun_projectile.tscn")
+	d.shoot_sound = load("res://assets/audio/sfx/shoot_ak.ogg")
+	d.has_infinite_ammo = false
+	return d
+
 ## 返回所有可在地图上刷新的武器（不含手枪）
 static func get_spawnable_weapons() -> Array[Callable]:
-	return [create_smg, create_ak_rifle, create_sniper]
+	return [create_smg, create_ak_rifle, create_shotgun, create_gatling, create_sniper]
+
+static func get_center_spawnable_weapons() -> Array[Callable]:
+	return [create_smg, create_ak_rifle, create_shotgun]
+
+static func get_outer_spawnable_weapons() -> Array[Callable]:
+	return get_spawnable_weapons()

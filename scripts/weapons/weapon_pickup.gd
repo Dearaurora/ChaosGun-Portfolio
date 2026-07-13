@@ -127,6 +127,14 @@ func _build_visual(weapon_id: StringName) -> void:
 			_add_box(_icon_root, "SniperBarrel", Vector3(1.55, 0.02, 0), Vector3(1.0, 0.12, 0.16), Color("#dff6ff"))
 			_add_box(_icon_root, "SniperScope", Vector3(0.08, 0.28, 0), Vector3(0.78, 0.20, 0.24), Color("#202833"))
 			_add_box(_icon_root, "SniperStock", Vector3(-1.35, 0.0, 0), Vector3(0.62, 0.22, 0.36), Color("#202833"))
+		&"gatling":
+			_add_box(_icon_root, "GatlingBody", Vector3(0.0, 0.0, 0), Vector3(1.85, 0.34, 0.48), _accent_color)
+			_add_box(_icon_root, "GatlingBarrels", Vector3(1.25, 0.02, 0), Vector3(0.85, 0.24, 0.34), Color("#596575"))
+			_add_box(_icon_root, "GatlingAmmo", Vector3(-0.10, -0.42, 0), Vector3(0.42, 0.55, 0.34), Color("#202833"))
+		&"shotgun":
+			_add_box(_icon_root, "ShotgunBody", Vector3(0.0, 0.0, 0), Vector3(2.35, 0.25, 0.36), _accent_color)
+			_add_box(_icon_root, "ShotgunPump", Vector3(0.62, -0.03, 0), Vector3(0.62, 0.31, 0.42), Color("#8850b7"))
+			_add_box(_icon_root, "ShotgunStock", Vector3(-1.25, 0.0, 0), Vector3(0.62, 0.28, 0.44), Color("#202833"))
 		_:
 			_add_box(_icon_root, "PistolBody", Vector3(0.0, 0.0, 0), Vector3(1.10, 0.28, 0.38), _accent_color)
 			_add_box(_icon_root, "PistolBarrel", Vector3(0.62, 0.02, 0), Vector3(0.52, 0.16, 0.22), Color("#dff6ff"))
@@ -156,6 +164,10 @@ func _weapon_asset_scale(weapon_id: StringName) -> float:
 			return 1.42
 		&"sniper":
 			return 1.28
+		&"gatling":
+			return 1.22
+		&"shotgun":
+			return 1.30
 		_:
 			return 1.0
 
@@ -228,6 +240,10 @@ func _weapon_color(weapon_id: StringName) -> Color:
 			return Color("#ff9b23")
 		&"sniper":
 			return Color("#31bde8")
+		&"gatling":
+			return Color("#ffd34d")
+		&"shotgun":
+			return Color("#d884ff")
 		_:
 			return Color("#38aeea")
 

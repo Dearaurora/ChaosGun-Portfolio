@@ -51,6 +51,10 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 			return {"length": 0.82, "width": 0.30, "lifetime": 0.060}
 		&"sniper":
 			return {"length": 1.08, "width": 0.34, "lifetime": 0.080}
+		&"gatling":
+			return {"length": 0.46, "width": 0.18, "lifetime": 0.040}
+		&"shotgun":
+			return {"length": 0.92, "width": 0.46, "lifetime": 0.075}
 		_:
 			return {"length": 0.68, "width": 0.26, "lifetime": 0.060}
 

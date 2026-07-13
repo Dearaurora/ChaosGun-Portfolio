@@ -185,9 +185,11 @@ func _configure_map_runtime() -> void:
 		config.set("max_recoil_impulse", 9.5)
 		config.set("weapon_feel_overrides", {
 			"pistol": {"knockback_power": 92.0, "damage": 14.0, "bullet_lifetime": 1.45},
-			"smg": {"knockback_power": 52.0, "damage": 7.0, "bullet_lifetime": 1.25},
+			"smg": {"knockback_power": 68.0, "damage": 7.0, "bullet_lifetime": 1.25},
 			"ak_rifle": {"knockback_power": 92.0, "damage": 13.0, "bullet_lifetime": 1.55},
 			"sniper": {"knockback_power": 330.0, "damage": 42.0, "bullet_lifetime": 1.9},
+			"gatling": {"knockback_power": 58.0, "damage": 5.0, "bullet_lifetime": 1.25},
+			"shotgun": {"knockback_power": 25.0, "damage": 4.5, "bullet_lifetime": 0.85},
 		})
 
 	if weapon_spawner:
@@ -297,7 +299,7 @@ func _setup_hud() -> void:
 func _spawn_characters() -> void:
 	super._spawn_characters()
 	await get_tree().process_frame
-	var loadouts = ["pistol", "smg", "ak_rifle", "sniper"]
+	var loadouts = ["pistol", "smg", "ak_rifle", "shotgun"]
 	for i in range(_characters.size()):
 		var character = _characters[i] as BaseCharacter
 		if character == null:
@@ -328,6 +330,10 @@ func _apply_slice_loadout(character: BaseCharacter, loadout: String) -> void:
 			character.weapon_manager.equip_weapon(WeaponData.create_ak_rifle())
 		"sniper":
 			character.weapon_manager.equip_weapon(WeaponData.create_sniper())
+		"gatling":
+			character.weapon_manager.equip_weapon(WeaponData.create_gatling())
+		"shotgun":
+			character.weapon_manager.equip_weapon(WeaponData.create_shotgun())
 		_:
 			if visual:
 				visual.set_weapon_visual(&"pistol")

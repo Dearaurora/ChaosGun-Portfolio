@@ -36,6 +36,8 @@ func _initialize() -> void:
 	_verify_weapon_speed("smg", WeaponData.create_smg(), multiplier, 45.0, 80.0)
 	_verify_weapon_speed("ak_rifle", WeaponData.create_ak_rifle(), multiplier, 60.0, 100.0)
 	_verify_weapon_speed("sniper", WeaponData.create_sniper(), multiplier, 100.0, 155.0)
+	_verify_weapon_speed("gatling", WeaponData.create_gatling(), multiplier, 48.0, 82.0)
+	_verify_weapon_speed("shotgun", WeaponData.create_shotgun(), multiplier, 52.0, 90.0)
 
 	await _finish(arena)
 

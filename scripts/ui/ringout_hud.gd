@@ -287,6 +287,10 @@ func _weapon_display_name(raw_name: String, weapon_id: String) -> String:
 				name = "AK RIFLE"
 			"sniper":
 				name = "SNIPER"
+			"gatling":
+				name = "GATLING"
+			"shotgun":
+				name = "SHOTGUN"
 			_:
 				name = "PISTOL"
 	return name.to_upper()
@@ -299,6 +303,10 @@ func _weapon_color(weapon_id: String, accent: Color) -> Color:
 			return Color("#ffb13b")
 		"sniper":
 			return Color("#5ce3ff")
+		"gatling":
+			return Color("#ffd34d")
+		"shotgun":
+			return Color("#d884ff")
 		_:
 			return Color("#ff6b72")
 

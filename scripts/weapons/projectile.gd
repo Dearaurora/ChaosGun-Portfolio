@@ -12,6 +12,11 @@ var direction: Vector3 = Vector3.FORWARD
 var shooter: Node3D = null
 var lifetime: float = 2.0
 var projectile_color: Color = Color("#ffce3a")
+var _knockback_origin: Vector3 = Vector3.ZERO
+var _close_range_knockback_multiplier: float = 1.0
+var _knockback_falloff_start: float = 0.0
+var _knockback_falloff_end: float = 0.0
+var _far_range_knockback_multiplier: float = 1.0
 
 var _visual_weapon_id: StringName = &"pistol"
 var _visual_profile: Dictionary = {}
@@ -73,10 +78,13 @@ func _handle_hit(body: Node3D) -> void:
 	if _hit:
 		return
 	_hit = true
+	var distance_multiplier := get_knockback_multiplier_for_distance(
+		_knockback_origin.distance_to(global_position)
+	)
 	if body.has_method("apply_hit"):
-		body.apply_hit(direction * knockback_power, damage, shooter)
+		body.apply_hit(direction * knockback_power * distance_multiplier, damage, shooter)
 	elif body.has_method("apply_knockback"):
-		body.apply_knockback(direction * knockback_power)
+		body.apply_knockback(direction * knockback_power * distance_multiplier)
 	# 鍑讳腑鐗规晥
 	_spawn_hit_effect()
 	queue_free()
@@ -87,6 +95,30 @@ func configure_visual_profile(weapon_id: StringName, color: Color) -> void:
 	_visual_profile = _profile_for_weapon(weapon_id)
 	if is_inside_tree():
 		_rebuild_projectile_visual()
+
+func configure_knockback_falloff(
+	origin: Vector3,
+	close_multiplier: float,
+	falloff_start: float,
+	falloff_end: float,
+	far_multiplier: float
+) -> void:
+	_knockback_origin = origin
+	_close_range_knockback_multiplier = maxf(0.0, close_multiplier)
+	_knockback_falloff_start = maxf(0.0, falloff_start)
+	_knockback_falloff_end = maxf(_knockback_falloff_start, falloff_end)
+	_far_range_knockback_multiplier = maxf(0.0, far_multiplier)
+
+func get_knockback_multiplier_for_distance(distance: float) -> float:
+	if _knockback_falloff_end <= _knockback_falloff_start + 0.001:
+		return _close_range_knockback_multiplier
+	var ratio := clampf(
+		(distance - _knockback_falloff_start) / (_knockback_falloff_end - _knockback_falloff_start),
+		0.0,
+		1.0
+	)
+	var eased_ratio := smoothstep(0.0, 1.0, ratio)
+	return lerpf(_close_range_knockback_multiplier, _far_range_knockback_multiplier, eased_ratio)
 
 func get_visual_profile_debug() -> Dictionary:
 	if _visual_profile.is_empty():
@@ -219,6 +251,22 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 				"trail_length": 1.16,
 				"trail_width": 0.11,
 				"trail_alpha": 0.38,
+			}
+		&"gatling":
+			return {
+				"body_length": 0.72,
+				"body_radius": 0.14,
+				"trail_length": 0.56,
+				"trail_width": 0.10,
+				"trail_alpha": 0.28,
+			}
+		&"shotgun":
+			return {
+				"body_length": 0.72,
+				"body_radius": 0.20,
+				"trail_length": 0.48,
+				"trail_width": 0.13,
+				"trail_alpha": 0.27,
 			}
 		_:
 			return {

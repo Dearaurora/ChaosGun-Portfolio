@@ -1,4 +1,6 @@
+import argparse
 import math
+import sys
 from pathlib import Path
 
 import bpy
@@ -183,6 +185,61 @@ def build_sniper():
     add_cylinder("SniperMuzzleGlow", (0, -1.72, 0.19), 0.052, 0.035, glow, 0.004, (math.radians(90), 0, 0), 24)
 
 
+def build_gatling():
+    shell = mat("gatling_graphite_receiver", (0.075, 0.07, 0.09, 1.0), 0.67)
+    gold = mat("gatling_gold_housing", (0.94, 0.58, 0.08, 1.0), 0.64)
+    cream = mat("gatling_cream_trim", (0.90, 0.80, 0.56, 1.0), 0.70)
+    dark = mat("gatling_dark_mechanics", (0.035, 0.04, 0.055, 1.0), 0.82)
+    steel = mat("gatling_soft_steel", (0.44, 0.48, 0.52, 1.0), 0.56, 0.06)
+    cyan = mat("gatling_cyan_status", (0.12, 0.70, 0.76, 1.0), 0.48, emission=(0.08, 0.72, 0.82, 1.0), strength=0.22)
+    glow = mat("gatling_muzzle_gold", (1.0, 0.78, 0.16, 1.0), 0.34, emission=(1.0, 0.56, 0.08, 1.0), strength=0.38)
+
+    add_tapered_box("Receiver", (0, -0.36, 0.20), 0.48, 0.40, 0.72, 0.34, shell, 0.06)
+    add_cube("ReceiverTop", (0, -0.40, 0.43), (0.35, 0.56, 0.11), gold, 0.032)
+    add_tapered_box("RearStock", (0, 0.27, 0.19), 0.52, 0.34, 0.58, 0.34, dark, 0.055)
+    add_cube("StockPad", (0, 0.59, 0.19), (0.53, 0.09, 0.38), cream, 0.035)
+    add_cube("RearGrip", (0, -0.05, -0.11), (0.24, 0.20, 0.48), dark, 0.045, (math.radians(-10), 0, 0))
+    add_cube("AmmoCanister", (0.31, -0.33, -0.03), (0.24, 0.43, 0.48), gold, 0.045)
+    add_cube("AmmoCanisterBand", (0.315, -0.33, -0.03), (0.255, 0.09, 0.50), cream, 0.02)
+    add_cube("CarryHandle", (0, -0.26, 0.58), (0.25, 0.40, 0.08), dark, 0.025)
+    add_cube("StatusLight", (-0.205, -0.43, 0.35), (0.035, 0.24, 0.09), cyan, 0.01)
+
+    add_cylinder("BarrelDrum", (0, -0.82, 0.20), 0.24, 0.36, gold, 0.025, (math.radians(90), 0, 0), 28)
+    add_cylinder("BarrelDrumCore", (0, -0.84, 0.20), 0.13, 0.40, dark, 0.015, (math.radians(90), 0, 0), 24)
+    barrel_offsets = [
+        (-0.12, 0.20), (-0.06, 0.305), (0.06, 0.305),
+        (0.12, 0.20), (0.06, 0.095), (-0.06, 0.095),
+    ]
+    for index, (x, z) in enumerate(barrel_offsets):
+        add_cylinder(f"RotaryBarrel{index}", (x, -1.24, z), 0.035, 0.76, steel, 0.006, (math.radians(90), 0, 0), 18)
+        add_cylinder(f"MuzzleGlow{index}", (x, -1.635, z), 0.047, 0.035, glow, 0.004, (math.radians(90), 0, 0), 18)
+    add_cylinder("FrontBrace", (0, -1.45, 0.20), 0.22, 0.08, dark, 0.014, (math.radians(90), 0, 0), 28)
+
+
+def build_shotgun():
+    shell = mat("shotgun_plum_receiver", (0.13, 0.095, 0.15, 1.0), 0.70)
+    violet = mat("shotgun_violet_pump", (0.56, 0.24, 0.78, 1.0), 0.68)
+    cream = mat("shotgun_cream_trim", (0.91, 0.79, 0.58, 1.0), 0.70)
+    dark = mat("shotgun_dark_parts", (0.04, 0.045, 0.06, 1.0), 0.82)
+    steel = mat("shotgun_soft_steel", (0.52, 0.55, 0.59, 1.0), 0.56, 0.04)
+    glow = mat("shotgun_muzzle_violet", (0.84, 0.48, 1.0, 1.0), 0.34, emission=(0.64, 0.20, 1.0, 1.0), strength=0.34)
+
+    add_tapered_box("Receiver", (0, -0.39, 0.20), 0.42, 0.34, 0.66, 0.30, shell, 0.055)
+    add_cube("ReceiverTop", (0, -0.43, 0.40), (0.31, 0.52, 0.09), dark, 0.025)
+    add_tapered_box("Stock", (0, 0.28, 0.18), 0.52, 0.31, 0.64, 0.34, dark, 0.055)
+    add_cube("StockPad", (0, 0.63, 0.18), (0.53, 0.09, 0.39), violet, 0.035)
+    add_cube("Grip", (0, -0.08, -0.10), (0.23, 0.19, 0.46), dark, 0.04, (math.radians(-11), 0, 0))
+    add_cube("TriggerGuard", (0, -0.24, 0.01), (0.27, 0.17, 0.15), cream, 0.025)
+    add_cylinder("MainBarrel", (0, -1.11, 0.24), 0.065, 0.92, steel, 0.010, (math.radians(90), 0, 0), 24)
+    add_cylinder("MagazineTube", (0, -1.02, 0.08), 0.052, 0.76, dark, 0.009, (math.radians(90), 0, 0), 22)
+    add_cube("PumpBody", (0, -0.89, 0.16), (0.38, 0.43, 0.31), violet, 0.052)
+    for y in (-0.75, -0.85, -0.95, -1.05):
+        add_cube("PumpRib", (0, y, 0.35), (0.34, 0.035, 0.045), cream, 0.008)
+    add_cube("FrontSight", (0, -1.49, 0.36), (0.10, 0.07, 0.12), cream, 0.016)
+    add_cylinder("ShotgunMuzzle", (0, -1.58, 0.24), 0.085, 0.075, dark, 0.012, (math.radians(90), 0, 0), 24)
+    add_cylinder("ShotgunMuzzleGlow", (0, -1.625, 0.24), 0.062, 0.025, glow, 0.004, (math.radians(90), 0, 0), 24)
+
+
 def export_weapon(name, build_fn):
     clear_scene()
     build_fn()
@@ -199,10 +256,21 @@ def export_weapon(name, build_fn):
 
 
 def main():
-    export_weapon("pistol", build_pistol)
-    export_weapon("smg", build_smg)
-    export_weapon("ak_rifle", build_ak_rifle)
-    export_weapon("sniper", build_sniper)
+    builders = {
+        "pistol": build_pistol,
+        "smg": build_smg,
+        "ak_rifle": build_ak_rifle,
+        "sniper": build_sniper,
+        "gatling": build_gatling,
+        "shotgun": build_shotgun,
+    }
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--weapon", action="append", choices=builders.keys())
+    blender_args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    args = parser.parse_args(blender_args)
+    requested = args.weapon if args.weapon else list(builders.keys())
+    for name in requested:
+        export_weapon(name, builders[name])
 
 
 if __name__ == "__main__":

@@ -50,7 +50,6 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	if not weapon_data or fire_cooldown > 0 or current_ammo == 0:
 		return false
 
-	var final_dir = _apply_spread(direction)
 	var scene_root = RuntimeGlobals.active_scene(fire_point.get_tree())
 	if scene_root == null:
 		return false
@@ -59,25 +58,25 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	var bullet_speed_multiplier = game_config.get("bullet_speed_multiplier") if game_config and game_config.get("bullet_speed_multiplier") is float else 10.0
 	var knockback_multiplier = game_config.get("knockback_multiplier") if game_config and game_config.get("knockback_multiplier") is float else 1.8
 
-	var proj = weapon_data.projectile_scene.instantiate() as Projectile
-	proj.direction = final_dir
-	proj.speed = weapon_data.bullet_speed * bullet_speed_multiplier
-	proj.knockback_power = weapon_data.knockback_power * knockback_multiplier
-	proj.damage = weapon_data.damage
-	proj.lifetime = weapon_data.bullet_lifetime
-	proj.shooter = shooter
 	var projectile_color := _projectile_color_for_weapon(weapon_data.weapon_id)
-	proj.configure_visual_profile(weapon_data.weapon_id, projectile_color)
-	scene_root.add_child(proj)
-	proj.global_position = fire_point.global_position
-	proj.look_at(proj.global_position + final_dir)
-	proj.set_projectile_color(projectile_color)
-	_spawn_shot_tracer(scene_root, fire_point.global_position, final_dir, projectile_color, weapon_data.weapon_id)
+	var shot_direction := _apply_spread(direction).normalized()
+	var projectile_count := maxi(1, weapon_data.projectiles_per_shot)
+	for projectile_index in range(projectile_count):
+		var projectile_direction := _pellet_direction(shot_direction, projectile_index, projectile_count)
+		_spawn_projectile(
+			scene_root,
+			fire_point.global_position,
+			projectile_direction,
+			shooter,
+			projectile_color,
+			bullet_speed_multiplier,
+			knockback_multiplier
+		)
 
 	# 枪口焰
 	var flash = MuzzleFlashScene.instantiate() as Node3D
 	if flash and flash.has_method("configure"):
-		flash.call("configure", final_dir, projectile_color, weapon_data.weapon_id)
+		flash.call("configure", shot_direction, projectile_color, weapon_data.weapon_id)
 	scene_root.add_child(flash)
 	flash.global_position = fire_point.global_position
 
@@ -107,7 +106,7 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 
 	# 后坐力反推（推射手后退）
 	if weapon_data.recoil_force > 0.0 and shooter.has_method("apply_recoil"):
-		var recoil_dir = -final_dir  # 与弹道方向相反
+		var recoil_dir = -shot_direction  # 与弹道方向相反
 		recoil_dir.y = 0
 		shooter.apply_recoil(recoil_dir * weapon_data.recoil_force)
 
@@ -123,6 +122,49 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 		ammo_depleted.emit()
 
 	return true
+
+func _spawn_projectile(
+	scene_root: Node,
+	spawn_position: Vector3,
+	projectile_direction: Vector3,
+	shooter: Node3D,
+	projectile_color: Color,
+	bullet_speed_multiplier: float,
+	knockback_multiplier: float
+) -> void:
+	var proj = weapon_data.projectile_scene.instantiate() as Projectile
+	if proj == null:
+		return
+	proj.direction = projectile_direction
+	proj.speed = weapon_data.bullet_speed * bullet_speed_multiplier
+	proj.knockback_power = weapon_data.knockback_power * knockback_multiplier
+	proj.damage = weapon_data.damage
+	proj.lifetime = weapon_data.bullet_lifetime
+	proj.shooter = shooter
+	proj.configure_visual_profile(weapon_data.weapon_id, projectile_color)
+	proj.configure_knockback_falloff(
+		spawn_position,
+		weapon_data.close_range_knockback_multiplier,
+		weapon_data.knockback_falloff_start,
+		weapon_data.knockback_falloff_end,
+		weapon_data.far_range_knockback_multiplier
+	)
+	scene_root.add_child(proj)
+	proj.global_position = spawn_position
+	proj.look_at(proj.global_position + projectile_direction)
+	proj.set_projectile_color(projectile_color)
+	_spawn_shot_tracer(scene_root, spawn_position, projectile_direction, projectile_color, weapon_data.weapon_id)
+
+func _pellet_direction(base_direction: Vector3, index: int, count: int) -> Vector3:
+	if count <= 1 or weapon_data.pellet_spread_degrees <= 0.01:
+		return base_direction
+	var spread_ratio := float(index) / float(count - 1)
+	var angle_degrees := lerpf(
+		-weapon_data.pellet_spread_degrees * 0.5,
+		weapon_data.pellet_spread_degrees * 0.5,
+		spread_ratio
+	)
+	return base_direction.rotated(Vector3.UP, deg_to_rad(angle_degrees)).normalized()
 
 # ------------------------------------------------------------------
 #  散布 & 后坐力
@@ -149,6 +191,10 @@ func _projectile_color_for_weapon(weapon_id: StringName) -> Color:
 			return Color("#e96525")
 		&"sniper":
 			return Color("#35c8e8")
+		&"gatling":
+			return Color("#ffd34d")
+		&"shotgun":
+			return Color("#d884ff")
 		_:
 			return Color("#f04455")
 
@@ -179,6 +225,18 @@ func _shot_tracer_profile_for_weapon(weapon_id: StringName) -> Dictionary:
 				"length": 2.80,
 				"width": 0.14,
 				"lifetime": 0.070,
+			}
+		&"gatling":
+			return {
+				"length": 1.10,
+				"width": 0.09,
+				"lifetime": 0.036,
+			}
+		&"shotgun":
+			return {
+				"length": 1.45,
+				"width": 0.11,
+				"lifetime": 0.050,
 			}
 		_:
 			return {

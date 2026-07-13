@@ -22,13 +22,17 @@ func _initialize() -> void:
 	var smg := await _make_scene_projectile(&"smg", Color("#65ff49"))
 	var ak := await _make_scene_projectile(&"ak_rifle", Color("#ffb13b"))
 	var sniper := await _make_scene_projectile(&"sniper", Color("#5ce3ff"))
+	var gatling := await _make_scene_projectile(&"gatling", Color("#ffd34d"))
+	var shotgun := await _make_scene_projectile(&"shotgun", Color("#d884ff"))
 
 	_verify_short_readable_projectile(pistol, "pistol")
 	_verify_short_readable_projectile(smg, "smg")
 	_verify_short_readable_projectile(ak, "ak_rifle")
 	_verify_short_readable_projectile(sniper, "sniper")
+	_verify_short_readable_projectile(gatling, "gatling")
+	_verify_short_readable_projectile(shotgun, "shotgun")
 	_verify_weapon_silhouette_differences(pistol, smg, ak, sniper)
-	await _finish([pistol, smg, ak, sniper])
+	await _finish([pistol, smg, ak, sniper, gatling, shotgun])
 
 func _make_scene_projectile(weapon_id: StringName, color: Color) -> Projectile:
 	var scene := load("res://scenes/weapons/pistol_projectile.tscn") as PackedScene

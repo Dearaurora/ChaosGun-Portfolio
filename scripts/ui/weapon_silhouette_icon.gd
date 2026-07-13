@@ -34,6 +34,12 @@ func _draw() -> void:
 		"sniper":
 			_draw_sniper(shadow_offset, true)
 			_draw_sniper(Vector2.ZERO, false)
+		"gatling":
+			_draw_gatling(shadow_offset, true)
+			_draw_gatling(Vector2.ZERO, false)
+		"shotgun":
+			_draw_shotgun(shadow_offset, true)
+			_draw_shotgun(Vector2.ZERO, false)
 		_:
 			_draw_pistol(shadow_offset, true)
 			_draw_pistol(Vector2.ZERO, false)
@@ -93,6 +99,36 @@ func _draw_sniper(offset: Vector2, shadow: bool) -> void:
 	_circle(Vector2(64, 10), 5, scope, offset)
 	_poly([Vector2(33, 28), Vector2(45, 28), Vector2(41, 42), Vector2(30, 42)], grip, offset)
 	_stroke(Vector2(73, 15), Vector2(96, 15), barrel, 2.0, offset)
+
+func _draw_gatling(offset: Vector2, shadow: bool) -> void:
+	var body = _part_color(Color("#ffd34d"), shadow)
+	var barrel = _part_color(Color("#8d99a7"), shadow)
+	var dark = _part_color(Color("#1d2431"), shadow)
+	var status = _part_color(Color("#61e2e5"), shadow)
+
+	_poly([Vector2(5, 24), Vector2(20, 16), Vector2(27, 22), Vector2(15, 31)], dark, offset)
+	_stroke(Vector2(25, 20), Vector2(58, 20), body, 17, offset)
+	_circle(Vector2(62, 20), 10, body, offset)
+	for y in [15.0, 20.0, 25.0]:
+		_stroke(Vector2(64, y), Vector2(96, y), barrel, 3.2, offset)
+	_poly([Vector2(35, 28), Vector2(54, 28), Vector2(55, 43), Vector2(34, 43)], body, offset)
+	_stroke(Vector2(31, 10), Vector2(52, 10), dark, 5, offset)
+	_circle(Vector2(31, 18), 2.5, status, offset)
+
+func _draw_shotgun(offset: Vector2, shadow: bool) -> void:
+	var body = _part_color(Color("#d884ff"), shadow)
+	var barrel = _part_color(Color("#dce4ed"), shadow)
+	var dark = _part_color(Color("#202432"), shadow)
+	var trim = _part_color(Color("#f4dba2"), shadow)
+
+	_poly([Vector2(5, 24), Vector2(23, 15), Vector2(29, 21), Vector2(14, 31)], dark, offset)
+	_stroke(Vector2(26, 20), Vector2(57, 20), body, 14, offset)
+	_stroke(Vector2(55, 18), Vector2(96, 18), barrel, 5, offset)
+	_stroke(Vector2(55, 24), Vector2(91, 24), dark, 3.5, offset)
+	_stroke(Vector2(60, 20), Vector2(78, 20), body.lerp(Color.WHITE, 0.12), 12, offset)
+	for x in [62.0, 68.0, 74.0]:
+		_stroke(Vector2(x, 14), Vector2(x, 26), trim, 1.5, offset)
+	_poly([Vector2(29, 28), Vector2(41, 28), Vector2(37, 42), Vector2(27, 42)], dark, offset)
 
 func _part_color(color: Color, shadow: bool) -> Color:
 	return Color(0, 0, 0, 0.48) if shadow else color

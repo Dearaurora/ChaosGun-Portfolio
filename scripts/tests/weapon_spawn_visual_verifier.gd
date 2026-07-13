@@ -24,7 +24,7 @@ func _initialize() -> void:
 	_verify_pedestal(outer, false, 4)
 
 	var pickup_scene := load("res://scenes/weapons/weapon_pickup.tscn") as PackedScene
-	for data in [WeaponData.create_pistol(), WeaponData.create_smg(), WeaponData.create_ak_rifle(), WeaponData.create_sniper()]:
+	for data in [WeaponData.create_pistol(), WeaponData.create_smg(), WeaponData.create_ak_rifle(), WeaponData.create_sniper(), WeaponData.create_gatling(), WeaponData.create_shotgun()]:
 		var pickup := pickup_scene.instantiate() as WeaponPickup
 		stage.add_child(pickup)
 		pickup.setup(data)

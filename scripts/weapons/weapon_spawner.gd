@@ -121,7 +121,10 @@ func _spawn_pickup_at(
 	if pickup == null:
 		return
 
-	var factories = WeaponData.get_spawnable_weapons()
+	var factories := _factories_for_spawn_kind(spawn_kind)
+	if factories.is_empty():
+		pickup.queue_free()
+		return
 	var factory = factories.pick_random() as Callable
 	var weapon_data = factory.call() as WeaponData
 
@@ -187,6 +190,21 @@ func _pick_spawn_slot(preferred_cluster_id: int = -1) -> Dictionary:
 		"position": Vector3(randf_range(-half, half), 1.5, randf_range(-half, half)),
 		"cluster_id": -1,
 	}
+
+func _factories_for_spawn_kind(spawn_kind: String) -> Array[Callable]:
+	if spawn_kind == "fixed":
+		return WeaponData.get_center_spawnable_weapons()
+	if spawn_kind == "random":
+		return WeaponData.get_outer_spawnable_weapons()
+	return WeaponData.get_spawnable_weapons()
+
+func get_spawn_pool_ids_debug(spawn_kind: String) -> Array[StringName]:
+	var ids: Array[StringName] = []
+	for factory in _factories_for_spawn_kind(spawn_kind):
+		var data := factory.call() as WeaponData
+		if data:
+			ids.append(data.weapon_id)
+	return ids
 
 func _pick_point_from_pool(points: Array) -> Vector3:
 	var available_points: Array[Vector3] = []
@@ -332,5 +350,9 @@ func _weapon_color(weapon_id: StringName) -> Color:
 			return Color("#ff9b23")
 		&"sniper":
 			return Color("#31bde8")
+		&"gatling":
+			return Color("#ffd34d")
+		&"shotgun":
+			return Color("#d884ff")
 		_:
 			return Color("#ff6b72")

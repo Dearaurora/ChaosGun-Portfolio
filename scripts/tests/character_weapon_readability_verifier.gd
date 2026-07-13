@@ -20,7 +20,7 @@ func _initialize() -> void:
 
 	var profiles := {}
 	var muzzle_positions := {}
-	for weapon_id in [&"pistol", &"smg", &"ak_rifle", &"sniper"]:
+	for weapon_id in [&"pistol", &"smg", &"ak_rifle", &"sniper", &"gatling", &"shotgun"]:
 		visual.set_weapon_visual(weapon_id)
 		await process_frame
 		var debug := visual.call("get_weapon_readability_debug") as Dictionary
@@ -42,18 +42,24 @@ func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
 		"smg": Vector3(-0.12, 1.35, -0.83),
 		"ak_rifle": Vector3(-0.18, 1.34, -0.92),
 		"sniper": Vector3(-0.18, 1.35, -0.96),
+		"gatling": Vector3(-0.18, 1.34, -0.94),
+		"shotgun": Vector3(-0.18, 1.34, -0.91),
 	}
 	var expected_scales := {
 		"pistol": 1.0,
 		"smg": 0.84,
 		"ak_rifle": 0.74,
 		"sniper": 0.68,
+		"gatling": 0.66,
+		"shotgun": 0.72,
 	}
 	var expected_poses := {
 		"pistol": "hold_pistol",
 		"smg": "hold_smg",
 		"ak_rifle": "hold_ak",
 		"sniper": "hold_sniper",
+		"gatling": "hold_ak",
+		"shotgun": "hold_ak",
 	}
 	var expected_position := expected_positions.get(weapon_id, Vector3.ZERO) as Vector3
 	var holder_scale := float(debug.get("holder_scale", 0.0))
@@ -129,7 +135,15 @@ func _verify_character_pose_meshes(visual: CharacterVisual, weapon_id: String) -
 	if skeleton == null or skeleton.get_bone_count() < 15:
 		_fail("%s character should use the complete 15-bone hero rig" % weapon_id)
 	var animation_player := _find_animation_player(visual)
-	var expected_pose := StringName("hold_%s" % ("ak" if weapon_id == "ak_rifle" else weapon_id))
+	var pose_names := {
+		"pistol": &"hold_pistol",
+		"smg": &"hold_smg",
+		"ak_rifle": &"hold_ak",
+		"sniper": &"hold_sniper",
+		"gatling": &"hold_ak",
+		"shotgun": &"hold_ak",
+	}
+	var expected_pose := pose_names.get(weapon_id, &"hold_pistol") as StringName
 	if animation_player == null or not animation_player.has_animation(expected_pose):
 		_fail("%s character is missing rig pose %s" % [weapon_id, expected_pose])
 	elif animation_player.assigned_animation != expected_pose:
@@ -241,6 +255,14 @@ func _verify_weapon_silhouette_steps(profiles: Dictionary) -> void:
 		_fail("AK silhouette should have magazine and stock markers")
 	if not bool(sniper_profile.get("has_scope", false)):
 		_fail("Sniper silhouette should have a scope marker")
+	var gatling_profile := profiles["gatling"] as Dictionary
+	var shotgun_profile := profiles["shotgun"] as Dictionary
+	if float(gatling_profile.get("silhouette_width", 0.0)) <= float(ak_profile.get("silhouette_width", 0.0)):
+		_fail("Gatling should have the widest heavy-weapon silhouette")
+	if not bool(gatling_profile.get("has_magazine", false)) or not bool(gatling_profile.get("has_stock", false)):
+		_fail("Gatling silhouette should expose ammo and stock mass")
+	if bool(shotgun_profile.get("has_magazine", true)) or not bool(shotgun_profile.get("has_stock", false)):
+		_fail("Shotgun silhouette should read as a stocked tube-fed weapon")
 	else:
 		print("OK  readable held-weapon silhouette steps")
 
@@ -256,6 +278,8 @@ func _verify_muzzle_positions(positions: Dictionary) -> void:
 		"smg": Vector3(-0.132, 1.4456, -2.101),
 		"ak_rifle": Vector3(-0.198, 1.4352, -2.464),
 		"sniper": Vector3(-0.198, 1.4456, -2.541),
+		"gatling": Vector3(-0.198, 1.4456, -2.233),
+		"shotgun": Vector3(-0.198, 1.4456, -2.288),
 	}
 	for weapon_id in positions:
 		var point := positions[weapon_id] as Vector3

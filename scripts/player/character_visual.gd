@@ -581,6 +581,18 @@ func set_weapon_visual(weapon_id: StringName) -> void:
 				{"size": Vector3(0.2, 0.18, 0.5), "pos": Vector3(0, 0.0, 0.4)},    # 枪托
 				{"size": Vector3(0.1, 0.15, 0.25), "pos": Vector3(0, 0.2, -0.6)},  #瞄准镜
 			])
+		&"gatling":
+			_build_gun_parts(gun_mat, [
+				{"size": Vector3(0.38, 0.30, 0.82), "pos": Vector3(0, 0.05, -0.38)},
+				{"size": Vector3(0.30, 0.30, 0.72), "pos": Vector3(0, 0.05, -1.08)},
+				{"size": Vector3(0.20, 0.42, 0.18), "pos": Vector3(0, -0.22, -0.24)},
+			])
+		&"shotgun":
+			_build_gun_parts(gun_mat, [
+				{"size": Vector3(0.30, 0.25, 1.28), "pos": Vector3(0, 0.05, -0.62)},
+				{"size": Vector3(0.35, 0.30, 0.46), "pos": Vector3(0, 0.02, 0.30)},
+				{"size": Vector3(0.32, 0.28, 0.42), "pos": Vector3(0, 0.01, -0.88)},
+			])
 
 	_build_weapon_readability_proxy(weapon_id)
 
@@ -595,6 +607,10 @@ func _weapon_holder_position_for(weapon_id: StringName) -> Vector3:
 				return Vector3(-0.18, 1.34, -0.92)
 			&"sniper":
 				return Vector3(-0.18, 1.35, -0.96)
+			&"gatling":
+				return Vector3(-0.18, 1.34, -0.94)
+			&"shotgun":
+				return Vector3(-0.18, 1.34, -0.91)
 	match weapon_id:
 		&"pistol":
 			return Vector3(0.0, 1.18, -1.24)
@@ -604,6 +620,10 @@ func _weapon_holder_position_for(weapon_id: StringName) -> Vector3:
 			return Vector3(0.0, 1.28, -1.20)
 		&"sniper":
 			return Vector3(0.0, 1.31, -1.20)
+		&"gatling":
+			return Vector3(0.0, 1.28, -1.20)
+		&"shotgun":
+			return Vector3(0.0, 1.28, -1.20)
 	return Vector3(0.0, 1.18, -1.24)
 
 func _set_weapon_pose_visual(weapon_id: StringName) -> void:
@@ -628,6 +648,8 @@ func _weapon_pose_animation_for(weapon_id: StringName) -> StringName:
 			return &"hold_ak"
 		&"sniper":
 			return &"hold_sniper"
+		&"gatling", &"shotgun":
+			return &"hold_ak"
 		_:
 			return &"hold_pistol"
 
@@ -759,6 +781,24 @@ func _weapon_readability_profile(weapon_id: StringName) -> Dictionary:
 				"has_stock": true,
 				"has_scope": true,
 			}
+		&"gatling":
+			return {
+				"silhouette_length": 1.72,
+				"silhouette_width": 0.48,
+				"silhouette_height": 0.34,
+				"has_magazine": true,
+				"has_stock": true,
+				"has_scope": false,
+			}
+		&"shotgun":
+			return {
+				"silhouette_length": 1.78,
+				"silhouette_width": 0.34,
+				"silhouette_height": 0.27,
+				"has_magazine": false,
+				"has_stock": true,
+				"has_scope": false,
+			}
 		_:
 			return {
 				"silhouette_length": 0.78,
@@ -801,6 +841,10 @@ func _weapon_model_path(weapon_id: StringName) -> String:
 			return WEAPON_MODEL_ROOT + "ak_rifle.glb"
 		&"sniper":
 			return WEAPON_MODEL_ROOT + "sniper.glb"
+		&"gatling":
+			return WEAPON_MODEL_ROOT + "gatling.glb"
+		&"shotgun":
+			return WEAPON_MODEL_ROOT + "shotgun.glb"
 		_:
 			return ""
 
@@ -815,6 +859,10 @@ func _weapon_asset_scale(weapon_id: StringName) -> float:
 				return 0.74
 			&"sniper":
 				return 0.68
+			&"gatling":
+				return 0.66
+			&"shotgun":
+				return 0.72
 	match weapon_id:
 		&"pistol":
 			return 1.34
@@ -824,6 +872,10 @@ func _weapon_asset_scale(weapon_id: StringName) -> float:
 			return 1.00
 		&"sniper":
 			return 0.92
+		&"gatling":
+			return 0.90
+		&"shotgun":
+			return 0.96
 		_:
 			return 1.0
 
@@ -837,6 +889,10 @@ func get_weapon_muzzle_local_position(weapon_id: StringName = _current_weapon_id
 				muzzle_position = Vector3(-0.18, 1.38, -2.24)
 			&"sniper":
 				muzzle_position = Vector3(-0.18, 1.39, -2.31)
+			&"gatling":
+				muzzle_position = Vector3(-0.18, 1.39, -2.03)
+			&"shotgun":
+				muzzle_position = Vector3(-0.18, 1.39, -2.08)
 			_:
 				muzzle_position = Vector3(0.0, 1.43, -1.69)
 	else:
@@ -847,6 +903,10 @@ func get_weapon_muzzle_local_position(weapon_id: StringName = _current_weapon_id
 				muzzle_position = Vector3(0.0, 1.26, -3.08)
 			&"sniper":
 				muzzle_position = Vector3(0.0, 1.24, -3.13)
+			&"gatling":
+				muzzle_position = Vector3(0.0, 1.26, -3.00)
+			&"shotgun":
+				muzzle_position = Vector3(0.0, 1.26, -3.02)
 			_:
 				muzzle_position = Vector3(0.0, 1.31, -2.64)
 	return muzzle_position * _runtime_visual_scale()
@@ -869,6 +929,10 @@ func _weapon_color(weapon_id: StringName) -> Color:
 			return Color("#ffb13b")
 		&"sniper":
 			return Color("#5ce3ff")
+		&"gatling":
+			return Color("#ffd34d")
+		&"shotgun":
+			return Color("#d884ff")
 		_:
 			return Color("#ff6b72")
 
@@ -909,6 +973,12 @@ func animate_fire(weapon_id: StringName = &"pistol") -> void:
 		&"sniper":
 			kick = 0.145
 			pitch = 0.115
+		&"gatling":
+			kick = 0.022
+			pitch = 0.018
+		&"shotgun":
+			kick = 0.085
+			pitch = 0.070
 	_weapon_kick = maxf(_weapon_kick, kick)
 	_recoil_pitch = maxf(_recoil_pitch, pitch)
 

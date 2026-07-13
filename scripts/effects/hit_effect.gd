@@ -46,6 +46,10 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 			return {"radius": 0.82, "lifetime": 0.145}
 		&"sniper":
 			return {"radius": 1.10, "lifetime": 0.180}
+		&"gatling":
+			return {"radius": 0.46, "lifetime": 0.095}
+		&"shotgun":
+			return {"radius": 0.58, "lifetime": 0.115}
 		_:
 			return {"radius": 0.68, "lifetime": 0.130}
 
