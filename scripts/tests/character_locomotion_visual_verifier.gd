@@ -23,6 +23,7 @@ func _initialize() -> void:
 		return
 
 	_verify_runtime_readability(visual)
+	_verify_runtime_material_profile(visual)
 	_verify_strafing_blends_smoothly(visual)
 	_verify_backpedal_blends_against_facing(visual)
 	_verify_idle_decays_smoothly(visual)
@@ -41,6 +42,28 @@ func _verify_runtime_readability(visual: CharacterVisual) -> void:
 		_fail("Motion debug should report the contact shadow")
 	else:
 		print("OK  enlarged hero silhouette with grounded contact shadow")
+
+func _verify_runtime_material_profile(visual: CharacterVisual) -> void:
+	var debug := visual.call("get_material_debug") as Dictionary
+	if int(debug.get("suit_surface_count", 0)) < 5:
+		_fail("Hero runtime should profile every suit surface")
+	if int(debug.get("rubber_surface_count", 0)) < 1:
+		_fail("Hero runtime should preserve a distinct glove and boot material")
+	if int(debug.get("face_panel_surface_count", 0)) != 1:
+		_fail("Hero runtime should profile exactly one face panel surface")
+	if int(debug.get("eye_surface_count", 0)) != 2:
+		_fail("Hero runtime should profile two eye surfaces")
+	var suit_roughness := float(debug.get("suit_roughness", 0.0))
+	if suit_roughness < 0.52 or suit_roughness > 0.66:
+		_fail("Hero suit should retain a controlled soft-plastic roughness")
+	var face_emission := float(debug.get("face_panel_emission", 1.0))
+	if face_emission <= 0.0 or face_emission > 0.25:
+		_fail("Face panel emission should stay subtle instead of reading as a glow card")
+	var eye_emission := float(debug.get("eye_emission", 0.0))
+	if eye_emission < 1.4 or eye_emission > 2.1:
+		_fail("Eye emission should remain readable under the locked gameplay camera")
+	else:
+		print("OK  calibrated suit, rubber, face panel, and eye materials")
 
 func _verify_strafing_blends_smoothly(visual: CharacterVisual) -> void:
 	visual.animate_locomotion(Vector3.RIGHT, Vector3.FORWARD, 1.0, 1.0 / 60.0)

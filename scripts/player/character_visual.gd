@@ -13,12 +13,22 @@ const LEGACY_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/b
 const WEAPON_MODEL_ROOT := "res://assets/models/generated/weapons/"
 const HERO_RUNTIME_SCALE := Vector3(1.10, 1.04, 1.10)
 const CONTACT_SHADOW_Y_OFFSET := -0.075
+const SUIT_ROUGHNESS := 0.58
+const RUBBER_COLOR := Color("#412853")
+const FACE_PANEL_COLOR := Color("#171126")
+const EYE_COLOR := Color("#ffd45a")
 
 var _weapon_holder: Node3D
 var _bounce_time: float = 0.0
 var _hit_flash_timer: float = 0.0
 var _body_mesh: MeshInstance3D
 var _body_color_meshes: Array[MeshInstance3D] = []
+var _suit_materials: Array[StandardMaterial3D] = []
+var _rubber_materials: Array[StandardMaterial3D] = []
+var _face_panel_materials: Array[StandardMaterial3D] = []
+var _eye_materials: Array[StandardMaterial3D] = []
+var _rendered_body_color := Color.TRANSPARENT
+var _has_rendered_body_color: bool = false
 var _asset_root: Node3D = null
 var _animation_player: AnimationPlayer = null
 var _skeleton: Skeleton3D = null
@@ -81,8 +91,15 @@ func _build_body() -> void:
 ## 运行时动态修改角色颜色
 func set_body_color(color: Color) -> void:
 	body_color = color
+	_apply_rendered_body_color(color)
+
+func _apply_rendered_body_color(color: Color) -> void:
+	if _has_rendered_body_color and _rendered_body_color.is_equal_approx(color):
+		return
 	for mesh_instance in _body_color_meshes:
 		_apply_body_color_to_mesh(mesh_instance, color)
+	_rendered_body_color = color
+	_has_rendered_body_color = true
 
 func _build_asset_visual() -> bool:
 	var asset_path := HERO_CHARACTER_SCENE_PATH
@@ -184,6 +201,7 @@ func _cache_asset_meshes(node: Node) -> void:
 		if child is MeshInstance3D:
 			var mesh_instance := child as MeshInstance3D
 			var lower_name = String(mesh_instance.name).to_lower()
+			_apply_asset_material_profile(mesh_instance)
 			if _body_mesh == null and lower_name.contains("body"):
 				_body_mesh = mesh_instance
 			if _mesh_has_suit_material(mesh_instance):
@@ -193,6 +211,78 @@ func _cache_asset_meshes(node: Node) -> void:
 			elif lower_name.contains("belly") or lower_name.contains("hand"):
 				_body_color_meshes.append(mesh_instance)
 		_cache_asset_meshes(child)
+
+func _apply_asset_material_profile(mesh_instance: MeshInstance3D) -> void:
+	if mesh_instance.mesh == null:
+		return
+	for surface_index in range(mesh_instance.mesh.get_surface_count()):
+		var source_material := mesh_instance.mesh.surface_get_material(surface_index)
+		if source_material == null:
+			continue
+		var material_name := String(source_material.resource_name).to_lower()
+		if not (
+			material_name.contains("hero_suit")
+			or material_name.contains("hero_rubber")
+			or material_name.contains("hero_face")
+			or material_name.contains("hero_eye")
+		):
+			continue
+		var runtime_material := mesh_instance.get_surface_override_material(surface_index) as StandardMaterial3D
+		if runtime_material == null:
+			runtime_material = (
+				(source_material as StandardMaterial3D).duplicate() as StandardMaterial3D
+				if source_material is StandardMaterial3D
+				else StandardMaterial3D.new()
+			)
+			mesh_instance.set_surface_override_material(surface_index, runtime_material)
+		if material_name.contains("hero_suit"):
+			_configure_suit_material(runtime_material, body_color)
+			if not _suit_materials.has(runtime_material):
+				_suit_materials.append(runtime_material)
+		elif material_name.contains("hero_rubber"):
+			_configure_rubber_material(runtime_material)
+			if not _rubber_materials.has(runtime_material):
+				_rubber_materials.append(runtime_material)
+		elif material_name.contains("hero_face"):
+			_configure_face_panel_material(runtime_material)
+			if not _face_panel_materials.has(runtime_material):
+				_face_panel_materials.append(runtime_material)
+		elif material_name.contains("hero_eye"):
+			_configure_eye_material(runtime_material)
+			if not _eye_materials.has(runtime_material):
+				_eye_materials.append(runtime_material)
+
+func _configure_suit_material(material: StandardMaterial3D, color: Color) -> void:
+	material.albedo_color = color
+	material.roughness = SUIT_ROUGHNESS
+	material.metallic = 0.0
+	material.metallic_specular = 0.24
+	material.emission_enabled = false
+
+func _configure_rubber_material(material: StandardMaterial3D) -> void:
+	material.albedo_color = RUBBER_COLOR
+	material.roughness = 0.66
+	material.metallic = 0.0
+	material.metallic_specular = 0.16
+	material.emission_enabled = false
+
+func _configure_face_panel_material(material: StandardMaterial3D) -> void:
+	material.albedo_color = FACE_PANEL_COLOR
+	material.roughness = 0.40
+	material.metallic = 0.0
+	material.metallic_specular = 0.30
+	material.emission_enabled = true
+	material.emission = Color("#261934")
+	material.emission_energy_multiplier = 0.16
+
+func _configure_eye_material(material: StandardMaterial3D) -> void:
+	material.albedo_color = EYE_COLOR
+	material.roughness = 0.34
+	material.metallic = 0.0
+	material.metallic_specular = 0.18
+	material.emission_enabled = true
+	material.emission = Color("#ffb52f")
+	material.emission_energy_multiplier = 1.75
 
 func _mesh_has_suit_material(mesh_instance: MeshInstance3D) -> bool:
 	if mesh_instance.mesh == null:
@@ -220,7 +310,9 @@ func _apply_body_color_to_mesh(mesh_instance: MeshInstance3D, color: Color) -> v
 					surface_material = StandardMaterial3D.new()
 					surface_material.roughness = 0.82
 				mesh_instance.set_surface_override_material(surface_index, surface_material)
-			surface_material.albedo_color = color
+			_configure_suit_material(surface_material, color)
+			if not _suit_materials.has(surface_material):
+				_suit_materials.append(surface_material)
 			tinted_suit_surface = true
 	if tinted_suit_surface:
 		return
@@ -902,6 +994,17 @@ func get_motion_debug() -> Dictionary:
 		"has_contact_shadow": _contact_shadow != null,
 	}
 
+func get_material_debug() -> Dictionary:
+	return {
+		"suit_surface_count": _suit_materials.size(),
+		"rubber_surface_count": _rubber_materials.size(),
+		"face_panel_surface_count": _face_panel_materials.size(),
+		"eye_surface_count": _eye_materials.size(),
+		"suit_roughness": _suit_materials[0].roughness if not _suit_materials.is_empty() else 0.0,
+		"face_panel_emission": _face_panel_materials[0].emission_energy_multiplier if not _face_panel_materials.is_empty() else 0.0,
+		"eye_emission": _eye_materials[0].emission_energy_multiplier if not _eye_materials.is_empty() else 0.0,
+	}
+
 func _update_contact_shadow() -> void:
 	if _contact_shadow == null or not is_inside_tree():
 		return
@@ -930,14 +1033,10 @@ func _process(delta: float) -> void:
 		_hit_flash_timer -= delta
 		var flash_weight := clampf(_hit_flash_timer / 0.12, 0.0, 1.0) * 0.72
 		var flash_color := body_color.lerp(Color("#fff0cf"), flash_weight)
-		for mesh_instance in _body_color_meshes:
-			_apply_body_color_to_mesh(mesh_instance, flash_color)
+		_apply_rendered_body_color(flash_color)
 	else:
-		for mesh_instance in _body_color_meshes:
-			_apply_body_color_to_mesh(mesh_instance, body_color)
+		_apply_rendered_body_color(body_color)
 
 ## 更新身体颜色
 func set_color(color: Color) -> void:
-	body_color = color
-	for mesh_instance in _body_color_meshes:
-		_apply_body_color_to_mesh(mesh_instance, color)
+	set_body_color(color)
