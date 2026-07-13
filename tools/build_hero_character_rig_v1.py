@@ -1,7 +1,8 @@
 from pathlib import Path
-import heapq
+from math import cos, pi, sin
 
 import bpy
+import bmesh
 from mathutils import Vector
 
 
@@ -26,7 +27,13 @@ def import_character():
     meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
     body = next(obj for obj in meshes if obj.name == "HeroCloudBody")
     details = [obj for obj in meshes if obj is not body]
-    return body, details
+    remove_reconstructed_sleeves(body)
+    suit_material = body.data.materials[0]
+    arm_parts = []
+    for suffix, sign in (("L", -1.0), ("R", 1.0)):
+        arm_parts.append(create_shoulder_socket(suffix, sign, suit_material))
+        arm_parts.append(create_clean_sleeve(suffix, sign, suit_material))
+    return body, details, arm_parts
 
 
 def add_bone(armature, name, head, tail, parent=None, connected=False):
@@ -70,47 +77,159 @@ def component_bounds(mesh, component):
     )
 
 
-def segment_distance(point, start, end):
-    axis = end - start
-    t = max(0.0, min(1.0, (point - start).dot(axis) / axis.length_squared))
-    return (point - start.lerp(end, t)).length
+def smoothstep(edge_start, edge_end, value):
+    t = max(0.0, min(1.0, (value - edge_start) / (edge_end - edge_start)))
+    return t * t * (3.0 - 2.0 * t)
 
 
-def sleeve_vertices(mesh, neighbors, sign, main_component):
-    main_vertices = set(main_component)
-    allowed = {
-        vertex.index
-        for vertex in mesh.vertices
-        if vertex.index in main_vertices
-        and sign * vertex.co.x > 0.48
-        and 0.82 < vertex.co.z < 1.90
-        and -0.36 < vertex.co.y < 0.30
-        and (sign * vertex.co.x > 0.66 or vertex.co.z > 1.36)
-    }
-    seeds = [
-        vertex.index
-        for vertex in mesh.vertices
-        if vertex.index in allowed
-        and sign * vertex.co.x > 0.84
-        and 0.96 < vertex.co.z < 1.36
-    ]
-    distances = {index: 0.0 for index in seeds}
-    queue = [(0.0, index) for index in seeds]
-    heapq.heapify(queue)
-    while queue:
-        distance, current = heapq.heappop(queue)
-        if distance != distances[current]:
+def remove_reconstructed_sleeves(body):
+    mesh = body.data
+    components, _neighbors = connected_components(mesh)
+    main_component = set(components[0])
+    remove_indices = []
+    for vertex in mesh.vertices:
+        if vertex.index not in main_component:
             continue
-        for neighbor in neighbors[current]:
-            if neighbor not in allowed:
-                continue
-            edge_length = (mesh.vertices[current].co - mesh.vertices[neighbor].co).length
-            candidate = distance + edge_length
-            if candidate > 0.62 or candidate >= distances.get(neighbor, float("inf")):
-                continue
-            distances[neighbor] = candidate
-            heapq.heappush(queue, (candidate, neighbor))
-    return set(distances)
+        point = vertex.co
+        height_blend = smoothstep(1.10, 1.68, point.z)
+        inner_limit = 0.69 - 0.21 * height_blend
+        cut_padding = 0.06 if point.z > 1.55 else 0.0
+        if (
+            1.02 < point.z < 1.90
+            and abs(point.x) > inner_limit + cut_padding
+            and -0.38 < point.y < 0.34
+        ):
+            remove_indices.append(vertex.index)
+
+    editable = bmesh.new()
+    editable.from_mesh(mesh)
+    editable.verts.ensure_lookup_table()
+    bmesh.ops.delete(
+        editable,
+        geom=[editable.verts[index] for index in remove_indices],
+        context="VERTS",
+    )
+    editable.to_mesh(mesh)
+    editable.free()
+    mesh.update()
+    print("REMOVED_RECONSTRUCTED_SLEEVES", len(remove_indices), "VERTICES")
+
+
+def quadratic_point(start, control, end, t):
+    return start * ((1.0 - t) ** 2) + control * (2.0 * (1.0 - t) * t) + end * (t ** 2)
+
+
+def quadratic_tangent(start, control, end, t):
+    return (control - start) * (2.0 * (1.0 - t)) + (end - control) * (2.0 * t)
+
+
+def create_shoulder_socket(suffix, sign, material):
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        segments=24,
+        ring_count=12,
+        location=(sign * 0.51, 0.0, 1.65),
+    )
+    socket = bpy.context.object
+    socket.name = "HeroShoulderSocket." + suffix
+    socket.data.name = "HeroShoulderSocketMesh." + suffix
+    socket.scale = (0.105, 0.32, 0.36)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    socket.data.materials.append(material)
+    for polygon in socket.data.polygons:
+        polygon.use_smooth = True
+    spine_group = socket.vertex_groups.new(name="Spine")
+    spine_group.add(
+        [vertex.index for vertex in socket.data.vertices],
+        1.0,
+        "REPLACE",
+    )
+    return socket
+
+
+def create_clean_sleeve(suffix, sign, material):
+    path_ring_count = 13
+    radial_segments = 16
+    start = Vector((sign * 0.56, -0.005, 1.68))
+    control = Vector((sign * 0.79, -0.005, 1.43))
+    end = Vector((sign * 0.89, -0.005, 1.14))
+    depth_axis = Vector((0.0, 1.0, 0.0))
+    vertices = []
+    ring_parameters = []
+    start_tangent = quadratic_tangent(start, control, end, 0.0).normalized()
+    samples = [
+        (start - start_tangent * 0.16, 0.0, 0.055),
+        (start - start_tangent * 0.09, 0.0, 0.205),
+        (start, 0.0, 0.285),
+    ]
+    for ring_index in range(1, path_ring_count):
+        t = ring_index / (path_ring_count - 1)
+        center = quadratic_point(start, control, end, t)
+        radius = 0.275 * (1.0 - t) + 0.175 * t + sin(pi * t) * 0.010
+        samples.append((center, t, radius))
+
+    ring_count = len(samples)
+    for center, t, radius in samples:
+        tangent = quadratic_tangent(start, control, end, t).normalized()
+        side_axis = depth_axis.cross(tangent).normalized()
+        for segment_index in range(radial_segments):
+            angle = 2.0 * pi * segment_index / radial_segments
+            point = (
+                center
+                + depth_axis * cos(angle) * radius * 0.90
+                + side_axis * sin(angle) * radius
+            )
+            vertices.append(tuple(point))
+            ring_parameters.append(t)
+
+    start_cap_index = len(vertices)
+    vertices.append(tuple(samples[0][0]))
+    ring_parameters.append(0.0)
+    end_cap_index = len(vertices)
+    vertices.append(tuple(end))
+    ring_parameters.append(1.0)
+
+    faces = []
+    for ring_index in range(ring_count - 1):
+        current = ring_index * radial_segments
+        following = (ring_index + 1) * radial_segments
+        for segment_index in range(radial_segments):
+            next_segment = (segment_index + 1) % radial_segments
+            faces.append((
+                current + segment_index,
+                current + next_segment,
+                following + next_segment,
+                following + segment_index,
+            ))
+    for segment_index in range(radial_segments):
+        next_segment = (segment_index + 1) % radial_segments
+        faces.append((start_cap_index, next_segment, segment_index))
+        end_ring = (ring_count - 1) * radial_segments
+        faces.append((end_cap_index, end_ring + segment_index, end_ring + next_segment))
+
+    mesh = bpy.data.meshes.new("HeroSleeveMesh." + suffix)
+    mesh.from_pydata(vertices, [], faces)
+    mesh.materials.append(material)
+    mesh.validate()
+    mesh.update()
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+
+    sleeve = bpy.data.objects.new("HeroSleeve." + suffix, mesh)
+    bpy.context.collection.objects.link(sleeve)
+    groups = {
+        name: sleeve.vertex_groups.new(name=name)
+        for name in ["UpperArm." + suffix, "Forearm." + suffix]
+    }
+    for vertex_index, t in enumerate(ring_parameters):
+        elbow_blend = smoothstep(0.45, 0.68, t)
+        weights = {
+            "UpperArm." + suffix: 1.0 - elbow_blend,
+            "Forearm." + suffix: elbow_blend,
+        }
+        for group_name, weight in weights.items():
+            if weight > 0.0001:
+                groups[group_name].add([vertex_index], weight, "REPLACE")
+    return sleeve
 
 
 def assign_manual_weights(body):
@@ -129,7 +248,7 @@ def assign_manual_weights(body):
     all_vertices = [vertex.index for vertex in mesh.vertices]
     groups["Spine"].add(all_vertices, 1.0, "REPLACE")
 
-    components, neighbors = connected_components(mesh)
+    components, _neighbors = connected_components(mesh)
     for component in components[1:]:
         minimum, maximum = component_bounds(mesh, component)
         if minimum.z > 0.60 and maximum.z < 1.40:
@@ -141,75 +260,8 @@ def assign_manual_weights(body):
             groups["Spine"].remove(component)
             groups["Foot." + suffix].add(component, 1.0, "REPLACE")
 
-    arm_values = {}
-    for suffix, sign in (("L", -1.0), ("R", 1.0)):
-        selected = sleeve_vertices(mesh, neighbors, sign, components[0])
-        upper_values = [0.0] * len(mesh.vertices)
-        forearm_values = [0.0] * len(mesh.vertices)
-        shoulder = Vector((sign * 0.56, 0.0, 1.72))
-        elbow = Vector((sign * 0.76, 0.0, 1.39))
-        wrist = Vector((sign * 0.89, -0.005, 1.14))
-        for vertex_index in selected:
-            point = mesh.vertices[vertex_index].co
-            upper_distance = segment_distance(point, shoulder, elbow)
-            forearm_distance = segment_distance(point, elbow, wrist)
-            upper_weight = 1.0 / max(0.02, upper_distance) ** 2
-            forearm_weight = 1.0 / max(0.02, forearm_distance) ** 2
-            total = upper_weight + forearm_weight
-            upper_weight /= total
-            forearm_weight /= total
-            shoulder_blend = max(0.0, 1.0 - (point - shoulder).length / 0.24) * 0.55
-            arm_scale = 1.0 - shoulder_blend
-            upper_values[vertex_index] = upper_weight * arm_scale
-            forearm_values[vertex_index] = forearm_weight * arm_scale
 
-        arm_values[suffix] = [upper_values, forearm_values]
-
-        points = [mesh.vertices[index].co for index in selected]
-        minimum = Vector((min(point.x for point in points), min(point.y for point in points), min(point.z for point in points)))
-        maximum = Vector((max(point.x for point in points), max(point.y for point in points), max(point.z for point in points)))
-        print("SLEEVE", suffix, "VERTICES", len(selected), "BOUNDS", tuple(minimum), tuple(maximum))
-
-    main_vertices = components[0]
-    main_set = set(main_vertices)
-    for suffix in ("L", "R"):
-        for value_index in (0, 1):
-            values = arm_values[suffix][value_index]
-            for _ in range(10):
-                smoothed = values.copy()
-                for vertex_index in main_vertices:
-                    adjacent = [index for index in neighbors[vertex_index] if index in main_set]
-                    if not adjacent:
-                        continue
-                    average = sum(values[index] for index in adjacent) / len(adjacent)
-                    smoothed[vertex_index] = values[vertex_index] * 0.45 + average * 0.55
-                values = smoothed
-            arm_values[suffix][value_index] = values
-
-    groups["Spine"].remove(main_vertices)
-    for suffix in ("L", "R"):
-        groups["UpperArm." + suffix].remove(main_vertices)
-        groups["Forearm." + suffix].remove(main_vertices)
-    for vertex_index in main_vertices:
-        weights = {
-            "UpperArm.L": arm_values["L"][0][vertex_index],
-            "Forearm.L": arm_values["L"][1][vertex_index],
-            "UpperArm.R": arm_values["R"][0][vertex_index],
-            "Forearm.R": arm_values["R"][1][vertex_index],
-        }
-        arm_total = sum(weights.values())
-        if arm_total > 1.0:
-            weights = {name: value / arm_total for name, value in weights.items()}
-            arm_total = 1.0
-        spine_weight = 1.0 - arm_total
-        if spine_weight > 0.0001:
-            groups["Spine"].add([vertex_index], spine_weight, "REPLACE")
-        for name, value in weights.items():
-            if value > 0.0001:
-                groups[name].add([vertex_index], value, "REPLACE")
-
-
-def build_rig(body, details):
+def build_rig(body, details, sleeves):
     armature_data = bpy.data.armatures.new("HeroRig")
     armature = bpy.data.objects.new("HeroRig", armature_data)
     bpy.context.collection.objects.link(armature)
@@ -273,6 +325,11 @@ def build_rig(body, details):
     body.parent = armature
     modifier = body.modifiers.new("HeroRigDeform", "ARMATURE")
     modifier.object = armature
+
+    for sleeve in sleeves:
+        sleeve.parent = armature
+        sleeve_modifier = sleeve.modifiers.new("HeroRigDeform", "ARMATURE")
+        sleeve_modifier.object = armature
 
     for detail in details:
         world = detail.matrix_world.copy()
@@ -372,13 +429,13 @@ def render(scene, path):
     bpy.ops.render.render(write_still=True)
 
 
-def save_and_export_runtime(armature, body, details):
+def save_and_export_runtime(armature, body, details, sleeves):
     SOURCE.parent.mkdir(parents=True, exist_ok=True)
     RUNTIME.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE))
 
     bpy.ops.object.select_all(action="DESELECT")
-    for obj in [armature, body, *details]:
+    for obj in [armature, body, *details, *sleeves]:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = armature
     bpy.ops.export_scene.gltf(
@@ -396,13 +453,13 @@ def save_and_export_runtime(armature, body, details):
 
 def main():
     clear_scene()
-    hero_body, hero_details = import_character()
-    hero_rig, hand_targets, _elbow_poles = build_rig(hero_body, hero_details)
+    hero_body, hero_details, hero_sleeves = import_character()
+    hero_rig, hand_targets, _elbow_poles = build_rig(hero_body, hero_details, hero_sleeves)
 
     rest_left = (-0.98, -0.015, 0.87)
     rest_right = (0.98, -0.015, 0.87)
     set_ik(hero_rig, hand_targets, rest_left, rest_right, False)
-    save_and_export_runtime(hero_rig, hero_body, hero_details)
+    save_and_export_runtime(hero_rig, hero_body, hero_details, hero_sleeves)
 
     scene = setup_render()
     render(scene, OUT_NEUTRAL)

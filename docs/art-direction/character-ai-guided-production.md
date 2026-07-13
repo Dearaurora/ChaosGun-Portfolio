@@ -32,11 +32,12 @@ Single-view reconstruction and procedural primitive assembly are no longer the p
 - Exported character total: 45,628 polygons across the body, face panel, and two eyes.
 - Blender GLB round-trip: passed.
 - Godot 4.6.2 scene import: passed.
-- Rig candidate: 15 bones and 45,708 imported Blender polygons.
-- Rig weighting: disconnected gloves and boots use rigid weights; reconstructed sleeves use constrained geodesic selection, nearest-bone weighting, and shoulder-boundary smoothing.
-- Blender rig round-trip: passed with one armature, five imported mesh objects, and one skinned body.
-- Godot 4.6.2 rig import: passed with one `Skeleton3D`, four visible mesh nodes, and one imported `Skin`.
-- Pistol, AK, and sniper two-hand inspection poses: rendered without torso penetration or automatic-weight spikes.
+- Rig candidate: 15 bones and 41,365 imported Blender polygons.
+- Rig topology: the non-manifold reconstructed sleeves are removed; each replacement sleeve uses a continuous 15-ring, 16-segment deformation mesh with an integrated rounded shoulder cap.
+- Rig weighting: the torso and hidden shoulder sockets remain on `Spine`, gloves and boots use rigid weights, and replacement sleeves blend only between their upper-arm and forearm bones.
+- Blender rig round-trip: passed with one armature, nine imported mesh objects, and five skinned meshes.
+- Godot 4.6.2 rig import: passed with one `Skeleton3D`, eight visible mesh nodes, and five imported `Skin` resources.
+- Pistol, AK, and sniper two-hand inspection poses: rendered without torso penetration, torso wrinkles, or automatic-weight spikes.
 
 ## Runtime contract
 
@@ -48,4 +49,4 @@ Single-view reconstruction and procedural primitive assembly are no longer the p
 
 ## Current limitation
 
-`hero_character_cloud_v1.glb` remains the unrigged art base. `hero_character_rig_v1.glb` is the first validated deformation candidate, but it is not yet the final playable mesh: the reconstructed body still needs cleaner material borders and shoulder/sleeve deformation, the inspection poses are Blender IK poses rather than baked runtime animations, and weapon sockets have not yet been authored into the exported skeleton contract. It must not replace the current runtime character until those steps and an isolated in-engine combat-pose check pass.
+`hero_character_cloud_v1.glb` remains the unrigged art base. `hero_character_rig_v1.glb` is the first validated deformation candidate, but it is not yet the final playable mesh: reconstructed material borders and the subtle shoulder-socket seam still need visual cleanup, the inspection poses are Blender IK poses rather than baked runtime animations, and weapon sockets have not yet been authored into the exported skeleton contract. It must not replace the current runtime character until those steps and an isolated in-engine combat-pose check pass.
