@@ -13,6 +13,9 @@ const LEGACY_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/b
 const WEAPON_MODEL_ROOT := "res://assets/models/generated/weapons/"
 const HERO_RUNTIME_SCALE := Vector3(1.10, 1.04, 1.10)
 const CONTACT_SHADOW_Y_OFFSET := -0.075
+const HERO_RECOIL_SCALE := 0.62
+const HERO_WEAPON_KICK_SCALE := 0.32
+const HERO_SPINE_PIVOT := Vector3(0.0, 0.62, 0.0)
 const SUIT_ROUGHNESS := 0.58
 const RUBBER_COLOR := Color("#412853")
 const FACE_PANEL_COLOR := Color("#171126")
@@ -39,6 +42,9 @@ var _contact_shadow_material: StandardMaterial3D = null
 var _leg_bone_indices: Array[int] = []
 var _leg_base_rotations: Array[Quaternion] = []
 var _leg_swing_amounts := Vector2.ZERO
+var _spine_bone_index: int = -1
+var _spine_pose_base_rotation := Quaternion.IDENTITY
+var _upper_body_recoil_angle: float = 0.0
 var _locomotion_forward_amount: float = 0.0
 var _locomotion_right_amount: float = 0.0
 var _locomotion_speed_ratio: float = 0.0
@@ -164,6 +170,13 @@ func _cache_locomotion_bones() -> void:
 			continue
 		_leg_bone_indices.append(bone_index)
 		_leg_base_rotations.append(_skeleton.get_bone_pose_rotation(bone_index))
+	_spine_bone_index = _skeleton.find_bone(&"Spine")
+	_cache_weapon_pose_recoil_base()
+
+func _cache_weapon_pose_recoil_base() -> void:
+	if _skeleton == null or _spine_bone_index < 0:
+		return
+	_spine_pose_base_rotation = _skeleton.get_bone_pose_rotation(_spine_bone_index)
 
 func _build_contact_shadow() -> void:
 	_contact_shadow = MeshInstance3D.new()
@@ -602,6 +615,7 @@ func _set_weapon_pose_visual(weapon_id: StringName) -> void:
 			_animation_player.play(_active_weapon_pose)
 			_animation_player.seek(0.0, true)
 			_animation_player.pause()
+			_cache_weapon_pose_recoil_base()
 			return
 	var wants_pistol := weapon_id == &"pistol"
 	_set_weapon_pose_mesh_visibility(_asset_root, wants_pistol)
@@ -934,19 +948,20 @@ func animate_locomotion(move_dir: Vector3, facing_dir: Vector3, speed_ratio: flo
 	_locomotion_speed_ratio = lerpf(_locomotion_speed_ratio, clamped_speed, blend)
 
 	var pose_blend := clampf(delta * 12.0, 0.0, 1.0)
+	var root_recoil_pitch := 0.0 if _uses_hero_rig else _recoil_pitch
 	if _locomotion_speed_ratio > 0.02 or absf(_locomotion_forward_amount) > 0.02 or absf(_locomotion_right_amount) > 0.02:
 		_bounce_time += delta * lerpf(8.0, 13.5, _locomotion_speed_ratio)
 		var step_bob := absf(sin(_bounce_time)) * 0.22 * _locomotion_speed_ratio
 		var stride_pulse := absf(sin(_bounce_time)) * _locomotion_speed_ratio
 		_stride_scale = Vector3(1.0 + stride_pulse * 0.035, 1.0 - stride_pulse * 0.050, 1.0 + stride_pulse * 0.025)
 		position.y = lerpf(position.y, step_bob, pose_blend)
-		rotation.x = lerpf(rotation.x, -_locomotion_forward_amount * 0.08 + _recoil_pitch + _impact_pitch, pose_blend)
+		rotation.x = lerpf(rotation.x, -_locomotion_forward_amount * 0.08 + root_recoil_pitch + _impact_pitch, pose_blend)
 		rotation.z = lerpf(rotation.z, (-_locomotion_right_amount * 0.18) + sin(_bounce_time * 0.5) * 0.025 * _locomotion_speed_ratio + _impact_roll, pose_blend)
 	else:
 		_bounce_time = 0.0
 		_stride_scale = _stride_scale.lerp(Vector3.ONE, pose_blend)
 		position.y = lerpf(position.y, 0.0, pose_blend)
-		rotation.x = lerpf(rotation.x, _recoil_pitch + _impact_pitch, pose_blend)
+		rotation.x = lerpf(rotation.x, root_recoil_pitch + _impact_pitch, pose_blend)
 		rotation.z = lerpf(rotation.z, _impact_roll, pose_blend)
 	_apply_leg_step_pose(pose_blend)
 
@@ -967,6 +982,31 @@ func _apply_leg_step_pose(blend: float) -> void:
 		var bone_index := _leg_bone_indices[index]
 		var current_rotation := _skeleton.get_bone_pose_rotation(bone_index)
 		_skeleton.set_bone_pose_rotation(bone_index, current_rotation.slerp(target_rotation, blend))
+
+func _apply_upper_body_recoil() -> void:
+	if not _uses_hero_rig or _skeleton == null or _spine_bone_index < 0:
+		_upper_body_recoil_angle = 0.0
+		return
+	_upper_body_recoil_angle = _recoil_pitch * HERO_RECOIL_SCALE
+	var recoil_rotation := Quaternion(Vector3.RIGHT, -_upper_body_recoil_angle)
+	_skeleton.set_bone_pose_rotation(
+		_spine_bone_index,
+		recoil_rotation * _spine_pose_base_rotation
+	)
+	_skeleton.force_update_all_bone_transforms()
+
+func _update_weapon_holder_pose() -> void:
+	if _weapon_holder == null:
+		return
+	if not _uses_hero_rig:
+		_weapon_holder.position = _weapon_holder_base_position + Vector3(0.0, 0.0, _weapon_kick)
+		_weapon_holder.basis = Basis.IDENTITY
+		return
+	var recoil_basis := Basis(Quaternion(Vector3.RIGHT, _upper_body_recoil_angle))
+	var pivot_offset := _weapon_holder_base_position - HERO_SPINE_PIVOT
+	var kick_offset := Vector3(0.0, 0.0, _weapon_kick * HERO_WEAPON_KICK_SCALE)
+	_weapon_holder.position = HERO_SPINE_PIVOT + recoil_basis * (pivot_offset + kick_offset)
+	_weapon_holder.basis = recoil_basis
 
 func get_locomotion_forward_amount() -> float:
 	return _locomotion_forward_amount
@@ -989,6 +1029,8 @@ func get_motion_debug() -> Dictionary:
 		"impact_pitch": _impact_pitch,
 		"impact_roll": _impact_roll,
 		"weapon_kick": _weapon_kick,
+		"upper_body_recoil": _upper_body_recoil_angle,
+		"hero_recoil_rigged": _uses_hero_rig and _spine_bone_index >= 0,
 		"leg_swing": _leg_swing_amounts,
 		"visual_scale": _runtime_visual_scale(),
 		"has_contact_shadow": _contact_shadow != null,
@@ -1020,14 +1062,14 @@ func _process(delta: float) -> void:
 	_impact_pitch = move_toward(_impact_pitch, 0.0, delta * 1.35)
 	_impact_roll = move_toward(_impact_roll, 0.0, delta * 1.75)
 	_weapon_kick = move_toward(_weapon_kick, 0.0, delta * 0.85)
+	_apply_upper_body_recoil()
 	var visual_scale := _runtime_visual_scale()
 	scale = Vector3(
 		visual_scale.x * _action_scale.x * _stride_scale.x,
 		visual_scale.y * _action_scale.y * _stride_scale.y,
 		visual_scale.z * _action_scale.z * _stride_scale.z
 	)
-	if _weapon_holder:
-		_weapon_holder.position = _weapon_holder_base_position + Vector3(0.0, 0.0, _weapon_kick)
+	_update_weapon_holder_pose()
 	_update_contact_shadow()
 	if _hit_flash_timer > 0:
 		_hit_flash_timer -= delta

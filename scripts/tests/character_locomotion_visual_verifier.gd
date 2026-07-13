@@ -124,6 +124,17 @@ func _verify_action_feedback(visual: CharacterVisual) -> void:
 	var fire_debug := visual.call("get_motion_debug") as Dictionary
 	if float(fire_debug.get("weapon_kick", 0.0)) < 0.12 or float(fire_debug.get("recoil_pitch", 0.0)) < 0.09:
 		_fail("Sniper fire should create a readable high-recoil impulse")
+	await process_frame
+	var rigged_fire_debug := visual.call("get_motion_debug") as Dictionary
+	var holder := visual.get_node_or_null("WeaponHolder") as Node3D
+	if not bool(rigged_fire_debug.get("hero_recoil_rigged", false)):
+		_fail("Hero fire recoil should use the exported spine rig")
+	if float(rigged_fire_debug.get("upper_body_recoil", 0.0)) < 0.05:
+		_fail("Sniper fire should create a readable upper-body recoil pose")
+	if holder == null or absf(holder.rotation.x) < 0.045:
+		_fail("Held weapon should follow the same recoil arc as the upper body")
+	if absf(visual.rotation.x) > 0.025:
+		_fail("Hero recoil should not rotate the complete lower-body visual")
 	await create_timer(0.25).timeout
 	var decay_debug := visual.call("get_motion_debug") as Dictionary
 	if float(decay_debug.get("weapon_kick", 1.0)) >= float(fire_debug.get("weapon_kick", 0.0)):
