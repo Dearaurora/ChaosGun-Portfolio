@@ -8,7 +8,8 @@ class_name CharacterVisual
 @export var show_vest: bool = false
 @export var show_visor: bool = true
 
-const BEAN_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/bean_character.glb"
+const HERO_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/hero_character_rig_v1.glb"
+const LEGACY_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/bean_character.glb"
 const WEAPON_MODEL_ROOT := "res://assets/models/generated/weapons/"
 
 var _weapon_holder: Node3D
@@ -17,6 +18,9 @@ var _hit_flash_timer: float = 0.0
 var _body_mesh: MeshInstance3D
 var _body_color_meshes: Array[MeshInstance3D] = []
 var _asset_root: Node3D = null
+var _animation_player: AnimationPlayer = null
+var _uses_hero_rig: bool = false
+var _active_weapon_pose: StringName = &"neutral"
 var _locomotion_forward_amount: float = 0.0
 var _locomotion_right_amount: float = 0.0
 var _locomotion_speed_ratio: float = 0.0
@@ -71,15 +75,24 @@ func set_body_color(color: Color) -> void:
 		_apply_body_color_to_mesh(mesh_instance, color)
 
 func _build_asset_visual() -> bool:
-	var packed_scene = load(BEAN_CHARACTER_SCENE_PATH) as PackedScene
+	var asset_path := HERO_CHARACTER_SCENE_PATH
+	var packed_scene = load(asset_path) as PackedScene
+	if packed_scene == null:
+		asset_path = LEGACY_CHARACTER_SCENE_PATH
+		packed_scene = load(asset_path) as PackedScene
 	if packed_scene == null:
 		return false
 
 	_asset_root = packed_scene.instantiate() as Node3D
 	if _asset_root == null:
 		return false
-	_asset_root.name = "BeanCharacterAsset"
+	_uses_hero_rig = asset_path == HERO_CHARACTER_SCENE_PATH
+	_asset_root.name = "HeroCharacterAsset" if _uses_hero_rig else "BeanCharacterAsset"
+	if _uses_hero_rig:
+		# The authored Blender character faces +Z after glTF conversion; gameplay faces -Z.
+		_asset_root.rotation_degrees.y = 180.0
 	add_child(_asset_root)
+	_animation_player = _find_animation_player(_asset_root)
 
 	_create_marker("FaceVisor", Vector3(0, 1.58, -0.84))
 	_create_marker("LeftHand", Vector3(-0.18, 1.13, -1.40))
@@ -93,6 +106,15 @@ func _build_asset_visual() -> bool:
 	set_body_color(body_color)
 	return true
 
+func _find_animation_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for child in node.get_children():
+		var found := _find_animation_player(child)
+		if found != null:
+			return found
+	return null
+
 func _create_marker(name: String, pos: Vector3) -> Node3D:
 	var marker = Node3D.new()
 	marker.name = name
@@ -105,8 +127,9 @@ func _cache_asset_meshes(node: Node) -> void:
 		if child is MeshInstance3D:
 			var mesh_instance := child as MeshInstance3D
 			var lower_name = String(mesh_instance.name).to_lower()
-			if lower_name == "body":
+			if _body_mesh == null and lower_name.contains("body"):
 				_body_mesh = mesh_instance
+			if _mesh_has_suit_material(mesh_instance):
 				_body_color_meshes.append(mesh_instance)
 			elif lower_name.contains("body") or lower_name.contains("helmet") or lower_name.contains("leg"):
 				_body_color_meshes.append(mesh_instance)
@@ -114,8 +137,35 @@ func _cache_asset_meshes(node: Node) -> void:
 				_body_color_meshes.append(mesh_instance)
 		_cache_asset_meshes(child)
 
+func _mesh_has_suit_material(mesh_instance: MeshInstance3D) -> bool:
+	if mesh_instance.mesh == null:
+		return false
+	for surface_index in range(mesh_instance.mesh.get_surface_count()):
+		var source_material := mesh_instance.mesh.surface_get_material(surface_index)
+		if source_material != null and String(source_material.resource_name).to_lower().contains("hero_suit"):
+			return true
+	return false
+
 func _apply_body_color_to_mesh(mesh_instance: MeshInstance3D, color: Color) -> void:
 	if mesh_instance == null:
+		return
+	var tinted_suit_surface := false
+	if mesh_instance.mesh != null:
+		for surface_index in range(mesh_instance.mesh.get_surface_count()):
+			var source_material := mesh_instance.mesh.surface_get_material(surface_index)
+			if source_material == null or not String(source_material.resource_name).to_lower().contains("hero_suit"):
+				continue
+			var surface_material := mesh_instance.get_surface_override_material(surface_index) as StandardMaterial3D
+			if surface_material == null:
+				if source_material is StandardMaterial3D:
+					surface_material = (source_material as StandardMaterial3D).duplicate() as StandardMaterial3D
+				else:
+					surface_material = StandardMaterial3D.new()
+					surface_material.roughness = 0.82
+				mesh_instance.set_surface_override_material(surface_index, surface_material)
+			surface_material.albedo_color = color
+			tinted_suit_surface = true
+	if tinted_suit_surface:
 		return
 	var mat = mesh_instance.material_override as StandardMaterial3D
 	if mat == null:
@@ -373,6 +423,16 @@ func set_weapon_visual(weapon_id: StringName) -> void:
 	_build_weapon_readability_proxy(weapon_id)
 
 func _weapon_holder_position_for(weapon_id: StringName) -> Vector3:
+	if _uses_hero_rig:
+		match weapon_id:
+			&"pistol":
+				return Vector3(0.0, 1.39, -0.72)
+			&"smg":
+				return Vector3(-0.12, 1.35, -0.83)
+			&"ak_rifle":
+				return Vector3(-0.18, 1.34, -0.92)
+			&"sniper":
+				return Vector3(-0.18, 1.35, -0.96)
 	match weapon_id:
 		&"pistol":
 			return Vector3(0.0, 1.18, -1.24)
@@ -387,8 +447,26 @@ func _weapon_holder_position_for(weapon_id: StringName) -> Vector3:
 func _set_weapon_pose_visual(weapon_id: StringName) -> void:
 	if _asset_root == null:
 		return
+	if _uses_hero_rig and _animation_player != null:
+		_active_weapon_pose = _weapon_pose_animation_for(weapon_id)
+		if _animation_player.has_animation(_active_weapon_pose):
+			_animation_player.play(_active_weapon_pose)
+			_animation_player.seek(0.0, true)
+			_animation_player.pause()
+			return
 	var wants_pistol := weapon_id == &"pistol"
 	_set_weapon_pose_mesh_visibility(_asset_root, wants_pistol)
+
+func _weapon_pose_animation_for(weapon_id: StringName) -> StringName:
+	match weapon_id:
+		&"smg":
+			return &"hold_smg"
+		&"ak_rifle":
+			return &"hold_ak"
+		&"sniper":
+			return &"hold_sniper"
+		_:
+			return &"hold_pistol"
 
 func _set_weapon_pose_mesh_visibility(node: Node, wants_pistol: bool) -> void:
 	if node is MeshInstance3D:
@@ -415,7 +493,7 @@ func _build_weapon_asset_visual(weapon_id: StringName) -> bool:
 
 	weapon_asset.name = "WeaponAsset"
 	weapon_asset.set_meta("weapon_id", String(weapon_id))
-	weapon_asset.position = Vector3(0.0, 0.04, -0.10)
+	weapon_asset.position = Vector3.ZERO if _uses_hero_rig else Vector3(0.0, 0.04, -0.10)
 	weapon_asset.rotation_degrees.y = 180.0
 	weapon_asset.scale = Vector3.ONE * _weapon_asset_scale(weapon_id)
 	_weapon_holder.add_child(weapon_asset)
@@ -542,7 +620,8 @@ func get_weapon_readability_debug() -> Dictionary:
 		"uses_proxy": proxy != null,
 		"asset_scale": _weapon_asset_scale(_current_weapon_id),
 		"asset_rotation_y": asset.rotation_degrees.y if asset else 0.0,
-		"weapon_pose": "pistol" if _current_weapon_id == &"pistol" else "long",
+		"weapon_pose": String(_active_weapon_pose) if _uses_hero_rig else ("pistol" if _current_weapon_id == &"pistol" else "long"),
+		"uses_hero_rig": _uses_hero_rig,
 		"has_magazine": bool(profile.get("has_magazine", false)),
 		"has_stock": bool(profile.get("has_stock", false)),
 		"has_scope": bool(profile.get("has_scope", false)),
@@ -563,6 +642,16 @@ func _weapon_model_path(weapon_id: StringName) -> String:
 			return ""
 
 func _weapon_asset_scale(weapon_id: StringName) -> float:
+	if _uses_hero_rig:
+		match weapon_id:
+			&"pistol":
+				return 1.0
+			&"smg":
+				return 0.84
+			&"ak_rifle":
+				return 0.74
+			&"sniper":
+				return 0.68
 	match weapon_id:
 		&"pistol":
 			return 1.34
@@ -576,6 +665,16 @@ func _weapon_asset_scale(weapon_id: StringName) -> float:
 			return 1.0
 
 func get_weapon_muzzle_local_position(weapon_id: StringName = _current_weapon_id) -> Vector3:
+	if _uses_hero_rig:
+		match weapon_id:
+			&"smg":
+				return Vector3(-0.12, 1.39, -1.91)
+			&"ak_rifle":
+				return Vector3(-0.18, 1.38, -2.24)
+			&"sniper":
+				return Vector3(-0.18, 1.39, -2.31)
+			_:
+				return Vector3(0.0, 1.43, -1.69)
 	match weapon_id:
 		&"smg":
 			return Vector3(0.0, 1.28, -2.78)

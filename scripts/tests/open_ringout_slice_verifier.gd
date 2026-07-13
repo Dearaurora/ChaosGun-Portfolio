@@ -371,12 +371,15 @@ func _verify_party_roster(arena: Node) -> void:
 			_fail("%s still has a head decoration" % base.name)
 		if visual.get_node_or_null("FaceVisor") == null:
 			_fail("%s is missing the toy visor face" % base.name)
-		if visual.get_node_or_null("BeanCharacterAsset") == null:
-			_fail("%s did not load the Blender bean character asset" % base.name)
-		if visual.find_child("Body", true, false) == null:
-			_fail("%s bean character asset is missing Body mesh" % base.name)
+		var hero_asset := visual.get_node_or_null("HeroCharacterAsset")
+		if hero_asset == null:
+			_fail("%s did not load the approved Blender hero rig" % base.name)
+		elif not _has_skeleton(hero_asset) or not _has_animation_player(hero_asset):
+			_fail("%s hero asset is missing its runtime skeleton or pose player" % base.name)
+		if visual.find_child("HeroCloudBody", true, false) == null:
+			_fail("%s hero rig is missing HeroCloudBody mesh" % base.name)
 		if visual.find_child("LeftHandGrip", true, false) == null or visual.find_child("RightHandGrip", true, false) == null:
-			_fail("%s bean character asset is missing defined weapon grip hands" % base.name)
+			_fail("%s hero character is missing defined weapon grip markers" % base.name)
 		if base.lives != 4:
 			_fail("%s should start the open ringout slice with 4 lives, got %d" % [base.name, base.lives])
 		var weapon_holder = visual.get_node_or_null("WeaponHolder")
@@ -397,6 +400,22 @@ func _has_mesh_instance(node: Node) -> bool:
 		return true
 	for child in node.get_children():
 		if _has_mesh_instance(child):
+			return true
+	return false
+
+func _has_skeleton(node: Node) -> bool:
+	if node is Skeleton3D:
+		return true
+	for child in node.get_children():
+		if _has_skeleton(child):
+			return true
+	return false
+
+func _has_animation_player(node: Node) -> bool:
+	if node is AnimationPlayer:
+		return true
+	for child in node.get_children():
+		if _has_animation_player(child):
 			return true
 	return false
 

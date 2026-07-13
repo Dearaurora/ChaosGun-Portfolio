@@ -3,7 +3,7 @@ from math import cos, pi, sin
 
 import bpy
 import bmesh
-from mathutils import Vector
+from mathutils import Quaternion, Vector
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,8 +13,37 @@ SOURCE = ROOT / "assets/source/characters/hero_character_rig_v1.blend"
 RUNTIME = ROOT / "assets/models/generated/characters/hero_character_rig_v1.glb"
 OUT_NEUTRAL = ROOT / "reports/hero_character_rig_v1_neutral.png"
 OUT_PISTOL = ROOT / "reports/hero_character_rig_v1_pistol.png"
+OUT_SMG = ROOT / "reports/hero_character_rig_v1_smg.png"
 OUT_AK = ROOT / "reports/hero_character_rig_v1_ak.png"
 OUT_SNIPER = ROOT / "reports/hero_character_rig_v1_sniper.png"
+
+POSES = {
+    "neutral": {
+        "left": (-0.98, -0.015, 0.87),
+        "right": (0.98, -0.015, 0.87),
+        "ik": False,
+    },
+    "hold_pistol": {
+        "left": (-0.11, -0.71, 1.27),
+        "right": (0.11, -0.68, 1.24),
+        "ik": True,
+    },
+    "hold_smg": {
+        "left": (-0.03, -1.02, 1.38),
+        "right": (0.23, -0.83, 1.22),
+        "ik": True,
+    },
+    "hold_ak": {
+        "left": (-0.04, -1.26, 1.42),
+        "right": (0.25, -1.00, 1.22),
+        "ik": True,
+    },
+    "hold_sniper": {
+        "left": (-0.05, -1.36, 1.43),
+        "right": (0.24, -1.02, 1.23),
+        "ik": True,
+    },
+}
 
 
 def clear_scene():
@@ -374,6 +403,108 @@ def set_ik(armature, targets, left, right, enabled=True):
     bpy.context.view_layer.update()
 
 
+def reset_pose(armature):
+    if armature.animation_data is not None:
+        armature.animation_data.action = None
+    for bone in armature.pose.bones:
+        bone.matrix_basis.identity()
+    bpy.context.scene.frame_set(1)
+    bpy.context.view_layer.update()
+
+
+def bake_pose_action(armature, targets, action_name, pose):
+    reset_pose(armature)
+    set_ik(
+        armature,
+        targets,
+        pose["left"],
+        pose["right"],
+        pose["ik"],
+    )
+
+    action = bpy.data.actions.new(action_name)
+    action.use_fake_user = True
+    armature.animation_data_create()
+    armature.animation_data.action = action
+
+    bpy.ops.object.select_all(action="DESELECT")
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode="POSE")
+    bpy.ops.pose.select_all(action="SELECT")
+    bpy.ops.nla.bake(
+        frame_start=1,
+        frame_end=2,
+        step=1,
+        only_selected=True,
+        visual_keying=True,
+        clear_constraints=False,
+        clear_parents=False,
+        use_current_action=True,
+        clean_curves=False,
+        bake_types={"POSE"},
+    )
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    action = armature.animation_data.action
+    action.name = action_name
+    action.use_fake_user = True
+
+    # Godot removes fully immutable tracks by default. The game always samples
+    # frame 1, while this tiny frame-2 delta keeps every bone pose portable.
+    bpy.context.scene.frame_set(2)
+    for bone in armature.pose.bones:
+        bone.rotation_quaternion = (
+            Quaternion((0.0, 0.0, 1.0), 0.002) @ bone.rotation_quaternion
+        ).normalized()
+        bone.keyframe_insert(
+            data_path="rotation_quaternion",
+            frame=2,
+            group=bone.name,
+        )
+    bpy.context.scene.frame_set(1)
+    armature.animation_data.action = None
+    return action
+
+
+def build_pose_actions(armature, targets):
+    actions = []
+    for action_name, pose in POSES.items():
+        actions.append(bake_pose_action(armature, targets, action_name, pose))
+    reset_pose(armature)
+    return actions
+
+
+def detach_ik_constraints(armature):
+    detached = []
+    for suffix in ("L", "R"):
+        hand = armature.pose.bones["Hand." + suffix]
+        constraint = hand.constraints.get("HandIK")
+        if constraint is None:
+            continue
+        detached.append({
+            "bone": hand,
+            "target": constraint.target,
+            "pole_target": constraint.pole_target,
+            "chain_count": constraint.chain_count,
+            "use_rotation": constraint.use_rotation,
+            "influence": constraint.influence,
+        })
+        hand.constraints.remove(constraint)
+    return detached
+
+
+def restore_ik_constraints(detached):
+    for spec in detached:
+        constraint = spec["bone"].constraints.new("IK")
+        constraint.name = "HandIK"
+        constraint.target = spec["target"]
+        constraint.pole_target = spec["pole_target"]
+        constraint.chain_count = spec["chain_count"]
+        constraint.use_rotation = spec["use_rotation"]
+        constraint.influence = spec["influence"]
+
+
 def import_weapon(name, location, scale):
     before = set(bpy.context.scene.objects)
     bpy.ops.import_scene.gltf(filepath=str(WEAPONS / (name + ".glb")))
@@ -438,15 +569,21 @@ def save_and_export_runtime(armature, body, details, sleeves):
     for obj in [armature, body, *details, *sleeves]:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = armature
-    bpy.ops.export_scene.gltf(
-        filepath=str(RUNTIME),
-        export_format="GLB",
-        use_selection=True,
-        export_yup=True,
-        export_apply=False,
-        export_skins=True,
-        export_animations=False,
-    )
+    detached_constraints = detach_ik_constraints(armature)
+    try:
+        bpy.ops.export_scene.gltf(
+            filepath=str(RUNTIME),
+            export_format="GLB",
+            use_selection=True,
+            export_yup=True,
+            export_apply=False,
+            export_skins=True,
+            export_animations=True,
+            export_animation_mode="ACTIONS",
+            export_merge_animation="NONE",
+        )
+    finally:
+        restore_ik_constraints(detached_constraints)
     print("SAVED_SOURCE", SOURCE)
     print("EXPORTED_RUNTIME", RUNTIME)
 
@@ -455,29 +592,38 @@ def main():
     clear_scene()
     hero_body, hero_details, hero_sleeves = import_character()
     hero_rig, hand_targets, _elbow_poles = build_rig(hero_body, hero_details, hero_sleeves)
+    build_pose_actions(hero_rig, hand_targets)
 
-    rest_left = (-0.98, -0.015, 0.87)
-    rest_right = (0.98, -0.015, 0.87)
-    set_ik(hero_rig, hand_targets, rest_left, rest_right, False)
+    neutral_pose = POSES["neutral"]
+    set_ik(hero_rig, hand_targets, neutral_pose["left"], neutral_pose["right"], False)
     save_and_export_runtime(hero_rig, hero_body, hero_details, hero_sleeves)
 
     scene = setup_render()
     render(scene, OUT_NEUTRAL)
 
     pistol = import_weapon("pistol", (0.0, -0.72, 1.39), 1.0)
-    set_ik(hero_rig, hand_targets, (-0.11, -0.71, 1.27), (0.11, -0.68, 1.24))
+    pistol_pose = POSES["hold_pistol"]
+    set_ik(hero_rig, hand_targets, pistol_pose["left"], pistol_pose["right"])
     render(scene, OUT_PISTOL)
     pistol.hide_render = True
 
+    smg = import_weapon("smg", (0.12, -0.83, 1.35), 0.84)
+    smg_pose = POSES["hold_smg"]
+    set_ik(hero_rig, hand_targets, smg_pose["left"], smg_pose["right"])
+    render(scene, OUT_SMG)
+    smg.hide_render = True
+
     ak = import_weapon("ak_rifle", (0.18, -0.92, 1.34), 0.74)
-    set_ik(hero_rig, hand_targets, (-0.04, -1.26, 1.42), (0.25, -1.00, 1.22))
+    ak_pose = POSES["hold_ak"]
+    set_ik(hero_rig, hand_targets, ak_pose["left"], ak_pose["right"])
     render(scene, OUT_AK)
     ak.hide_render = True
 
     sniper = import_weapon("sniper", (0.18, -0.96, 1.35), 0.68)
-    set_ik(hero_rig, hand_targets, (-0.05, -1.36, 1.43), (0.24, -1.02, 1.23))
+    sniper_pose = POSES["hold_sniper"]
+    set_ik(hero_rig, hand_targets, sniper_pose["left"], sniper_pose["right"])
     render(scene, OUT_SNIPER)
-    print("RENDERED", OUT_NEUTRAL, OUT_PISTOL, OUT_AK, OUT_SNIPER)
+    print("RENDERED", OUT_NEUTRAL, OUT_PISTOL, OUT_SMG, OUT_AK, OUT_SNIPER)
 
 
 if __name__ == "__main__":

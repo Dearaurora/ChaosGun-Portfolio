@@ -14,9 +14,17 @@ const EXPECTED_BONES := [
 	&"Foot.L",
 	&"Foot.R",
 ]
+const EXPECTED_ANIMATIONS := [
+	&"neutral",
+	&"hold_pistol",
+	&"hold_smg",
+	&"hold_ak",
+	&"hold_sniper",
+]
 
 var _skeletons: Array[Skeleton3D] = []
 var _meshes: Array[MeshInstance3D] = []
+var _animation_players: Array[AnimationPlayer] = []
 
 
 func _initialize() -> void:
@@ -34,6 +42,9 @@ func _initialize() -> void:
 	if _meshes.size() < 4:
 		_fail("expected at least four MeshInstance3D nodes, found %d" % _meshes.size())
 		return
+	if _animation_players.size() != 1:
+		_fail("expected one AnimationPlayer, found %d" % _animation_players.size())
+		return
 
 	var skeleton := _skeletons[0]
 	for bone_name in EXPECTED_BONES:
@@ -49,9 +60,19 @@ func _initialize() -> void:
 		_fail("no MeshInstance3D has an imported Skin resource")
 		return
 
+	var animation_player := _animation_players[0]
+	for animation_name in EXPECTED_ANIMATIONS:
+		if not animation_player.has_animation(animation_name):
+			_fail("missing animation %s; imported %s" % [animation_name, animation_player.get_animation_list()])
+			return
+		var animation := animation_player.get_animation(animation_name)
+		if animation == null or animation.get_track_count() == 0:
+			_fail("animation %s has no pose tracks" % animation_name)
+			return
+
 	print(
-		"HERO_RIG_GODOT_PASS bones=%d meshes=%d skinned=%d"
-		% [skeleton.get_bone_count(), _meshes.size(), skinned_meshes]
+		"HERO_RIG_GODOT_PASS bones=%d meshes=%d skinned=%d animations=%s"
+		% [skeleton.get_bone_count(), _meshes.size(), skinned_meshes, animation_player.get_animation_list()]
 	)
 	quit(0)
 
@@ -61,6 +82,8 @@ func _collect_nodes(node: Node) -> void:
 		_skeletons.append(node)
 	if node is MeshInstance3D:
 		_meshes.append(node)
+	if node is AnimationPlayer:
+		_animation_players.append(node)
 	for child in node.get_children():
 		_collect_nodes(child)
 

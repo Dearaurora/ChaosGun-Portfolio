@@ -38,10 +38,22 @@ func _initialize() -> void:
 func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
 	var holder_position := debug.get("holder_position", Vector3.ZERO) as Vector3
 	var expected_positions := {
-		"pistol": Vector3(0.0, 1.18, -1.24),
-		"smg": Vector3(0.0, 1.23, -1.22),
-		"ak_rifle": Vector3(0.0, 1.28, -1.20),
-		"sniper": Vector3(0.0, 1.31, -1.20),
+		"pistol": Vector3(0.0, 1.39, -0.72),
+		"smg": Vector3(-0.12, 1.35, -0.83),
+		"ak_rifle": Vector3(-0.18, 1.34, -0.92),
+		"sniper": Vector3(-0.18, 1.35, -0.96),
+	}
+	var expected_scales := {
+		"pistol": 1.0,
+		"smg": 0.84,
+		"ak_rifle": 0.74,
+		"sniper": 0.68,
+	}
+	var expected_poses := {
+		"pistol": "hold_pistol",
+		"smg": "hold_smg",
+		"ak_rifle": "hold_ak",
+		"sniper": "hold_sniper",
 	}
 	var expected_position := expected_positions.get(weapon_id, Vector3.ZERO) as Vector3
 	var holder_scale := float(debug.get("holder_scale", 0.0))
@@ -49,8 +61,14 @@ func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
 		_fail("%s weapon holder should use its authored hand-fit position %s, got %s" % [weapon_id, expected_position, holder_position])
 	if holder_scale < 0.95 or holder_scale > 1.05:
 		_fail("%s weapon holder scale should preserve hand contact and silhouette, got %.2f" % [weapon_id, holder_scale])
+	if absf(float(debug.get("asset_scale", 0.0)) - float(expected_scales[weapon_id])) > 0.01:
+		_fail("%s weapon asset scale does not match its rig-fit profile" % weapon_id)
 	if absf(float(debug.get("asset_rotation_y", 0.0)) - 180.0) > 0.1:
 		_fail("%s asset must face Godot -Z instead of back into the torso" % weapon_id)
+	if not bool(debug.get("uses_hero_rig", false)):
+		_fail("%s should use the approved hero rig" % weapon_id)
+	if String(debug.get("weapon_pose", "")) != String(expected_poses[weapon_id]):
+		_fail("%s should activate %s, got %s" % [weapon_id, expected_poses[weapon_id], debug.get("weapon_pose", "")])
 
 	var length := float(debug.get("silhouette_length", 0.0))
 	var width := float(debug.get("silhouette_width", 0.0))
@@ -104,39 +122,26 @@ func _collect_asset_material_stats(node: Node, stats: Dictionary) -> void:
 		_collect_asset_material_stats(child, stats)
 
 func _verify_character_pose_meshes(visual: CharacterVisual, weapon_id: String) -> void:
-	for required_part in ["Body", "HelmetShell", "HelmetCollar", "FaceOpening", "HelmetVisorTop", "LeftBoot", "RightBoot"]:
+	for required_part in ["HeroCloudBody", "HeroSleeve.L", "HeroSleeve.R", "FacePanel", "EyeL", "EyeR"]:
 		if _find_descendant(visual, required_part) == null:
 			_fail("%s character asset is missing authored part %s" % [weapon_id, required_part])
-	var counts := {"pistol_visible": 0, "long_visible": 0, "pistol_total": 0, "long_total": 0}
-	_count_pose_meshes(visual, counts)
-	if int(counts["pistol_total"]) < 4 or int(counts["long_total"]) < 4:
-		_fail("%s character asset should contain complete pistol and long-gun pose sets" % weapon_id)
-	var wants_pistol := weapon_id == "pistol"
-	if wants_pistol and (int(counts["pistol_visible"]) < 4 or int(counts["long_visible"]) != 0):
-		_fail("pistol should show only the close-grip arm pose")
-	if not wants_pistol and (int(counts["long_visible"]) < 4 or int(counts["pistol_visible"]) != 0):
-		_fail("%s should show only the long-gun support pose" % weapon_id)
-
-func _count_pose_meshes(node: Node, counts: Dictionary) -> void:
-	if node is MeshInstance3D:
-		var mesh_instance := node as MeshInstance3D
-		var lower_name := String(mesh_instance.name).to_lower()
-		if lower_name.contains("posepistol"):
-			counts["pistol_total"] = int(counts["pistol_total"]) + 1
-			if mesh_instance.visible:
-				counts["pistol_visible"] = int(counts["pistol_visible"]) + 1
-		elif lower_name.contains("poselong"):
-			counts["long_total"] = int(counts["long_total"]) + 1
-			if mesh_instance.visible:
-				counts["long_visible"] = int(counts["long_visible"]) + 1
-	for child in node.get_children():
-		_count_pose_meshes(child, counts)
+	var skeleton := _find_skeleton(visual)
+	if skeleton == null or skeleton.get_bone_count() < 15:
+		_fail("%s character should use the complete 15-bone hero rig" % weapon_id)
+	var animation_player := _find_animation_player(visual)
+	var expected_pose := StringName("hold_%s" % ("ak" if weapon_id == "ak_rifle" else weapon_id))
+	if animation_player == null or not animation_player.has_animation(expected_pose):
+		_fail("%s character is missing rig pose %s" % [weapon_id, expected_pose])
+	elif animation_player.assigned_animation != expected_pose:
+		_fail("%s character did not activate rig pose %s" % [weapon_id, expected_pose])
 
 func _verify_no_torso_intersection(visual: CharacterVisual, weapon_id: String) -> void:
-	var torso := _find_descendant(visual, "Body") as MeshInstance3D
+	var torso := _find_descendant(visual, "HeroCloudBody") as MeshInstance3D
 	var asset := visual.get_node_or_null("WeaponHolder/WeaponAsset")
-	if torso == null or asset == null:
-		_fail("%s cannot evaluate torso clearance without Body and WeaponAsset" % weapon_id)
+	var holder := visual.get_node_or_null("WeaponHolder") as Node3D
+	var skeleton := _find_skeleton(visual)
+	if torso == null or asset == null or holder == null or skeleton == null:
+		_fail("%s cannot evaluate hand fit without rig, torso, holder, and WeaponAsset" % weapon_id)
 		return
 	var torso_points: Array[Vector3] = []
 	var weapon_points: Array[Vector3] = []
@@ -146,22 +151,60 @@ func _verify_no_torso_intersection(visual: CharacterVisual, weapon_id: String) -
 		_fail("%s cannot evaluate empty mesh bounds" % weapon_id)
 		return
 	var torso_front_z := INF
-	var weapon_rear_z := -INF
+	var weapon_min := Vector3(INF, INF, INF)
+	var weapon_max := Vector3(-INF, -INF, -INF)
 	for point in torso_points:
 		torso_front_z = minf(torso_front_z, point.z)
 	for point in weapon_points:
-		weapon_rear_z = maxf(weapon_rear_z, point.z)
-	var clearance := torso_front_z - weapon_rear_z
-	if clearance < 0.04:
-		_fail("%s penetrates the torso depth plane, clearance %.3f" % [weapon_id, clearance])
-	else:
-		print("OK  %s torso clearance %.3f" % [weapon_id, clearance])
+		weapon_min = weapon_min.min(point)
+		weapon_max = weapon_max.max(point)
+	var root_clearance := torso_front_z - holder.global_position.z
+	if root_clearance < 0.08:
+		_fail("%s weapon root sits behind the suit front, clearance %.3f" % [weapon_id, root_clearance])
+	for hand_name in [&"Hand.L", &"Hand.R"]:
+		var bone_index := skeleton.find_bone(hand_name)
+		if bone_index < 0:
+			_fail("%s is missing %s" % [weapon_id, hand_name])
+			continue
+		var hand_position := skeleton.global_transform * skeleton.get_bone_global_pose(bone_index).origin
+		var distance := _distance_to_bounds(hand_position, weapon_min, weapon_max)
+		if distance > 0.42:
+			_fail("%s %s is %.3f units away from the weapon grip envelope" % [weapon_id, hand_name, distance])
+	print("OK  %s rig hands fit weapon envelope" % weapon_id)
+
+func _distance_to_bounds(point: Vector3, bounds_min: Vector3, bounds_max: Vector3) -> float:
+	var delta := Vector3(
+		maxf(maxf(bounds_min.x - point.x, point.x - bounds_max.x), 0.0),
+		maxf(maxf(bounds_min.y - point.y, point.y - bounds_max.y), 0.0),
+		maxf(maxf(bounds_min.z - point.z, point.z - bounds_max.z), 0.0)
+	)
+	return delta.length()
 
 func _find_descendant(node: Node, target_name: String) -> Node:
-	if node.name == target_name:
+	var normalized_name := String(node.name).to_lower().replace(".", "").replace("_", "")
+	var normalized_target := target_name.to_lower().replace(".", "").replace("_", "")
+	if normalized_name == normalized_target:
 		return node
 	for child in node.get_children():
 		var found := _find_descendant(child, target_name)
+		if found != null:
+			return found
+	return null
+
+func _find_skeleton(node: Node) -> Skeleton3D:
+	if node is Skeleton3D:
+		return node as Skeleton3D
+	for child in node.get_children():
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
+
+func _find_animation_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for child in node.get_children():
+		var found := _find_animation_player(child)
 		if found != null:
 			return found
 	return null
@@ -208,9 +251,15 @@ func _verify_muzzle_positions(positions: Dictionary) -> void:
 	var sniper := positions["sniper"] as Vector3
 	if not (pistol.z > smg.z and smg.z > ak.z and ak.z > sniper.z):
 		_fail("Muzzle anchors should advance with authored weapon length")
+	var expected := {
+		"pistol": Vector3(0.0, 1.43, -1.69),
+		"smg": Vector3(-0.12, 1.39, -1.91),
+		"ak_rifle": Vector3(-0.18, 1.38, -2.24),
+		"sniper": Vector3(-0.18, 1.39, -2.31),
+	}
 	for weapon_id in positions:
 		var point := positions[weapon_id] as Vector3
-		if point.y < 1.18 or point.y > 1.36 or point.z > -2.55:
+		if point.distance_to(expected[weapon_id] as Vector3) > 0.02:
 			_fail("%s muzzle anchor is not aligned with its authored barrel: %s" % [weapon_id, point])
 	print("OK  authored per-weapon muzzle anchor progression")
 
