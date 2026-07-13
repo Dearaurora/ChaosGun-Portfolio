@@ -18,45 +18,46 @@ func _initialize() -> void:
 	player.set_physics_process(false)
 	stage.add_child(player)
 	player.position = Vector3(0.0, 2.0, 0.0)
-	player.set("_face_dir", Vector3.RIGHT)
+	player.set("_face_dir", Vector3(0.6, 0.0, 0.8))
 
-	var off_plane := BaseCharacter.new()
-	off_plane.name = "CloserButOffPlane"
-	off_plane.freeze = true
-	stage.add_child(off_plane)
-	off_plane.position = Vector3(8.0, 2.0, 11.0)
-	var same_plane := BaseCharacter.new()
-	same_plane.name = "FartherSamePlane"
-	same_plane.freeze = true
-	stage.add_child(same_plane)
-	same_plane.position = Vector3(20.0, 7.0, 2.0)
+	var arena_target := BaseCharacter.new()
+	arena_target.name = "ArenaTarget"
+	arena_target.freeze = true
+	stage.add_child(arena_target)
+	arena_target.position = Vector3(12.0, 18.0, 16.0)
 	await process_frame
 
 	var target := player.call("_get_lock_target") as BaseCharacter
-	if target != same_plane:
-		_fail("Lock-on should ignore a closer target outside the same Z lane")
-	var fire_dir := player.call("_get_lock_on_fire_dir", Vector3.RIGHT) as Vector3
-	if fire_dir.distance_to(Vector3.RIGHT) > 0.001:
-		_fail("Lock-on fire must travel on one horizontal lane, got %s" % fire_dir)
-	if absf(fire_dir.y) > 0.001 or absf(fire_dir.z) > 0.001:
-		_fail("Lock-on direction must not track vertical or Z displacement")
+	if target != arena_target:
+		_fail("Lock-on should acquire targets across the full arena XZ plane")
+	var expected_direction := Vector3(12.0, 0.0, 16.0).normalized()
+	var fire_dir := player.call("_get_lock_on_fire_dir", expected_direction) as Vector3
+	if fire_dir.distance_to(expected_direction) > 0.001:
+		_fail("Lock-on should follow horizontal XZ displacement, got %s" % fire_dir)
+	if absf(fire_dir.y) > 0.001:
+		_fail("Lock-on direction must ignore terrain and character height differences")
 
-	same_plane.global_position.z = 7.0
+	arena_target.global_position = Vector3(20.0, 42.0, 60.0)
+	var retained := player.call("_get_lock_target") as BaseCharacter
+	if retained != arena_target:
+		_fail("Cached lock target should survive large Z and height changes while horizontally in range")
+	arena_target.global_position = Vector3(80.0, 2.0, 60.0)
 	var invalidated := player.call("_get_lock_target") as BaseCharacter
 	if invalidated != null:
-		_fail("Cached lock target should be released after leaving the Z tolerance")
+		_fail("Cached lock target should release only after leaving horizontal range")
 
-	same_plane.global_position = Vector3(-18.0, 6.0, 1.0)
+	arena_target.global_position = Vector3(-18.0, 30.0, -12.0)
 	player.set("_lock_target", null)
-	player.set("_face_dir", Vector3.LEFT)
-	var assisted_dir := player.call("_get_aim_assisted_dir", Vector3.LEFT) as Vector3
-	if assisted_dir.distance_to(Vector3.LEFT) > 0.001:
-		_fail("Aim assist should return a pure horizontal direction for same-lane targets")
+	var assisted_expected := Vector3(-18.0, 0.0, -12.0).normalized()
+	player.set("_face_dir", assisted_expected)
+	var assisted_dir := player.call("_get_aim_assisted_dir", assisted_expected) as Vector3
+	if assisted_dir.distance_to(assisted_expected) > 0.001 or absf(assisted_dir.y) > 0.001:
+		_fail("Aim assist should retain full-arena horizontal tracking without vertical aim")
 
 	stage.queue_free()
 	await process_frame
 	root.set_meta("disable_runtime_audio", false)
-	print("OK  same-lane target filtering, cache invalidation, and flat fire direction")
+	print("OK  full-arena XZ tracking, range cache, and flattened vertical aim")
 	_finish()
 
 func _fail(message: String) -> void:

@@ -202,16 +202,18 @@ func _find_lane_target() -> BaseCharacter:
 func _get_lock_on_fire_dir(base_dir: Vector3) -> Vector3:
 	var target := _get_lock_target()
 	if target:
-		var x_delta: float = target.global_position.x - global_position.x
-		if absf(x_delta) > 0.01:
-			return Vector3(signf(x_delta), 0.0, 0.0)
+		var fire_origin := weapon_point.global_position if weapon_point else global_position
+		var horizontal_direction := target.global_position - fire_origin
+		horizontal_direction.y = 0.0
+		if horizontal_direction.length_squared() > 0.0001:
+			return horizontal_direction.normalized()
 	return _get_aim_assisted_dir(base_dir)
 
 func _get_lock_target() -> BaseCharacter:
 	if _lock_target and is_instance_valid(_lock_target) and not _lock_target.is_dead:
 		var cached_offset := _lock_target.global_position - global_position
 		cached_offset.y = 0.0
-		if absf(cached_offset.z) <= LANE_TARGET_Z_TOLERANCE and absf(cached_offset.x) <= LOCK_ON_RANGE:
+		if cached_offset.length() <= LOCK_ON_RANGE:
 			return _lock_target
 	_lock_target = null
 	var scene_root = RuntimeGlobals.active_scene(get_tree())
@@ -226,12 +228,11 @@ func _get_lock_target() -> BaseCharacter:
 		if target.is_dead: continue
 		var to_target = target.global_position - global_position
 		to_target.y = 0.0
-		if absf(to_target.z) > LANE_TARGET_Z_TOLERANCE: continue
-		var x_gap := absf(to_target.x)
-		if x_gap < 1.0 or x_gap > LOCK_ON_RANGE: continue
-		var dir_to := Vector3(signf(to_target.x), 0.0, 0.0)
+		var dist := to_target.length()
+		if dist < 1.0 or dist > LOCK_ON_RANGE: continue
+		var dir_to := to_target.normalized()
 		var facing_score = maxf(0.0, _face_dir.normalized().dot(dir_to))
-		var distance_score = 1.0 - clampf(x_gap / LOCK_ON_RANGE, 0.0, 1.0)
+		var distance_score = 1.0 - clampf(dist / LOCK_ON_RANGE, 0.0, 1.0)
 		var score = distance_score * 0.70 + facing_score * 0.30
 		if score > best_score:
 			best_score = score
@@ -303,10 +304,9 @@ func _get_aim_assisted_dir(base_dir: Vector3) -> Vector3:
 		if target.is_dead: continue
 		var to_target = target.global_position - global_position
 		to_target.y = 0
-		if absf(to_target.z) > LANE_TARGET_Z_TOLERANCE: continue
-		var dist := absf(to_target.x)
+		var dist := to_target.length()
 		if dist < 1.0 or dist > AIM_ASSIST_RANGE: continue
-		var dir_to := Vector3(signf(to_target.x), 0.0, 0.0)
+		var dir_to := to_target.normalized()
 		var dot = aim_dir.dot(dir_to)
 		var cone_deg = AIM_ASSIST_CLOSE_CONE_DEG if dist <= AIM_ASSIST_CLOSE_RANGE else AIM_ASSIST_CONE_DEG
 		if dot < cos(deg_to_rad(cone_deg)): continue
@@ -317,8 +317,11 @@ func _get_aim_assisted_dir(base_dir: Vector3) -> Vector3:
 			best_target = target
 			
 	if best_target:
-		var x_delta: float = best_target.global_position.x - global_position.x
-		return Vector3(signf(x_delta), 0.0, 0.0)
+		var fire_origin := weapon_point.global_position if weapon_point else global_position
+		var horizontal_direction := best_target.global_position - fire_origin
+		horizontal_direction.y = 0.0
+		if horizontal_direction.length_squared() > 0.0001:
+			return horizontal_direction.normalized()
 
 	return aim_dir
 
