@@ -22,11 +22,25 @@ func _initialize() -> void:
 		await _finish(visual)
 		return
 
+	_verify_runtime_readability(visual)
 	_verify_strafing_blends_smoothly(visual)
 	_verify_backpedal_blends_against_facing(visual)
 	_verify_idle_decays_smoothly(visual)
 	await _verify_action_feedback(visual)
 	await _finish(visual)
+
+func _verify_runtime_readability(visual: CharacterVisual) -> void:
+	var shadow := visual.get_node_or_null("ContactShadow") as MeshInstance3D
+	var debug := visual.call("get_motion_debug") as Dictionary
+	var visual_scale := debug.get("visual_scale", Vector3.ONE) as Vector3
+	if shadow == null or not shadow.top_level:
+		_fail("Hero runtime should have a grounded top-level contact shadow")
+	if visual_scale.x < 1.08 or visual_scale.z < 1.08:
+		_fail("Hero runtime silhouette should be enlarged for the locked gameplay camera")
+	if not bool(debug.get("has_contact_shadow", false)):
+		_fail("Motion debug should report the contact shadow")
+	else:
+		print("OK  enlarged hero silhouette with grounded contact shadow")
 
 func _verify_strafing_blends_smoothly(visual: CharacterVisual) -> void:
 	visual.animate_locomotion(Vector3.RIGHT, Vector3.FORWARD, 1.0, 1.0 / 60.0)
@@ -43,8 +57,12 @@ func _verify_strafing_blends_smoothly(visual: CharacterVisual) -> void:
 		_fail("Pure strafe should not read as forward/backpedal, forward amount %.3f" % forward_amount)
 	if absf(visual.rotation.z) < 0.035:
 		_fail("Strafe movement should visibly lean the bean model sideways")
+	var motion_debug := visual.call("get_motion_debug") as Dictionary
+	var leg_swing := motion_debug.get("leg_swing", Vector2.ZERO) as Vector2
+	if maxf(absf(leg_swing.x), absf(leg_swing.y)) < 0.012:
+		_fail("Moving hero should alternate its rigged leg pose")
 	else:
-		print("OK  smooth strafe locomotion")
+		print("OK  smooth strafe locomotion with alternating leg pose")
 
 func _verify_backpedal_blends_against_facing(visual: CharacterVisual) -> void:
 	for _i in range(18):

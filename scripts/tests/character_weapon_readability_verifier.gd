@@ -252,10 +252,10 @@ func _verify_muzzle_positions(positions: Dictionary) -> void:
 	if not (pistol.z > smg.z and smg.z > ak.z and ak.z > sniper.z):
 		_fail("Muzzle anchors should advance with authored weapon length")
 	var expected := {
-		"pistol": Vector3(0.0, 1.43, -1.69),
-		"smg": Vector3(-0.12, 1.39, -1.91),
-		"ak_rifle": Vector3(-0.18, 1.38, -2.24),
-		"sniper": Vector3(-0.18, 1.39, -2.31),
+		"pistol": Vector3(0.0, 1.4872, -1.859),
+		"smg": Vector3(-0.132, 1.4456, -2.101),
+		"ak_rifle": Vector3(-0.198, 1.4352, -2.464),
+		"sniper": Vector3(-0.198, 1.4456, -2.541),
 	}
 	for weapon_id in positions:
 		var point := positions[weapon_id] as Vector3

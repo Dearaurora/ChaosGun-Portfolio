@@ -11,6 +11,8 @@ class_name CharacterVisual
 const HERO_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/hero_character_rig_v1.glb"
 const LEGACY_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/bean_character.glb"
 const WEAPON_MODEL_ROOT := "res://assets/models/generated/weapons/"
+const HERO_RUNTIME_SCALE := Vector3(1.10, 1.04, 1.10)
+const CONTACT_SHADOW_Y_OFFSET := -0.075
 
 var _weapon_holder: Node3D
 var _bounce_time: float = 0.0
@@ -19,8 +21,14 @@ var _body_mesh: MeshInstance3D
 var _body_color_meshes: Array[MeshInstance3D] = []
 var _asset_root: Node3D = null
 var _animation_player: AnimationPlayer = null
+var _skeleton: Skeleton3D = null
 var _uses_hero_rig: bool = false
 var _active_weapon_pose: StringName = &"neutral"
+var _contact_shadow: MeshInstance3D = null
+var _contact_shadow_material: StandardMaterial3D = null
+var _leg_bone_indices: Array[int] = []
+var _leg_base_rotations: Array[Quaternion] = []
+var _leg_swing_amounts := Vector2.ZERO
 var _locomotion_forward_amount: float = 0.0
 var _locomotion_right_amount: float = 0.0
 var _locomotion_speed_ratio: float = 0.0
@@ -45,6 +53,8 @@ func _ready() -> void:
 		if show_vest:
 			_build_vest_stripes()
 		_build_limbs()
+	if _uses_hero_rig:
+		_build_contact_shadow()
 	_build_weapon_holder()
 	# 默认手枪
 	set_weapon_visual(&"pistol")
@@ -93,6 +103,8 @@ func _build_asset_visual() -> bool:
 		_asset_root.rotation_degrees.y = 180.0
 	add_child(_asset_root)
 	_animation_player = _find_animation_player(_asset_root)
+	_skeleton = _find_skeleton(_asset_root)
+	_cache_locomotion_bones()
 
 	_create_marker("FaceVisor", Vector3(0, 1.58, -0.84))
 	_create_marker("LeftHand", Vector3(-0.18, 1.13, -1.40))
@@ -114,6 +126,51 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 		if found != null:
 			return found
 	return null
+
+func _find_skeleton(node: Node) -> Skeleton3D:
+	if node is Skeleton3D:
+		return node as Skeleton3D
+	for child in node.get_children():
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
+
+func _cache_locomotion_bones() -> void:
+	_leg_bone_indices.clear()
+	_leg_base_rotations.clear()
+	if _skeleton == null:
+		return
+	for bone_name in [&"Thigh.L", &"Thigh.R"]:
+		var bone_index := _skeleton.find_bone(bone_name)
+		if bone_index < 0:
+			continue
+		_leg_bone_indices.append(bone_index)
+		_leg_base_rotations.append(_skeleton.get_bone_pose_rotation(bone_index))
+
+func _build_contact_shadow() -> void:
+	_contact_shadow = MeshInstance3D.new()
+	_contact_shadow.name = "ContactShadow"
+	var shadow_mesh := CylinderMesh.new()
+	shadow_mesh.top_radius = 0.88
+	shadow_mesh.bottom_radius = 0.88
+	shadow_mesh.height = 0.016
+	shadow_mesh.radial_segments = 32
+	_contact_shadow.mesh = shadow_mesh
+	_contact_shadow.scale = Vector3(1.0, 1.0, 0.72)
+	_contact_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_contact_shadow_material = StandardMaterial3D.new()
+	_contact_shadow_material.albedo_color = Color(0.08, 0.055, 0.12, 0.22)
+	_contact_shadow_material.roughness = 1.0
+	_contact_shadow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_contact_shadow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_contact_shadow.material_override = _contact_shadow_material
+	add_child(_contact_shadow)
+	_contact_shadow.top_level = true
+	_update_contact_shadow()
+
+func _runtime_visual_scale() -> Vector3:
+	return HERO_RUNTIME_SCALE if _uses_hero_rig else Vector3.ONE
 
 func _create_marker(name: String, pos: Vector3) -> Node3D:
 	var marker = Node3D.new()
@@ -665,25 +722,28 @@ func _weapon_asset_scale(weapon_id: StringName) -> float:
 			return 1.0
 
 func get_weapon_muzzle_local_position(weapon_id: StringName = _current_weapon_id) -> Vector3:
+	var muzzle_position := Vector3.ZERO
 	if _uses_hero_rig:
 		match weapon_id:
 			&"smg":
-				return Vector3(-0.12, 1.39, -1.91)
+				muzzle_position = Vector3(-0.12, 1.39, -1.91)
 			&"ak_rifle":
-				return Vector3(-0.18, 1.38, -2.24)
+				muzzle_position = Vector3(-0.18, 1.38, -2.24)
 			&"sniper":
-				return Vector3(-0.18, 1.39, -2.31)
+				muzzle_position = Vector3(-0.18, 1.39, -2.31)
 			_:
-				return Vector3(0.0, 1.43, -1.69)
-	match weapon_id:
-		&"smg":
-			return Vector3(0.0, 1.28, -2.78)
-		&"ak_rifle":
-			return Vector3(0.0, 1.26, -3.08)
-		&"sniper":
-			return Vector3(0.0, 1.24, -3.13)
-		_:
-			return Vector3(0.0, 1.31, -2.64)
+				muzzle_position = Vector3(0.0, 1.43, -1.69)
+	else:
+		match weapon_id:
+			&"smg":
+				muzzle_position = Vector3(0.0, 1.28, -2.78)
+			&"ak_rifle":
+				muzzle_position = Vector3(0.0, 1.26, -3.08)
+			&"sniper":
+				muzzle_position = Vector3(0.0, 1.24, -3.13)
+			_:
+				muzzle_position = Vector3(0.0, 1.31, -2.64)
+	return muzzle_position * _runtime_visual_scale()
 
 func _build_gun_parts(mat: StandardMaterial3D, parts: Array) -> void:
 	for part in parts:
@@ -796,6 +856,25 @@ func animate_locomotion(move_dir: Vector3, facing_dir: Vector3, speed_ratio: flo
 		position.y = lerpf(position.y, 0.0, pose_blend)
 		rotation.x = lerpf(rotation.x, _recoil_pitch + _impact_pitch, pose_blend)
 		rotation.z = lerpf(rotation.z, _impact_roll, pose_blend)
+	_apply_leg_step_pose(pose_blend)
+
+func _apply_leg_step_pose(blend: float) -> void:
+	if _skeleton == null or _leg_bone_indices.size() != 2:
+		_leg_swing_amounts = Vector2.ZERO
+		return
+	var gait_weight := maxf(absf(_locomotion_forward_amount), absf(_locomotion_right_amount) * 0.82)
+	gait_weight *= _locomotion_speed_ratio
+	var stride_angle := sin(_bounce_time) * 0.16 * gait_weight
+	var strafe_angle := cos(_bounce_time) * 0.055 * _locomotion_right_amount * _locomotion_speed_ratio
+	_leg_swing_amounts = Vector2(stride_angle + strafe_angle, -stride_angle - strafe_angle)
+	for index in range(_leg_bone_indices.size()):
+		var direction := 1.0 if index == 0 else -1.0
+		var target_rotation := _leg_base_rotations[index]
+		target_rotation *= Quaternion(Vector3.RIGHT, stride_angle * direction)
+		target_rotation *= Quaternion(Vector3.FORWARD, strafe_angle * direction)
+		var bone_index := _leg_bone_indices[index]
+		var current_rotation := _skeleton.get_bone_pose_rotation(bone_index)
+		_skeleton.set_bone_pose_rotation(bone_index, current_rotation.slerp(target_rotation, blend))
 
 func get_locomotion_forward_amount() -> float:
 	return _locomotion_forward_amount
@@ -818,16 +897,35 @@ func get_motion_debug() -> Dictionary:
 		"impact_pitch": _impact_pitch,
 		"impact_roll": _impact_roll,
 		"weapon_kick": _weapon_kick,
+		"leg_swing": _leg_swing_amounts,
+		"visual_scale": _runtime_visual_scale(),
+		"has_contact_shadow": _contact_shadow != null,
 	}
+
+func _update_contact_shadow() -> void:
+	if _contact_shadow == null or not is_inside_tree():
+		return
+	var grounded_position := global_position - Vector3.UP * position.y
+	_contact_shadow.global_position = grounded_position + Vector3.UP * CONTACT_SHADOW_Y_OFFSET
+	_contact_shadow.global_rotation = Vector3.ZERO
+	if _contact_shadow_material != null:
+		var lift_ratio := clampf(position.y / 0.22, 0.0, 1.0)
+		_contact_shadow_material.albedo_color.a = lerpf(0.22, 0.15, lift_ratio)
 
 func _process(delta: float) -> void:
 	_recoil_pitch = move_toward(_recoil_pitch, 0.0, delta * 0.72)
 	_impact_pitch = move_toward(_impact_pitch, 0.0, delta * 1.35)
 	_impact_roll = move_toward(_impact_roll, 0.0, delta * 1.75)
 	_weapon_kick = move_toward(_weapon_kick, 0.0, delta * 0.85)
-	scale = Vector3(_action_scale.x * _stride_scale.x, _action_scale.y * _stride_scale.y, _action_scale.z * _stride_scale.z)
+	var visual_scale := _runtime_visual_scale()
+	scale = Vector3(
+		visual_scale.x * _action_scale.x * _stride_scale.x,
+		visual_scale.y * _action_scale.y * _stride_scale.y,
+		visual_scale.z * _action_scale.z * _stride_scale.z
+	)
 	if _weapon_holder:
 		_weapon_holder.position = _weapon_holder_base_position + Vector3(0.0, 0.0, _weapon_kick)
+	_update_contact_shadow()
 	if _hit_flash_timer > 0:
 		_hit_flash_timer -= delta
 		var flash_weight := clampf(_hit_flash_timer / 0.12, 0.0, 1.0) * 0.72
