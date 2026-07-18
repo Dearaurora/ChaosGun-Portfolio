@@ -473,6 +473,9 @@ func _has_line_of_sight_to_target() -> bool:
 	var query := PhysicsRayQueryParameters3D.create(origin, target_position)
 	query.exclude = _line_of_sight_exclusions()
 	query.collide_with_areas = false
+	# At physical contact the authored muzzle can sit inside the enemy body.
+	# Include that containing collider so point-blank shots retain line of sight.
+	query.hit_from_inside = true
 	var result := get_world_3d().direct_space_state.intersect_ray(query)
 	return not result.is_empty() and result.get("collider") == _target
 
