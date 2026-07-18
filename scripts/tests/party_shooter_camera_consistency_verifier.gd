@@ -39,11 +39,9 @@ func _capture_map_camera(scene_path: String, director_name: String, label: Strin
 	current_scene = arena
 	await process_frame
 	await process_frame
-	# Open Ring-Out authors a short READY/GO intro tween. Let it finish so this
-	# verifier never tears down a live presentation object while comparing maps.
-	if label == "Open Ring-Out":
-		await create_timer(1.6).timeout
-		await process_frame
+	# Both production maps author the shared READY/GO intro. Observe the actual
+	# controller state instead of relying on wall-clock padding before teardown.
+	await _await_match_presentation_settled(arena)
 
 	var camera := arena.get_node_or_null("GlobalCamera") as Camera3D
 	var director := arena.get_node_or_null(director_name)
@@ -73,6 +71,21 @@ func _capture_map_camera(scene_path: String, director_name: String, label: Strin
 	await process_frame
 	await physics_frame
 	return snapshot
+
+
+func _await_match_presentation_settled(arena: Node) -> void:
+	var presentation := arena.find_child("OpenRingoutMatchPresentation", true, false)
+	if presentation == null:
+		presentation = arena.find_child("PartyShooterMatchPresentation", true, false)
+	if presentation == null or not presentation.has_method("get_debug_state"):
+		return
+	var deadline_msec := Time.get_ticks_msec() + 2000
+	while is_instance_valid(presentation) and Time.get_ticks_msec() < deadline_msec:
+		var state := presentation.call("get_debug_state") as Dictionary
+		if String(state.get("cue_state", "idle")) in ["idle", "complete", "result_ready"]:
+			break
+		await create_timer(0.05, true, false, true).timeout
+	await process_frame
 
 
 func _verify_shared_contract(open_snapshot: Dictionary, twin_snapshot: Dictionary) -> void:

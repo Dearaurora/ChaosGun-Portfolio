@@ -22,6 +22,7 @@ const OUTER_ISLAND_POSITIONS := [
 ]
 
 var _failures: Array[String] = []
+var _arena: Node = null
 
 func _initialize() -> void:
 	root.set_meta("disable_runtime_audio", true)
@@ -31,10 +32,11 @@ func _initialize() -> void:
 	var scene := load(SCENE_PATH) as PackedScene
 	if scene == null:
 		_fail("Could not load %s" % SCENE_PATH)
-		_finish()
+		await _finish()
 		return
 
 	var arena := scene.instantiate()
+	_arena = arena
 	root.add_child(arena)
 	current_scene = arena
 	await process_frame
@@ -45,7 +47,7 @@ func _initialize() -> void:
 	var characters = arena.get("_characters") as Array
 	if director == null or camera == null or characters.size() != 4:
 		_fail("Camera verifier requires the director, camera, and four characters")
-		_finish()
+		await _finish()
 		return
 
 	for item in characters:
@@ -133,7 +135,7 @@ func _initialize() -> void:
 	_verify_unscaled_camera_motion(arena, characters)
 	_verify_screen_shake_isolation(camera)
 
-	_finish()
+	await _finish()
 
 func _configure_roster() -> void:
 	var match_config = root.get_node_or_null("MatchConfig")
@@ -280,6 +282,14 @@ func _fail(message: String) -> void:
 	push_error(message)
 
 func _finish() -> void:
+	await _await_match_presentation_settled()
+	if _arena and is_instance_valid(_arena):
+		if current_scene == _arena:
+			current_scene = null
+		_arena.queue_free()
+	await process_frame
+	await process_frame
+	await physics_frame
 	if _failures.is_empty():
 		print("[Open Ringout Camera Verifier] PASS")
 		quit(0)
@@ -288,3 +298,18 @@ func _finish() -> void:
 	for failure in _failures:
 		print("- ", failure)
 	quit(1)
+
+
+func _await_match_presentation_settled() -> void:
+	if _arena == null or not is_instance_valid(_arena):
+		return
+	var presentation := _arena.find_child("OpenRingoutMatchPresentation", true, false)
+	if presentation == null or not presentation.has_method("get_debug_state"):
+		return
+	var deadline_msec := Time.get_ticks_msec() + 1800
+	while is_instance_valid(presentation) and Time.get_ticks_msec() < deadline_msec:
+		var state := presentation.call("get_debug_state") as Dictionary
+		if String(state.get("cue_state", "idle")) in ["idle", "complete", "result_ready"]:
+			break
+		await create_timer(0.05, true, false, true).timeout
+	await process_frame

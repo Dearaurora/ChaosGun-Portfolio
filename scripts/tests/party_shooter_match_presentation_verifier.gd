@@ -70,6 +70,13 @@ func _initialize() -> void:
 	presentation.start_intro()
 	state = presentation.get_debug_state()
 	_expect(director.reveal_calls == 1, "start_intro remains idempotent")
+	await _wait_for_cue_state(presentation, ["complete"], 1.8)
+	if current_scene == arena:
+		current_scene = null
+	arena.queue_free()
+	await process_frame
+	await process_frame
+	await physics_frame
 	_finish()
 
 
@@ -79,6 +86,15 @@ func _expect(condition: bool, label: String) -> void:
 	else:
 		_failures.append(label)
 		push_error(label)
+
+
+func _wait_for_cue_state(presentation: Node, expected_states: Array, timeout_seconds: float) -> void:
+	var deadline_msec := Time.get_ticks_msec() + int(timeout_seconds * 1000.0)
+	while is_instance_valid(presentation) and Time.get_ticks_msec() < deadline_msec:
+		var state := presentation.call("get_debug_state") as Dictionary
+		if String(state.get("cue_state", "")) in expected_states:
+			return
+		await create_timer(0.025, true, false, true).timeout
 
 
 func _finish() -> void:

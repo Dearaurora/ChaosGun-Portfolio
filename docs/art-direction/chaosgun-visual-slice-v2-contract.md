@@ -50,6 +50,8 @@ Selected visual reference:
 - Backdrop depth comes from layered pink-violet clouds, distant tiny islands,
   one or two large framing silhouettes such as a balloon, and atmospheric value
   separation, not random floating particles.
+- Every authored cloud bank is a single visible volume. Do not duplicate the
+  silhouette as a darker lower slab or detached shadow layer.
 - Surface detail uses large readable panels first, medium trim second, and sparse
   small accents last. No uniformly scattered decoration.
 - The central combat floor stays mostly open. Prop personality is concentrated
@@ -103,9 +105,10 @@ Selected visual reference:
   cast until they dominate the board or shrink them into colored dots.
 - Weapons are dark neutral toy guns with player-color accents and strong muzzle
   shapes. Each is held close to the body with a readable aim line.
-- Projectile trails are short segmented streaks in player colors. Muzzle flashes
-  are compact warm stars. Impacts use a fast directional burst plus one readable
-  knockback arc; avoid persistent particle clouds.
+- Projectiles use the locked yellow-white teardrop body and short tapered wake.
+  Never replace this silhouette with a cone or recolor it by player. Muzzle
+  flashes may retain weapon identity. Impacts use a fast directional burst plus
+  one readable knockback arc; avoid persistent particle clouds.
 - Contact shadows and directional cast shadows ground every fighter and cover.
 
 ## Immediate Failure Conditions

@@ -3,8 +3,9 @@ class_name RingoutHUD
 
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
 const WEAPON_ICON_SCRIPT = preload("res://scripts/ui/weapon_silhouette_icon.gd")
+const TOY_UI = preload("res://scripts/ui/toy_sunset_ui.gd")
 
-const PANEL_SIZE := Vector2(212, 86)
+const PANEL_SIZE := Vector2(200, 72)
 const PANEL_MARGIN := Vector2(12, 12)
 const CAMERA_OCCLUSION_GUTTER := 8.0
 const HEART_CODE := 0x2665
@@ -14,7 +15,8 @@ var _panel_data: Array[Dictionary] = []
 var _root: Control = null
 
 static func camera_occlusion_rects(viewport_size: Vector2, panel_count: int = 4) -> Array[Rect2]:
-	var footprint := PANEL_MARGIN + PANEL_SIZE + Vector2.ONE * CAMERA_OCCLUSION_GUTTER
+	var ui_scale := TOY_UI.ui_scale(viewport_size)
+	var footprint := (PANEL_MARGIN + PANEL_SIZE + Vector2.ONE * CAMERA_OCCLUSION_GUTTER) * ui_scale
 	var right := maxf(viewport_size.x - footprint.x, 0.0)
 	var bottom := maxf(viewport_size.y - footprint.y, 0.0)
 	var all_rects: Array[Rect2] = [
@@ -68,56 +70,43 @@ func _build_panel(character: BaseCharacter, index: int) -> Control:
 	panel.custom_minimum_size = PANEL_SIZE
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var style = StyleBoxFlat.new()
-	var panel_tint := Color("#211c31").lerp(accent.darkened(0.60), 0.16)
-	panel_tint.a = 0.88
-	style.bg_color = panel_tint
-	style.border_color = accent.lerp(Color.WHITE, 0.12)
-	style.border_width_left = 2
-	style.border_width_right = 2
-	style.border_width_top = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
-	style.shadow_color = Color(0.05, 0.03, 0.10, 0.30)
-	style.shadow_size = 8
-	style.shadow_offset = Vector2(0, 3)
+	var style := TOY_UI.panel_style(accent, 0.72, TOY_UI.PANEL_RADIUS, 1, 3)
 	panel.add_theme_stylebox_override("panel", style)
+
+	var accent_rail := ColorRect.new()
+	accent_rail.name = "PlayerAccent"
+	accent_rail.position = Vector2(3, 6)
+	accent_rail.size = Vector2(4, 60)
+	accent_rail.color = accent
+	accent_rail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(accent_rail)
 
 	var avatar = Panel.new()
 	avatar.name = "Avatar"
-	avatar.position = Vector2(9, 16)
-	avatar.size = Vector2(52, 52)
-	avatar.add_theme_stylebox_override("panel", _round_style(accent.darkened(0.08), accent.lerp(Color.WHITE, 0.38), 26, 2))
+	avatar.position = Vector2(11, 15)
+	avatar.size = Vector2(42, 42)
+	avatar.add_theme_stylebox_override("panel", _round_style(accent.darkened(0.06), TOY_UI.CREAM, 21, 1))
 	panel.add_child(avatar)
-
-	var avatar_shine = Panel.new()
-	avatar_shine.name = "AvatarShine"
-	avatar_shine.position = Vector2(9, 7)
-	avatar_shine.size = Vector2(24, 9)
-	avatar_shine.add_theme_stylebox_override("panel", _round_style(Color(1, 1, 1, 0.18), Color(1, 1, 1, 0.0), 5, 0))
-	avatar.add_child(avatar_shine)
 
 	var visor = Panel.new()
 	visor.name = "Visor"
-	visor.position = Vector2(11, 19)
-	visor.size = Vector2(31, 19)
-	visor.add_theme_stylebox_override("panel", _round_style(Color("#dff7ff"), Color("#2a2742"), 7, 2))
+	visor.position = Vector2(8, 14)
+	visor.size = Vector2(27, 15)
+	visor.add_theme_stylebox_override("panel", _round_style(TOY_UI.INK, Color(TOY_UI.CREAM.r, TOY_UI.CREAM.g, TOY_UI.CREAM.b, 0.22), 5, 1))
 	avatar.add_child(visor)
 
-	var visor_glint = Panel.new()
-	visor_glint.name = "VisorGlint"
-	visor_glint.position = Vector2(5, 4)
-	visor_glint.size = Vector2(17, 4)
-	visor_glint.add_theme_stylebox_override("panel", _round_style(Color(1, 1, 1, 0.55), Color(1, 1, 1, 0.0), 3, 0))
-	visor.add_child(visor_glint)
+	for eye_index in range(2):
+		var eye := Panel.new()
+		eye.name = "Eye%d" % (eye_index + 1)
+		eye.position = Vector2(7 + eye_index * 10, 4)
+		eye.size = Vector2(3, 7)
+		eye.add_theme_stylebox_override("panel", _round_style(TOY_UI.GOLD, Color.TRANSPARENT, 2, 0))
+		visor.add_child(eye)
 
-	var player_tag = _make_label("PlayerTag", _player_tag(index), Vector2(69, 6), Vector2(64, 18), 14, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	var player_tag = _make_label("PlayerTag", _player_tag(index), Vector2(59, 4), Vector2(82, 16), 13, TOY_UI.CREAM, HORIZONTAL_ALIGNMENT_LEFT)
 	panel.add_child(player_tag)
 
-	var life_label = _make_label("LifeLabel", "LIFE 4", Vector2(146, 7), Vector2(54, 15), 9, Color("#c7c1d4"), HORIZONTAL_ALIGNMENT_RIGHT)
+	var life_label = _make_label("LifeLabel", "x4", Vector2(155, 4), Vector2(34, 16), 9, TOY_UI.CREAM_DIM, HORIZONTAL_ALIGNMENT_RIGHT)
 	panel.add_child(life_label)
 
 	var hearts: Array[Label] = []
@@ -125,38 +114,35 @@ func _build_panel(character: BaseCharacter, index: int) -> Control:
 		var heart = Label.new()
 		heart.name = "Heart%d" % i
 		heart.text = String.chr(HEART_CODE)
-		heart.position = Vector2(68 + i * 22, 23)
-		heart.size = Vector2(20, 21)
+		heart.position = Vector2(58 + i * 18, 20)
+		heart.size = Vector2(17, 18)
 		heart.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		heart.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		heart.add_theme_font_size_override("font_size", 20)
-		heart.add_theme_color_override("font_color", Color("#ff496a"))
+		heart.add_theme_font_size_override("font_size", 16)
+		heart.add_theme_color_override("font_color", TOY_UI.CORAL)
 		panel.add_child(heart)
 		hearts.append(heart)
 
-	var weapon_box = Panel.new()
-	weapon_box.name = "WeaponBox"
-	weapon_box.position = Vector2(66, 48)
-	weapon_box.size = Vector2(136, 29)
-	var weapon_box_color := Color("#151426")
-	weapon_box_color.a = 0.78
-	var weapon_border := accent.darkened(0.12)
-	weapon_border.a = 0.72
-	weapon_box.add_theme_stylebox_override("panel", _round_style(weapon_box_color, weapon_border, 6, 1))
-	panel.add_child(weapon_box)
+	var divider := ColorRect.new()
+	divider.name = "InformationDivider"
+	divider.position = Vector2(58, 41)
+	divider.size = Vector2(131, 1)
+	divider.color = Color(TOY_UI.CREAM.r, TOY_UI.CREAM.g, TOY_UI.CREAM.b, 0.14)
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(divider)
 
 	var weapon_icon = WEAPON_ICON_SCRIPT.new()
 	weapon_icon.name = "WeaponSilhouette"
-	weapon_icon.position = Vector2(3, 2)
-	weapon_icon.size = Vector2(77, 25)
+	weapon_icon.position = Vector2(58, 45)
+	weapon_icon.size = Vector2(66, 21)
 	weapon_icon.set_weapon("pistol", accent)
-	weapon_box.add_child(weapon_icon)
+	panel.add_child(weapon_icon)
 
-	var weapon_name = _make_label("WeaponName", "PISTOL", Vector2(82, 1), Vector2(49, 11), 8, Color("#f4f0f6"), HORIZONTAL_ALIGNMENT_LEFT)
-	weapon_box.add_child(weapon_name)
+	var weapon_name = _make_label("WeaponName", "PISTOL", Vector2(127, 43), Vector2(62, 11), 8, TOY_UI.CREAM_DIM, HORIZONTAL_ALIGNMENT_LEFT)
+	panel.add_child(weapon_name)
 
-	var ammo_label = _make_label("AmmoLabel", "INF", Vector2(82, 11), Vector2(49, 16), 11, Color("#e8dfed"), HORIZONTAL_ALIGNMENT_LEFT)
-	weapon_box.add_child(ammo_label)
+	var ammo_label = _make_label("AmmoLabel", "INF", Vector2(127, 53), Vector2(62, 15), 11, TOY_UI.CREAM, HORIZONTAL_ALIGNMENT_LEFT)
+	panel.add_child(ammo_label)
 
 	_panel_data.append({
 		"character": character,
@@ -175,19 +161,23 @@ func _build_panel(character: BaseCharacter, index: int) -> Control:
 
 func _layout_panels() -> void:
 	var viewport_size = get_viewport().get_visible_rect().size
+	var ui_scale := TOY_UI.ui_scale(viewport_size)
+	var scaled_panel_size := PANEL_SIZE * ui_scale
+	var scaled_margin := PANEL_MARGIN * ui_scale
 	for i in range(_panel_data.size()):
 		var panel = _panel_data[i].get("panel") as Control
 		if panel == null:
 			continue
+		panel.scale = Vector2.ONE * ui_scale
 		match i:
 			0:
-				panel.position = PANEL_MARGIN
+				panel.position = scaled_margin
 			1:
-				panel.position = Vector2(viewport_size.x - PANEL_SIZE.x - PANEL_MARGIN.x, PANEL_MARGIN.y)
+				panel.position = Vector2(viewport_size.x - scaled_panel_size.x - scaled_margin.x, scaled_margin.y)
 			2:
-				panel.position = Vector2(PANEL_MARGIN.x, viewport_size.y - PANEL_SIZE.y - PANEL_MARGIN.y)
+				panel.position = Vector2(scaled_margin.x, viewport_size.y - scaled_panel_size.y - scaled_margin.y)
 			_:
-				panel.position = viewport_size - PANEL_SIZE - PANEL_MARGIN
+				panel.position = viewport_size - scaled_panel_size - scaled_margin
 
 func _update_hearts(data: Dictionary, lives: int) -> void:
 	var hearts = data.get("hearts") as Array
@@ -198,15 +188,15 @@ func _update_hearts(data: Dictionary, lives: int) -> void:
 		var active = i < lives
 		heart.add_theme_color_override(
 			"font_color",
-			Color("#ff496a") if active else Color(1.0, 0.29, 0.42, 0.20)
+			TOY_UI.CORAL if active else Color(TOY_UI.CORAL.r, TOY_UI.CORAL.g, TOY_UI.CORAL.b, 0.20)
 		)
 
 func _update_life_label(data: Dictionary, lives: int) -> void:
 	var life_label = data.get("life_label") as Label
 	if life_label == null:
 		return
-	life_label.text = "LIFE %d" % max(lives, 0)
-	life_label.add_theme_color_override("font_color", Color("#c7c1d4") if lives > 1 else Color("#ff9b72"))
+	life_label.text = "x%d" % max(lives, 0)
+	life_label.add_theme_color_override("font_color", TOY_UI.CREAM_DIM if lives > 1 else TOY_UI.CORAL)
 
 func _update_weapon_info(data: Dictionary, character: BaseCharacter) -> void:
 	var weapon_id := "pistol"
@@ -232,7 +222,7 @@ func _update_weapon_info(data: Dictionary, character: BaseCharacter) -> void:
 	var ammo_label = data.get("ammo_label") as Label
 	if ammo_label != null:
 		ammo_label.text = ammo_text
-		ammo_label.add_theme_color_override("font_color", Color("#e8dfed") if infinite_ammo else Color.WHITE)
+		ammo_label.add_theme_color_override("font_color", TOY_UI.CREAM_DIM if infinite_ammo else TOY_UI.CREAM)
 
 	if data.get("weapon_id", "") == weapon_id:
 		return
@@ -255,24 +245,13 @@ func _make_label(name: String, text: String, pos: Vector2, size: Vector2, font_s
 	label.clip_text = true
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.40))
+	label.add_theme_color_override("font_shadow_color", Color(TOY_UI.INK.r, TOY_UI.INK.g, TOY_UI.INK.b, 0.28))
 	label.add_theme_constant_override("shadow_offset_x", 1)
 	label.add_theme_constant_override("shadow_offset_y", 1)
 	return label
 
 func _round_style(bg: Color, border: Color, radius: int, border_width: int) -> StyleBoxFlat:
-	var style = StyleBoxFlat.new()
-	style.bg_color = bg
-	style.border_color = border
-	style.border_width_left = border_width
-	style.border_width_right = border_width
-	style.border_width_top = border_width
-	style.border_width_bottom = border_width
-	style.corner_radius_top_left = radius
-	style.corner_radius_top_right = radius
-	style.corner_radius_bottom_left = radius
-	style.corner_radius_bottom_right = radius
-	return style
+	return TOY_UI.inset_style(bg, border, bg.a, radius, border_width)
 
 func _character_color(character: BaseCharacter, index: int) -> Color:
 	var match_config = _match_config()

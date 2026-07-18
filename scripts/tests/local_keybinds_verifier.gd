@@ -13,14 +13,15 @@ const ACTION_SUFFIXES := [
 
 var _failures: Array[String] = []
 
+
 func _initialize() -> void:
 	print("==================================================")
 	print("[Local Keybinds Verifier]")
 	print("==================================================")
 	root.size = Vector2i(1536, 960)
-
 	_verify_input_actions()
 	_verify_default_keyboard_conflicts()
+
 	var match_config := root.get_node_or_null("MatchConfig")
 	var input_prefixes = match_config.get("INPUT_PREFIXES") as Array if match_config else []
 	if input_prefixes != ["p1_", "p2_", "p3_", "p4_"]:
@@ -36,43 +37,43 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 
-	var toggle = screen.find_child("ExtraPlayersToggle", true, false) as Button
-	var section = screen.find_child("ExtraPlayersSection", true, false) as Control
-	var content = screen.find_child("KeybindContent", true, false) as Control
+	var toggle := screen.find_child("ExtraPlayersToggle", true, false) as Button
+	var section := screen.find_child("ExtraPlayersSection", true, false) as Control
+	var content := screen.find_child("KeybindContent", true, false) as Control
 	if toggle == null or section == null or content == null:
 		_fail("Player 3/4 collapsible controls are incomplete")
 		await _finish(screen)
 		return
 	if section.visible:
 		_fail("Player 3/4 keybind section must start collapsed")
-	if not toggle.toggle_mode or not toggle.text.contains("PLAYER 3 / PLAYER 4"):
+	if not toggle.toggle_mode or not toggle.text.contains("P3 / P4"):
 		_fail("Player 3/4 expand button is not configured")
 
 	for player_index in range(1, 5):
 		var prefix := "p%d_" % player_index
-		var drop_button = screen.find_child("Bind_%sdrop_weapon" % prefix, true, false) as Button
-		var drop_label = screen.find_child("Label_%sdrop_weapon" % prefix, true, false) as Label
-		if drop_button == null or drop_button.text in ["???", "未绑定"]:
+		var drop_button := screen.find_child("Bind_%sdrop_weapon" % prefix, true, false) as Button
+		var drop_label := screen.find_child("Label_%sdrop_weapon" % prefix, true, false) as Label
+		if drop_button == null or drop_button.text in ["???", "未绑定", "未配置"]:
 			_fail("Player %d drop-weapon binding is unavailable" % player_index)
 		if drop_label == null or drop_label.text != "丢弃武器":
 			_fail("Player %d still exposes the old switch-weapon label" % player_index)
 
-	var collapsed_height: float = content.custom_minimum_size.y
+	var collapsed_height := content.custom_minimum_size.y
 	toggle.button_pressed = true
 	await process_frame
 	if not section.visible:
 		_fail("Player 3/4 section did not expand")
 	if content.custom_minimum_size.y <= collapsed_height:
 		_fail("Expanded keybind content did not grow for scrolling")
-	if not toggle.text.begins_with("▼"):
+	if not toggle.text.begins_with("收起"):
 		_fail("Expanded Player 3/4 control is missing its state indicator")
 
 	toggle.button_pressed = false
 	await process_frame
 	if section.visible:
 		_fail("Player 3/4 section did not collapse again")
-
 	await _finish(screen)
+
 
 func _verify_input_actions() -> void:
 	for player_index in range(1, 5):
@@ -82,6 +83,7 @@ func _verify_input_actions() -> void:
 				_fail("Missing local-player action: %s" % action)
 		if InputMap.has_action("p%d_weapon_cycle" % player_index):
 			_fail("Obsolete weapon-cycle action remains for Player %d" % player_index)
+
 
 func _verify_default_keyboard_conflicts() -> void:
 	var key_owners := {}
@@ -100,6 +102,7 @@ func _verify_default_keyboard_conflicts() -> void:
 				else:
 					key_owners[code] = action
 
+
 func _finish(screen: Node) -> void:
 	if screen and is_instance_valid(screen):
 		screen.queue_free()
@@ -114,6 +117,7 @@ func _finish(screen: Node) -> void:
 	for failure in _failures:
 		print("- ", failure)
 	quit(1)
+
 
 func _fail(message: String) -> void:
 	_failures.append(message)

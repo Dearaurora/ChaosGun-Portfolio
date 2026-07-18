@@ -29,6 +29,11 @@ func _initialize() -> void:
 		_fail("Presentation verifier requires the controller, director, camera, and four characters")
 		_finish()
 		return
+	for item in characters:
+		var character := item as BaseCharacter
+		character.freeze = true
+		character.linear_velocity = Vector3.ZERO
+		character.process_mode = Node.PROCESS_MODE_DISABLED
 
 	var presentation_state := presentation.call("get_debug_state") as Dictionary
 	_expect(bool(presentation_state.get("intro_started", false)), "intro sequence starts after loadouts are ready")
@@ -62,13 +67,15 @@ func _initialize() -> void:
 	camera_state = director.call("get_debug_state") as Dictionary
 	_expect(String(camera_state.get("presentation_mode", "")) == "none", "reveal hands control back to adaptive gameplay framing")
 	_expect(float(camera_state.get("current_size", 0.0)) < 70.0, "reveal visibly settles toward the fight")
+	await _wait_for_cue_state(presentation, ["complete"], 1.8)
 
 	var winner := characters[0] as BaseCharacter
 	var match_config = root.get_node_or_null("MatchConfig")
 	arena.call("_present_match_result", winner, winner.name, match_config.PLAYER_COLORS[0])
 	camera_state = director.call("get_debug_state") as Dictionary
 	_expect(String(camera_state.get("presentation_mode", "")) == "winner_focus", "winner result starts a camera focus move")
-	await create_timer(0.84, true, false, true).timeout
+	await _wait_for_result_handoff(presentation, director, arena, 1.4)
+	await process_frame
 	camera_state = director.call("get_debug_state") as Dictionary
 	_expect(String(camera_state.get("presentation_mode", "")) == "winner_hold", "winner focus settles before the result overlay")
 	_expect(absf(float(camera_state.get("current_size", 0.0)) - 29.5) < 0.1, "winner focus uses the authored close framing")
@@ -82,6 +89,12 @@ func _initialize() -> void:
 	_expect(victory_screen != null and victory_screen.visible, "winner focus hands off to the result screen")
 	_expect(paused, "result screen pauses the finished match")
 	paused = false
+	if current_scene == arena:
+		current_scene = null
+	arena.queue_free()
+	await process_frame
+	await process_frame
+	await physics_frame
 	_finish()
 
 
@@ -113,6 +126,32 @@ func _expect(condition: bool, label: String) -> void:
 func _fail(message: String) -> void:
 	_failures.append(message)
 	push_error(message)
+
+
+func _wait_for_cue_state(presentation: Node, expected_states: Array, timeout_seconds: float) -> void:
+	var deadline_msec := Time.get_ticks_msec() + int(timeout_seconds * 1000.0)
+	while is_instance_valid(presentation) and Time.get_ticks_msec() < deadline_msec:
+		var state := presentation.call("get_debug_state") as Dictionary
+		if String(state.get("cue_state", "")) in expected_states:
+			return
+		await create_timer(0.025, true, false, true).timeout
+
+
+func _wait_for_result_handoff(presentation: Node, director: Node, arena: Node, timeout_seconds: float) -> void:
+	var deadline_msec := Time.get_ticks_msec() + int(timeout_seconds * 1000.0)
+	while is_instance_valid(presentation) and Time.get_ticks_msec() < deadline_msec:
+		var cue_state := presentation.call("get_debug_state") as Dictionary
+		var camera_state := director.call("get_debug_state") as Dictionary
+		var victory_visible := false
+		for child in arena.get_children():
+			if child.has_method("show_victory") and child is CanvasLayer:
+				victory_visible = (child as CanvasLayer).visible
+				break
+		if String(cue_state.get("cue_state", "")) == "result_ready" \
+				and String(camera_state.get("presentation_mode", "")) == "winner_hold" \
+				and victory_visible and paused:
+			return
+		await create_timer(0.025, true, false, true).timeout
 
 
 func _finish() -> void:

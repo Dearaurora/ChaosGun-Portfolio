@@ -312,10 +312,10 @@ func _verify_ringout_hud(arena: Node) -> void:
 		"Avatar/Visor",
 		"PlayerTag",
 		"LifeLabel",
-		"WeaponBox",
-		"WeaponBox/WeaponSilhouette",
-		"WeaponBox/WeaponName",
-		"WeaponBox/AmmoLabel",
+		"InformationDivider",
+		"WeaponSilhouette",
+		"WeaponName",
+		"AmmoLabel",
 	]
 
 	for i in range(4):
@@ -336,14 +336,14 @@ func _verify_ringout_hud(arena: Node) -> void:
 			_fail("%s player tag is empty" % panel_name)
 
 		var life_label = panel.get_node_or_null("LifeLabel") as Label
-		if life_label == null or not life_label.text.contains("LIFE"):
+		if life_label == null or not life_label.text.begins_with("x"):
 			_fail("%s life label should expose stock/life information" % panel_name)
 
-		var weapon_name = panel.get_node_or_null("WeaponBox/WeaponName") as Label
+		var weapon_name = panel.get_node_or_null("WeaponName") as Label
 		if weapon_name == null or weapon_name.text.strip_edges().is_empty():
 			_fail("%s weapon name label is empty" % panel_name)
 
-		var ammo_label = panel.get_node_or_null("WeaponBox/AmmoLabel") as Label
+		var ammo_label = panel.get_node_or_null("AmmoLabel") as Label
 		if ammo_label == null or ammo_label.text.strip_edges().is_empty():
 			_fail("%s ammo label is empty" % panel_name)
 		elif ammo_label.text.contains("AMMO"):
@@ -351,7 +351,7 @@ func _verify_ringout_hud(arena: Node) -> void:
 		elif ammo_label.text != "INF" and not ammo_label.text.contains("/"):
 			_fail("%s ammo label should use current/max count format, got %s" % [panel_name, ammo_label.text])
 
-		var silhouette = panel.get_node_or_null("WeaponBox/WeaponSilhouette") as Control
+		var silhouette = panel.get_node_or_null("WeaponSilhouette") as Control
 		if silhouette == null:
 			_fail("%s weapon silhouette is missing" % panel_name)
 		else:
@@ -360,7 +360,7 @@ func _verify_ringout_hud(arena: Node) -> void:
 			if silhouette.get_child_count() > 0:
 				_fail("%s weapon silhouette should not be assembled from blocky child panels" % panel_name)
 
-		for forbidden in ["WeaponBox/AmmoTrack", "WeaponBox/AmmoFill"]:
+		for forbidden in ["WeaponBox", "AmmoTrack", "AmmoFill"]:
 			if panel.get_node_or_null(forbidden) != null:
 				_fail("%s should not contain progress bar ammo UI: %s" % [panel_name, forbidden])
 
