@@ -10,11 +10,18 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 import build_hero_character_rig_v1 as base
+import hero_character_p29_geometry as p29_geometry
 
 
 SOURCE = ROOT / "assets/source/characters/hero_character_rig_v2.blend"
 RUNTIME = ROOT / "assets/models/generated/characters/hero_character_rig_v2.glb"
 OUT_NEUTRAL = ROOT / "reports/hero_character_rig_v2_neutral.png"
+OUT_TURNAROUND = {
+    "front": ROOT / "reports/hero_character_p29_front.png",
+    "side": ROOT / "reports/hero_character_p29_side.png",
+    "back": ROOT / "reports/hero_character_p29_back.png",
+    "three_quarter": ROOT / "reports/hero_character_p29_three_quarter.png",
+}
 OUT_POSES = {
     "pistol": ROOT / "reports/hero_character_rig_v2_pistol.png",
     "smg": ROOT / "reports/hero_character_rig_v2_smg.png",
@@ -103,39 +110,8 @@ MOTION_PROFILES = {
 }
 
 
-def assign_rigid_weight(obj, bone_name):
-    group = obj.vertex_groups.new(name=bone_name)
-    group.add([vertex.index for vertex in obj.data.vertices], 1.0, "REPLACE")
-
-
-def create_wrist_cuff(suffix, sign, material):
-    forearm_axis = Vector((sign * 0.26, 0.0, -0.48)).normalized()
-    center = Vector((sign * 0.90, -0.006, 1.13))
-    bpy.ops.mesh.primitive_uv_sphere_add(
-        segments=32,
-        ring_count=16,
-        location=center,
-    )
-    cuff = bpy.context.object
-    cuff.name = "HeroWristCuff." + suffix
-    cuff.data.name = "HeroWristCuffMesh." + suffix
-    cuff.rotation_mode = "QUATERNION"
-    cuff.rotation_quaternion = Vector((0.0, 0.0, 1.0)).rotation_difference(forearm_axis)
-    cuff.scale = (0.190, 0.180, 0.110)
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    cuff.data.materials.append(material)
-    for polygon in cuff.data.polygons:
-        polygon.use_smooth = True
-    assign_rigid_weight(cuff, "Forearm." + suffix)
-    return cuff
-
-
 def import_character():
-    body, details, deform_parts = original_import_character()
-    rubber_material = body.data.materials[1]
-    for suffix, sign in (("L", -1.0), ("R", 1.0)):
-        deform_parts.append(create_wrist_cuff(suffix, sign, rubber_material))
-    return body, details, deform_parts
+    return p29_geometry.build_character()
 
 
 def configure_ik_stretch(armature):
@@ -428,15 +404,64 @@ def build_motion_actions(armature):
     return actions
 
 
-original_import_character = base.import_character
-
-
 def configure_base_module():
     base.SOURCE = SOURCE
     base.RUNTIME = RUNTIME
     base.POSES = POSES
     base.import_character = import_character
+    base.assign_manual_weights = p29_geometry.assign_continuous_shell_weights
     base.bake_pose_action = bake_pose_action
+
+
+def aim_preview_camera(camera, location, target, ortho_scale=3.25):
+    camera.location = Vector(location)
+    camera.data.type = "ORTHO"
+    camera.data.ortho_scale = ortho_scale
+    camera.rotation_euler = (Vector(target) - camera.location).to_track_quat("-Z", "Y").to_euler()
+
+
+def setup_p29_render():
+    scene = base.setup_render()
+    scene.render.resolution_x = 1000
+    scene.render.resolution_y = 1000
+    scene.render.resolution_percentage = 100
+    scene.view_settings.look = "AgX - Medium High Contrast"
+    background = scene.world.node_tree.nodes.get("Background")
+    background.inputs["Color"].default_value = (0.76, 0.72, 0.72, 1.0)
+    background.inputs["Strength"].default_value = 0.72
+    floor = bpy.data.objects.get("Plane")
+    if floor is not None:
+        floor.scale = (4.0, 4.0, 4.0)
+        if floor.data.materials:
+            floor.data.materials[0].diffuse_color = (0.70, 0.66, 0.65, 1.0)
+    lights = [obj for obj in scene.objects if obj.type == "LIGHT"]
+    if lights:
+        lights[0].data.energy = 920
+        lights[0].data.color = (1.0, 0.74, 0.58)
+        lights[0].location = (-4.5, -5.5, 7.0)
+    if len(lights) > 1:
+        lights[1].data.energy = 540
+        lights[1].data.color = (0.50, 0.64, 1.0)
+        lights[1].location = (4.5, 1.5, 4.5)
+    return scene
+
+
+def render_turnaround(scene, armature):
+    armature.animation_data.action = bpy.data.actions["neutral"]
+    bpy.context.scene.frame_set(1)
+    bpy.context.view_layer.update()
+    camera = scene.camera
+    views = {
+        "front": ((0.0, -8.0, 1.58), (0.0, 0.0, 1.42)),
+        "side": ((8.0, 0.0, 1.58), (0.0, 0.0, 1.42)),
+        "back": ((0.0, 8.0, 1.58), (0.0, 0.0, 1.42)),
+        "three_quarter": ((5.2, -8.2, 2.35), (0.0, 0.0, 1.42)),
+    }
+    for view_name, (location, target) in views.items():
+        aim_preview_camera(camera, location, target)
+        base.render(scene, OUT_TURNAROUND[view_name])
+    aim_preview_camera(camera, views["three_quarter"][0], views["three_quarter"][1])
+    base.render(scene, OUT_NEUTRAL)
 
 
 def main():
@@ -451,12 +476,10 @@ def main():
 
     base.save_and_export_runtime(armature, body, details, deform_parts)
 
-    scene = base.setup_render()
+    scene = setup_p29_render()
     detached_constraints = base.detach_ik_constraints(armature)
     try:
-        armature.animation_data.action = bpy.data.actions["neutral"]
-        bpy.context.scene.frame_set(1)
-        base.render(scene, OUT_NEUTRAL)
+        render_turnaround(scene, armature)
         for weapon_name, (location, scale, pose_name) in WEAPON_PREVIEWS.items():
             weapon = base.import_weapon(weapon_name, location, scale)
             armature.animation_data.action = bpy.data.actions[pose_name]
