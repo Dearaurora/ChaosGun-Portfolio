@@ -301,11 +301,11 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 			}
 		&"ak_rifle":
 			return {
-				"body_length": 0.72,
-				"body_radius": 0.19,
-				"trail_length": 0.62,
-				"trail_width": 0.15,
-				"trail_alpha": 0.34,
+				"body_length": 0.86,
+				"body_radius": 0.20,
+				"trail_length": 0.82,
+				"trail_width": 0.19,
+				"trail_alpha": 0.42,
 				"shape": "yellow_white_teardrop",
 			}
 		&"sniper":

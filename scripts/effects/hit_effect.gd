@@ -2,6 +2,8 @@ extends Node3D
 class_name HitEffect
 
 const CombatVisualResourceCache = preload("res://scripts/effects/combat_visual_resource_cache.gd")
+const IMPACT_GOLD := Color("#ffc83d")
+const IMPACT_WHITE := Color("#fff8d8")
 
 var _weapon_id: StringName = &"pistol"
 var _color: Color = Color("#ff6b72")
@@ -76,11 +78,12 @@ func _build_visual() -> void:
 		var shard_length := _radius * _elongation * lerpf(0.72, 1.0, center_weight)
 		var shard_reach := _radius * lerpf(0.42, 0.54, center_weight)
 		var shard_scale := Vector3(_radius * lerpf(0.08, 0.12, center_weight), 0.025, shard_length)
+		var shard_color := IMPACT_WHITE if center_weight > 0.45 else IMPACT_GOLD
 		var shard := _add_box(
 			"ImpactShard_%d" % index,
 			shard_direction * shard_reach + Vector3.UP * 0.10,
 			shard_scale,
-			_material(_color, _color, 1.75, 0.80, true)
+			_material(shard_color, shard_color, 1.95, 0.86, true)
 		)
 		shard.basis = Basis.looking_at(shard_direction, Vector3.UP)
 		shard.scale = shard_scale
@@ -92,7 +95,7 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 		&"smg":
 			return {"radius": 0.62, "lifetime": 0.105, "fan_degrees": 28.0, "elongation": 0.76, "shape": &"rapid_chips", "shard_count": 3}
 		&"ak_rifle":
-			return {"radius": 0.96, "lifetime": 0.145, "fan_degrees": 34.0, "elongation": 1.00, "shape": &"directional_slash", "shard_count": 4}
+			return {"radius": 1.10, "lifetime": 0.180, "fan_degrees": 34.0, "elongation": 1.00, "shape": &"directional_slash", "shard_count": 4}
 		&"sniper":
 			return {"radius": 1.28, "lifetime": 0.180, "fan_degrees": 16.0, "elongation": 1.24, "shape": &"pierce_ring", "shard_count": 3, "ring_count": 1}
 		&"gatling":
