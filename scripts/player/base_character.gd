@@ -100,6 +100,10 @@ func _ready() -> void:
 	physics_material_override = mat
 
 func _base_process(delta: float) -> void:
+	# A game-over death exits before assigning a respawn timer. Keep eliminated
+	# characters out of the normal respawn branch on subsequent process frames.
+	if is_game_over:
+		return
 	# 复活倒计时
 	if is_dead:
 		_respawn_timer -= delta

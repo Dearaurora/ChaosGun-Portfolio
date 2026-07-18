@@ -169,6 +169,8 @@ try {
     Get-HashBinding -Name "hero_blend" -RelativePath "assets/source/characters/hero_character_rig_v2.blend"
     Get-HashBinding -Name "p29_builder" -RelativePath "tools/build_hero_character_rig_v2.py"
     Get-HashBinding -Name "p29_geometry" -RelativePath "tools/hero_character_p29_geometry.py"
+    Get-HashBinding -Name "base_character" -RelativePath "scripts/player/base_character.gd"
+    Get-HashBinding -Name "game_over_no_respawn_test" -RelativePath "scripts/tests/game_over_no_respawn_verifier.gd"
     Get-HashBinding -Name "ai_character" -RelativePath "scripts/player/ai_character.gd"
     Get-HashBinding -Name "projectile" -RelativePath "scripts/weapons/projectile.gd"
     Get-HashBinding -Name "open_ringout_slice" -RelativePath "scripts/maps/open_ringout_slice.gd"
@@ -185,6 +187,7 @@ try {
         @{ Name = "character_weapon_readability"; Script = "res://scripts/tests/character_weapon_readability_verifier.gd" },
         @{ Name = "character_combat_feedback"; Script = "res://scripts/tests/character_combat_feedback_verifier.gd" },
         @{ Name = "combat_audio_feedback"; Script = "res://scripts/tests/combat_audio_feedback_verifier.gd" },
+        @{ Name = "game_over_no_respawn"; Script = "res://scripts/tests/game_over_no_respawn_verifier.gd" },
         @{ Name = "ai_point_blank_fire"; Script = "res://scripts/tests/ai_point_blank_fire_verifier.gd" },
         @{ Name = "ai_point_blank_hit"; Script = "res://scripts/tests/ai_point_blank_hit_verifier.gd" },
         @{ Name = "open_ringout_slice"; Script = "res://scripts/tests/open_ringout_slice_verifier.gd" },
