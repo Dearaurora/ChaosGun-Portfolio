@@ -97,7 +97,7 @@ func _initialize() -> void:
 	await _run_timeline()
 	if _failed:
 		return
-	_finish()
+	await _finish()
 
 
 func _configure_slots() -> void:
@@ -382,7 +382,20 @@ func _finish() -> void:
 		_fail("P31 commercial capture contract failed: %s" % JSON.stringify(report))
 		return
 	print("P31_COMMERCIAL_CAPTURE_PASS|attempt=%d|shot=%s|hit=%s|fall=%s|duration=%.2f" % [report["attempt"], _shot_fired, _hit_seen, _fall_seen, CLIP_SECONDS])
+	await _release_capture_scene()
 	quit(0)
+
+
+func _release_capture_scene() -> void:
+	# Movie Writer may still own active pickup/impact tweens on the authored end
+	# frame. Release the production scene outside the five-second edit before quit.
+	paused = false
+	current_scene = null
+	if _arena and is_instance_valid(_arena):
+		_arena.queue_free()
+	for _frame_index in range(4):
+		await process_frame
+	RenderingServer.force_sync()
 
 
 func _save_viewport_png(path: String) -> bool:

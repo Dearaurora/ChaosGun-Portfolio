@@ -62,7 +62,7 @@ func _initialize() -> void:
 		_observe()
 		if _failed:
 			return
-	_finish()
+	await _finish()
 
 
 func _configure_slots() -> void:
@@ -141,6 +141,13 @@ func _finish() -> void:
 		_fail("P31 production match-tail contract failed: %s" % JSON.stringify(report))
 		return
 	print("P31_MATCH_TAIL_PASS|winner_focus=%s|result_ui=%s" % [_winner_focus_seen, _result_ui_seen])
+	paused = false
+	current_scene = null
+	if _arena and is_instance_valid(_arena):
+		_arena.queue_free()
+	for _frame_index in range(4):
+		await process_frame
+	RenderingServer.force_sync()
 	quit(0)
 
 
