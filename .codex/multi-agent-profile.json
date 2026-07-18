@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "project": "ChaosGun",
+  "engine": "Godot 4.6.2",
+  "max_concurrency": 3,
+  "max_escalations": 2,
+  "cost_strategy": "value_per_cost",
+  "roles": {
+    "art-director": {
+      "base_tier": 3,
+      "read_only_by_default": true,
+      "validation": [
+        "Compare fixed panorama, combat, winner, pause, and result evidence against the frozen visual contract"
+      ]
+    },
+    "godot-engineer": {
+      "base_tier": 2,
+      "validation": [
+        "Run the narrow affected Godot verifier",
+        "Run a clean headless editor import and parse scan"
+      ]
+    },
+    "asset-engineer": {
+      "base_tier": 1,
+      "validation": [
+        "Run Blender round-trip verification",
+        "Run the Godot asset verifier",
+        "Capture fixed-view evidence when appearance changes"
+      ]
+    },
+    "visual-qa": {
+      "base_tier": 3,
+      "read_only_by_default": true,
+      "validation": [
+        "Score direction fit, forbidden motifs, silhouette, material, contact, and hierarchy from raw screenshots"
+      ]
+    },
+    "test-runner": {
+      "base_tier": 0,
+      "read_only_by_default": true,
+      "validation": [
+        "Report the first reproducible failure with exact command and log location"
+      ]
+    },
+    "mechanical-worker": {
+      "base_tier": 1,
+      "validation": [
+        "Run only the frozen task's specified tests and report changed files"
+      ]
+    }
+  },
+  "protected_interfaces": [
+    "VictoryScreen.show_victory(...)",
+    "RingoutHUD.camera_occlusion_rects()",
+    "HUD data inputs",
+    "pause and restart flow",
+    "character GLB runtime path",
+    "15 character bone names",
+    "31 character action names",
+    "weapon and muzzle anchors"
+  ],
+  "forbidden": [
+    "Do not change weapon balance, character collision, map topology, spawn rules, or auto-aim unless explicitly requested",
+    "Do not reinterpret accepted visual direction during bounded implementation",
+    "Do not add overlay patches to hide defects in the P29 character shell",
+    "Do not replace single-layer clouds with stacked shadow layers",
+    "Do not replace yellow-white teardrop projectiles with cone projectiles",
+    "Do not stage, revert, or modify unrelated dirty work"
+  ],
+  "excluded_write_paths": [
+    "reports/",
+    ".godot/",
+    "_worktrees/",
+    "assets/models/generated/momentum_circuit/",
+    "assets/models/generated/twin_bays_splash_arena/",
+    "assets/source/momentum_circuit/",
+    "assets/source/twin_bays_splash_arena/"
+  ],
+  "evidence_paths": {
+    "screenshots": "reports/",
+    "art_reviews": "docs/art-direction/",
+    "workflow": "docs/workflow/"
+  },
+  "milestones": {
+    "P29": {
+      "objective": "Production character base mesh acceptance and freeze",
+      "required_evidence": [
+        "front",
+        "side",
+        "back",
+        "three-quarter",
+        "six weapon contact views",
+        "Godot runtime view"
+      ]
+    },
+    "P30": {
+      "objective": "Full-frame color, material, and lighting hierarchy",
+      "required_evidence": [
+        "panorama",
+        "combat close-up",
+        "winner close-up"
+      ]
+    },
+    "P31": {
+      "objective": "Five-second commercial gameplay sample and freeze",
+      "required_evidence": [
+        "entry",
+        "movement",
+        "pickup",
+        "firefight",
+        "knockback",
+        "fall",
+        "winner",
+        "result"
+      ]
+    }
+  },
+  "default_validation": [
+    "Run the smallest verifier that proves the changed behavior",
+    "Inspect git diff for scope violations",
+    "Require visual evidence for visual changes"
+  ]
+}

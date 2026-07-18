@@ -4,6 +4,7 @@ param(
 
     [string]$Profile = "ringout_push",
     [string]$NotesPath = "",
+    [string]$WindowResolution = "960x540",
     [switch]$DryRun
 )
 
@@ -90,6 +91,8 @@ if (-not (Test-Path -LiteralPath $profilePath)) {
 $notesFile = New-LivePlayNotes -ProfilePath $profilePath -TargetPath $NotesPath
 
 $args = @(
+    "--windowed",
+    "--resolution", $WindowResolution,
     "--path", $projectPath,
     "-s", "res://scripts/playtest/commercial_slice_playtest_boot.gd",
     "--",

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "project": "ChaosGun",
+  "baseline_commit": "27964ca",
+  "branch": "codex/art-vertical-slice-v2",
+  "critical_path": "Open Ring-Out P29-P31 commercial slice",
+  "staging_policy": {
+    "allow_git_add_all": false,
+    "require_explicit_paths": true,
+    "require_clean_checkout_validation": true,
+    "reports_are_evidence_only": true
+  },
+  "work_packages": {
+    "ai_point_blank": {
+      "owner": "godot-engineer",
+      "paths": [
+        "scripts/player/ai_character.gd",
+        "scripts/tests/ai_point_blank_fire_verifier.gd",
+        "scripts/tests/ai_point_blank_hit_verifier.gd"
+      ]
+    },
+    "p29_character": {
+      "owner": "asset-engineer",
+      "paths": [
+        "tools/hero_character_p29_geometry.py",
+        "tools/build_hero_character_rig_v2.py",
+        "assets/source/characters/hero_character_rig_v2.blend",
+        "assets/models/generated/characters/hero_character_rig_v2.glb"
+      ]
+    },
+    "release_gates": {
+      "owner": "mechanical-worker",
+      "paths": [
+        "scripts/tests/run_commercial_slice_release_validation.ps1",
+        "docs/art-direction/commercial-slice-freeze-manifest.json"
+      ]
+    },
+    "test_launch_policy": {
+      "owner": "godot-engineer",
+      "paths": [
+        ".agents/rules/godot.md",
+        "scripts/playtest/launch_commercial_slice_playtest.ps1"
+      ],
+      "forbidden_paths": [
+        "project.godot"
+      ]
+    }
+  },
+  "quarantined_work": [
+    "assets/models/generated/momentum_circuit/**",
+    "assets/models/generated/twin_bays_splash_arena/**",
+    "assets/source/momentum_circuit/**",
+    "assets/source/twin_bays_splash_arena/**",
+    "assets/textures/generated/momentum_circuit/**",
+    "assets/textures/generated/twin_bays_splash_arena/**",
+    "resources/maps/**",
+    "scenes/maps/momentum_circuit_*.tscn",
+    "scenes/maps/twin_bays_*.tscn",
+    "scripts/maps/momentum_circuit_*.gd",
+    "scripts/maps/twin_bays_*.gd",
+    "tools/*momentum_circuit*",
+    "tools/*twin_bays*"
+  ],
+  "protected_interfaces": [
+    "VictoryScreen.show_victory(...) ",
+    "RingoutHUD.camera_occlusion_rects()",
+    "character GLB runtime path",
+    "15 character bone names",
+    "31 character action names",
+    "weapon and muzzle anchors"
+  ]
+}
