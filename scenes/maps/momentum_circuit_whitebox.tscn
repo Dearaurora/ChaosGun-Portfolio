@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/maps/momentum_circuit_whitebox.gd" id="1_map"]
+[ext_resource type="Script" uid="uid://dwlowsr7w2nod" path="res://scripts/weapons/weapon_spawner.gd" id="2_spawner"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="3_pause"]
+
+[node name="MomentumCircuitWhiteboxArena" type="Node3D"]
+script = ExtResource("1_map")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-52, -28, 0)
+light_color = Color(0.968627, 0.960784, 0.94902, 1)
+light_energy = 0.51
+shadow_enabled = true
+shadow_blur = 3.0
+
+[node name="GlobalCamera" type="Camera3D" parent="."]
+position = Vector3(0, 82.915204, 57.357644)
+rotation_degrees = Vector3(-55, 0, 0)
+projection = 1
+current = true
+size = 81.92
+
+[node name="WeaponSpawner" type="Node" parent="."]
+script = ExtResource("2_spawner")
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("3_pause")

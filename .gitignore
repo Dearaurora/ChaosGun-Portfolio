@@ -1,6 +1,8 @@
 # Godot 4 .gitignore
 .godot/
 *.import
+!assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_foreground.glb.import
+!assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_hero_kit.glb.import
 export_presets.cfg
 *.translation
 *.uid
@@ -31,6 +33,8 @@ reports/
 /tools/__pycache__/
 *.pyc
 /assets/models/generated/sunset_toy_sky_islands/open_ringout_v2_preview_*.png
+/assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_foreground_tbsa_*.png
+/assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_hero_kit_tbsa_*.png
 
 # Local design-session artifacts
 /.superpowers/

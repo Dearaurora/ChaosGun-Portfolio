@@ -1,0 +1,60 @@
+{
+  "schema": "chaos_gun.momentum_circuit_production",
+  "version": 1,
+  "layout_path": "res://resources/maps/momentum_circuit_layout_v1.json",
+  "visual_reference": {
+    "selected_path": "res://docs/art-direction/references/momentum_circuit/momentum_circuit_gravity_side_swap_selected.png",
+    "selected_sha256": "83B18F031FC11A35AB204B3FD23ECE21F66AF5338AB7F701774D608D27CDA2B8",
+    "cloud_vortex_path": "res://docs/art-direction/references/momentum_circuit/momentum_circuit_gravity_side_swap_cloud_vortex.png",
+    "cloud_vortex_sha256": "07C82B612914B1B1F686C2D4C1091D2432338AD0BE464499452A65080B215606"
+  },
+  "gravity": {
+    "corridor_x_min": 2.0,
+    "corridor_y_min": -4.0,
+    "corridor_y_max": 7.0,
+    "axis_world": [1.0, 0.0, 0.0],
+    "warning_seconds": 1.25,
+    "active_seconds": 4.0,
+    "reversing_seconds": 0.65,
+    "recovery_seconds": 0.75,
+    "global_guard_seconds": 0.75,
+    "node_cooldown_seconds": 8.0,
+    "acceleration": 28.0,
+    "max_field_axis_speed": 18.0,
+    "initial_direction": 1
+  },
+  "anchors": {
+    "outer_radius": 5.5,
+    "core_radius": 2.75,
+    "brake_seconds": 0.45
+  },
+  "camera": {
+    "profile_id": "momentum_circuit",
+    "map_focus": [0.0, 1.0, -2.0],
+    "view_offset": [0.0, 49.068444, 64.0],
+    "initial_size": 84.0,
+    "idle_overview_size": 88.0,
+    "min_size": 56.0,
+    "max_size": 104.0,
+    "playable_min": [-48.0, -46.0],
+    "playable_max": [48.0, 43.0],
+    "focus_min": [-39.0, -37.0],
+    "focus_max": [39.0, 34.0],
+    "track_min_y": -2.0,
+    "world_frame_padding": 7.0,
+    "character_screen_radius": 3.2,
+    "screen_edge_gutter": 20.0,
+    "fallback_viewport": [1280.0, 720.0]
+  },
+  "weapons": {
+    "initial_delay": 20.0,
+    "stay_duration": 30.0,
+    "respawn_cooldown": 10.0,
+    "max_active_pickups": 1,
+    "spawn_pool": ["smg", "ak_rifle", "shotgun", "gatling", "sniper"]
+  },
+  "cloud_vortex": {
+    "upper_angular_speed": 0.003,
+    "lower_angular_speed": -0.008
+  }
+}

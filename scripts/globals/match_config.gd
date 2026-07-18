@@ -10,10 +10,10 @@ var slots: Array = [SlotType.HUMAN, SlotType.AI, SlotType.EMPTY, SlotType.EMPTY]
 
 ## 玩家颜色
 var PLAYER_COLORS: Array = [
-	Color(0.2, 0.45, 1.0),    # P1 蓝
-	Color(1.0, 0.4, 0.25),    # P2 橙
-	Color(0.3, 0.85, 0.4),    # P3 绿
-	Color(0.9, 0.3, 0.8),     # P4 紫
+	Color("#ef3f3f"), # P1 红
+	Color("#78d23d"), # P2 绿
+	Color("#24a9e8"), # P3 青
+	Color("#f2bf27"), # P4 黄
 ]
 
 ## 四名本地玩家的输入前缀映射
@@ -22,7 +22,6 @@ var INPUT_PREFIXES: Array = ["p1_", "p2_", "p3_", "p4_"]
 ## 可选地图列表 [显示名, 场景路径]
 var MAPS: Array = [
 	["Open Ring-Out Slice", "res://scenes/maps/open_ringout_slice.tscn"],
-	["Twin Bays Splash Arena", "res://scenes/maps/twin_bays_splash_arena.tscn"],
 ]
 
 ## 当前选择的地图索引

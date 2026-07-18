@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/maps/twin_bays_whitebox.gd" id="1_map"]
+[ext_resource type="Script" uid="uid://dwlowsr7w2nod" path="res://scripts/weapons/weapon_spawner.gd" id="2_spawner"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="3_pause"]
+
+[node name="TwinBaysWhiteboxArena" type="Node3D"]
+script = ExtResource("1_map")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.882948, -0.357824, 0.303148, 0, 0.64679, 0.762668, -0.469472, -0.67342, 0.571078, 0, 80, 0)
+shadow_enabled = true
+shadow_blur = 2.0
+
+[node name="GlobalCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5396661, 0.841879, 0, -0.841879, 0.5396661, 0.5, 100, 64)
+projection = 1
+current = true
+size = 83.75
+
+[node name="WeaponSpawner" type="Node" parent="."]
+script = ExtResource("2_spawner")
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("3_pause")

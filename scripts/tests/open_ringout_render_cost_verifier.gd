@@ -117,7 +117,11 @@ func _fail(message: String) -> void:
 
 func _finish() -> void:
 	if _arena and is_instance_valid(_arena):
+		current_scene = null
 		_arena.queue_free()
+		_arena = null
+	await process_frame
+	await physics_frame
 	await process_frame
 	print("\n==================================================")
 	if _failures.is_empty():

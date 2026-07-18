@@ -145,18 +145,18 @@ func _build_map_layout() -> void:
 	art_root.name = ART_ROOT_NAME
 	add_child(art_root)
 
-	var deck_mat = _material(Color("#c7a47a"), 0.95, 0.07)
-	var deck_alt_mat = _material(Color("#d7c094"), 0.95, 0.07)
-	var bridge_mat = _material(Color("#ad7b57"), 0.92, 0.07)
-	var cliff_mat = _material(Color("#4d4f76"), 0.98, 0.06)
-	var dark_cliff_mat = _material(Color("#2e3154"), 0.98, 0.04)
-	var cover_orange_mat = _material(Color("#dc7a2c"), 0.86, 0.16)
-	var cover_yellow_mat = _material(Color("#d4b944"), 0.90, 0.12)
-	var cover_red_mat = _material(Color("#c7493b"), 0.88, 0.14)
-	var cover_tan_mat = _material(Color("#d8b47b"), 0.92, 0.10)
-	var metal_mat = _material(Color("#8f9690"), 0.58, 0.18)
+	var deck_mat = _material(Color("#cda46a"), 0.95, 0.07)
+	var deck_alt_mat = _material(Color("#dcbe85"), 0.95, 0.07)
+	var bridge_mat = _material(Color("#9e7255"), 0.92, 0.07)
+	var cliff_mat = _material(Color("#4a3e79"), 0.98, 0.06)
+	var dark_cliff_mat = _material(Color("#2d2859"), 0.98, 0.04)
+	var cover_orange_mat = _material(Color("#bf6632"), 0.86, 0.16)
+	var cover_yellow_mat = _material(Color("#c4a13e"), 0.90, 0.12)
+	var cover_red_mat = _material(Color("#af4650"), 0.88, 0.14)
+	var cover_tan_mat = _material(Color("#d4ad69"), 0.92, 0.10)
+	var metal_mat = _material(Color("#7d899c"), 0.58, 0.18)
 	var water_mat = _abyss_gradient_material()
-	var glow_mat = _emissive_material(Color(1.0, 0.42, 0.08, 0.86), Color("#ff8128"), 1.25)
+	var glow_mat = _emissive_material(Color(0.96, 0.72, 0.28, 0.72), Color("#f0b650"), 0.84)
 
 	_spawn_abyss_plane("AbyssPlane", Vector3(0, -30.0, 0), Vector2(420, 380), abyss_root, water_mat)
 	_build_abyss_clouds(abyss_root)
@@ -245,6 +245,7 @@ func _configure_map_runtime() -> void:
 
 func _apply_map_visual_overrides() -> void:
 	_ensure_sunset_sky_backplate()
+	_apply_authored_material_color_overrides()
 	var camera = get_node_or_null("GlobalCamera") as Camera3D
 	if camera:
 		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -256,15 +257,15 @@ func _apply_map_visual_overrides() -> void:
 
 	var light = get_node_or_null("DirectionalLight3D") as DirectionalLight3D
 	if light:
-		light.light_color = Color("#ffd0a0")
+		light.light_color = Color("#ffe0b8")
 		light.light_energy = 1.08
 		light.shadow_enabled = true
-		light.shadow_blur = 1.65
-		light.shadow_opacity = 0.76
+		light.shadow_blur = 1.28
+		light.shadow_opacity = 0.86
 		light.rotation_degrees = Vector3(-52, 34, 0)
 
-	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#e7aab8"), 0.10, 82.0)
-	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#91b6ff"), 0.44, 100.0)
+	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#8998d7"), 0.18, 82.0)
+	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#9fc8ff"), 0.58, 100.0)
 
 	var env_node = get_node_or_null("WorldEnvironment") as WorldEnvironment
 	if env_node == null:
@@ -275,10 +276,10 @@ func _apply_map_visual_overrides() -> void:
 	var env = Environment.new()
 	var sky = Sky.new()
 	var sky_mat = ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color("#414f91")
-	sky_mat.sky_horizon_color = Color("#d78aa6")
-	sky_mat.ground_bottom_color = Color("#293b78")
-	sky_mat.ground_horizon_color = Color("#c77e9b")
+	sky_mat.sky_top_color = Color("#354889")
+	sky_mat.sky_horizon_color = Color("#6978b7")
+	sky_mat.ground_bottom_color = Color("#252c67")
+	sky_mat.ground_horizon_color = Color("#5664a0")
 	sky.sky_material = sky_mat
 	env.background_mode = Environment.BG_CANVAS
 	env.background_canvas_max_layer = -1
@@ -287,25 +288,68 @@ func _apply_map_visual_overrides() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_exposure = 0.77
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.08
+	env.adjustment_contrast = 1.02
 	env.adjustment_saturation = 1.10
-	env.adjustment_brightness = 1.0
+	env.adjustment_brightness = 0.98
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("#aaa1cf")
+	env.ambient_light_color = Color("#7f8dcd")
 	env.ambient_light_energy = 0.18
 	env.fog_enabled = true
-	env.fog_light_color = Color("#b28fbd")
-	env.fog_density = 0.0012
-	env.fog_sun_scatter = 0.22
+	env.fog_light_color = Color("#7787bf")
+	env.fog_density = 0.0009
+	env.fog_sun_scatter = 0.14
 	env.ssao_enabled = true
-	env.ssao_radius = 0.95
-	env.ssao_intensity = 1.10
-	env.ssao_power = 1.45
+	env.ssao_radius = 0.82
+	env.ssao_intensity = 1.25
+	env.ssao_power = 1.60
 	env.glow_enabled = true
-	env.glow_intensity = 0.34
-	env.glow_strength = 0.76
-	env.glow_bloom = 0.05
+	env.glow_intensity = 0.30
+	env.glow_strength = 0.58
+	env.glow_bloom = 0.0
 	env_node.environment = env
+
+func _apply_authored_material_color_overrides() -> void:
+	var visual_root = get_node_or_null("OpenRingoutBlenderVisuals/%s" % SUNSET_V2_VISUAL_ROOT_NAME)
+	if visual_root == null:
+		return
+	_tint_authored_materials(
+		visual_root,
+		[
+			"V2CentralTop",
+			"V2CentralTopInset",
+			"V10CentralFloorTile_",
+			"V10CentralLobeTile_",
+			"V3NorthIslandTop",
+			"V3EastIslandTop",
+			"V3SouthIslandTop",
+			"V3WestIslandTop",
+		],
+		Color("#d8bb7c")
+	)
+	_tint_authored_materials(
+		visual_root,
+		["V2CentralCliff", "V7CentralCliffShoulder", "V3NorthIslandCliff", "V3EastIslandCliff", "V3SouthIslandCliff", "V3WestIslandCliff"],
+		Color("#66558e")
+	)
+	_tint_authored_materials(
+		visual_root,
+		["V2CentralWarmBand", "V2CentralEdgeRim_", "V2CentralEdgeGem_"],
+		Color("#d6ad55")
+	)
+
+func _tint_authored_materials(root: Node, prefixes: Array[String], tint: Color) -> void:
+	if root is MeshInstance3D:
+		var mesh_instance = root as MeshInstance3D
+		for prefix in prefixes:
+			if not String(mesh_instance.name).begins_with(prefix):
+				continue
+			for surface_index in range(mesh_instance.get_surface_override_material_count()):
+				var material = mesh_instance.get_active_material(surface_index) as BaseMaterial3D
+				if material:
+					material.albedo_color = tint
+			break
+	for child in root.get_children():
+		_tint_authored_materials(child, prefixes, tint)
 
 func _ensure_sunset_sky_backplate() -> void:
 	if _sunset_sky_backplate and is_instance_valid(_sunset_sky_backplate):
@@ -329,7 +373,7 @@ func _ensure_sunset_sky_backplate() -> void:
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	backdrop.texture = texture
-	backdrop.modulate = Color(0.88, 0.90, 0.96, 1.0)
+	backdrop.modulate = Color(0.78, 0.84, 0.98, 1.0)
 	layer.add_child(backdrop)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_sunset_sky_backplate = layer

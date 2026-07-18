@@ -1,0 +1,2 @@
+# Blender authoring sources are rebuilt explicitly by tools/rebuild_twin_bays_splash_arena.ps1.
+# Godot consumes only the generated GLBs under assets/models/generated.

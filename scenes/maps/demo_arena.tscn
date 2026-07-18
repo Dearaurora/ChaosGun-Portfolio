@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://dma2j2p6lyxxy"]
 
 [ext_resource type="PackedScene" uid="uid://cxab3qykk26e4" path="res://scenes/characters/player.tscn" id="1_test_player"]
-[ext_resource type="PackedScene" uid="uid://bfs0o836ofdtd" path="res://scenes/characters/ai_character.tscn" id="2_ai"]
+[ext_resource type="PackedScene" path="res://scenes/characters/ai_character.tscn" id="2_ai"]
 [ext_resource type="Script" uid="uid://dwlowsr7w2nod" path="res://scripts/weapons/weapon_spawner.gd" id="3_spawner"]
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="4_pause"]
 [ext_resource type="Script" path="res://scripts/maps/demo_arena.gd" id="5_arena"]

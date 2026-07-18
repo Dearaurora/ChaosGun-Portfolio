@@ -1,0 +1,265 @@
+{
+  "asset": "Twin Bays Splash Arena",
+  "schema": "chaos_gun.generated_environment_manifest",
+  "version": 1,
+  "generated_at_utc": "2026-07-18T09:53:52.752200+00:00",
+  "generator": "tools/build_twin_bays_splash_arena.py",
+  "generator_sha256": "19ac9729c238948480ffcc52dfebb89e81bdf7f4f88a29a9c759c468746e5915",
+  "layout": "resources/maps/twin_bays_layout_v1.json",
+  "layout_schema": "chaos_gun.twin_bays_layout",
+  "layout_version": 1,
+  "layout_sha256": "ea69b591ae88df766967596a18dacbcaff047c07e65b41fc008330f5e94a0227",
+  "coordinate_conversion": "Godot(x,y,z) -> Blender(x,-z,y); glTF export_yup=true",
+  "outputs": {
+    "blend": "assets/source/twin_bays_splash_arena/twin_bays_splash_arena.blend",
+    "hero_glb": "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_hero_kit.glb",
+    "foreground_glb": "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_foreground.glb",
+    "hero_preview": "docs/art-direction/previews/twin_bays_splash_arena_hero_kit.png",
+    "foreground_preview": "docs/art-direction/previews/twin_bays_splash_arena_foreground.png"
+  },
+  "output_sha256": {
+    "blend": "9b111543bef403bf4314260d371bbf2f65585a973a90cf8b8ee3390fbc38cee3",
+    "hero_glb": "ec9f2dabde4033919eec22b936eccf0bd8b4546159ba2bfa00b82f64171adfb5",
+    "foreground_glb": "1c782a57f3da7e24dacbb881b44e35b58bc510fcb019de549fec02b6a5b10c40",
+    "hero_preview": "99a57cf5419adca138769f334211f91f77576c1412f8ff39347887e184314963",
+    "foreground_preview": "8c11af0da5eff72ce2aec3d607e492354dc2dda1d022a93fc2810a648b3e9964"
+  },
+  "palette": {
+    "dry_cream": "#F4EFE7",
+    "cyan": "#4FC5D8",
+    "coral": "#FF8F82",
+    "safety_yellow": "#FFD54A",
+    "pickup_orange": "#FF8A3D",
+    "portal_cyan": "#36D9FF"
+  },
+  "support_colors": {
+    "cyan_dark": "#178DA8",
+    "portal_recess": "#176E88"
+  },
+  "pbr_texture_sets": {
+    "coral": {
+      "resolution": 1024,
+      "uv_world_scale": 10.0,
+      "surface_style": "broad_soft_padding",
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_coral_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_coral_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_coral_roughness.png"
+      },
+      "sha256": {
+        "albedo": "fdaf3df21213188c6f1b23091d937ec469270a9ef53343db9e2706e57aedcadd",
+        "normal": "046885fbfe7d0112f12541e94db24c36f26bde33210f6045554981c04aac3abc",
+        "roughness": "457f17aefa4ac3c520365f95ce86261c435ad13bbd9c87433621f4783211be49"
+      }
+    },
+    "cyan": {
+      "resolution": 1024,
+      "uv_world_scale": 8.0,
+      "surface_style": "clean_aqua_tile",
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_roughness.png"
+      },
+      "sha256": {
+        "albedo": "f0d3bdd41dbae0160b8702257a97db32926999cee793bf549fbe9a175d6c412a",
+        "normal": "712a9741c92c17c41c2eb14d65895f5a337f69e9337e5db0772294f4e66a039a",
+        "roughness": "94dcaf6f567b0736a842805bb486940b4a702b64bc3d8c1e32f2f5ceb35be414"
+      }
+    },
+    "cyan_dark": {
+      "resolution": 1024,
+      "uv_world_scale": 9.0,
+      "surface_style": "clean_structural_side_tile",
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_dark_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_dark_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_dark_roughness.png"
+      },
+      "sha256": {
+        "albedo": "c7b873db7c04818fa41cda1de70f2bb193ea51e4e764e71dc85c854e2a5260d9",
+        "normal": "7175a7d6852ec5edd0ea6bcbf34a21c1a32d5e2ef92c94c42b9ecad2e8b3804e",
+        "roughness": "7e9101f11cac719b3a681700927c286c4b6a101a88c33fa658d2a1fa75ba787a"
+      }
+    },
+    "dry_cream": {
+      "resolution": 2048,
+      "uv_world_scale": 16.0,
+      "surface_style": "dry_large_resin_tile",
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_dry_cream_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_dry_cream_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_dry_cream_roughness.png"
+      },
+      "sha256": {
+        "albedo": "604044ed45324ed52a32b7d4d209ef3fc6a107f18b3a9ae2a827dfeec80de25f",
+        "normal": "343865d0caf234160fd3a7f5cfda2d0926dc04ba62f753d227d7696125afaefc",
+        "roughness": "e1077bec9fd41a07f4fac48953c094fa27b135039d48fbcaf0302e79da465e65"
+      }
+    }
+  },
+  "material_count": 8,
+  "materials": [
+    "TBSA_CoralSoft",
+    "TBSA_Cyan",
+    "TBSA_CyanDark",
+    "TBSA_DryCream",
+    "TBSA_PickupOrange",
+    "TBSA_PortalCyan",
+    "TBSA_PortalRecess",
+    "TBSA_SafetyYellow"
+  ],
+  "hero_kit": {
+    "mesh_objects": 8,
+    "semantic_anchors": 5,
+    "triangles": 4156,
+    "materials": [
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_PickupOrange",
+      "TBSA_PortalCyan",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow"
+    ]
+  },
+  "production_foreground": {
+    "mesh_objects": 7,
+    "semantic_anchors": 33,
+    "triangles": 25124,
+    "materials": [
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_PickupOrange",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow"
+    ]
+  },
+  "editable_source": {
+    "hero_kit": {
+      "mesh_objects": 14,
+      "semantic_anchors": 5,
+      "triangles": 4156,
+      "materials": [
+        "TBSA_CoralSoft",
+        "TBSA_Cyan",
+        "TBSA_CyanDark",
+        "TBSA_DryCream",
+        "TBSA_PickupOrange",
+        "TBSA_PortalCyan",
+        "TBSA_PortalRecess",
+        "TBSA_SafetyYellow"
+      ]
+    },
+    "production_foreground": {
+      "mesh_objects": 40,
+      "semantic_anchors": 33,
+      "triangles": 25124,
+      "materials": [
+        "TBSA_CoralSoft",
+        "TBSA_Cyan",
+        "TBSA_CyanDark",
+        "TBSA_DryCream",
+        "TBSA_PickupOrange",
+        "TBSA_PortalRecess",
+        "TBSA_SafetyYellow"
+      ]
+    }
+  },
+  "export_consolidation": {
+    "hero_source_meshes": 14,
+    "hero_export_meshes": 8,
+    "foreground_source_meshes": 40,
+    "foreground_export_meshes": 7,
+    "foreground_mesh_reduction": 0.825
+  },
+  "semantic_anchors": [
+    "Anchor_CausewaySafeVisual",
+    "Anchor_EastCausewayCube",
+    "Anchor_EastNorthCoverFar",
+    "Anchor_EastNorthCoverOuter",
+    "Anchor_EastNorthOuterWall_00",
+    "Anchor_EastNorthOuterWall_03",
+    "Anchor_EastSouthCoverFar",
+    "Anchor_EastSouthCoverOuter",
+    "Anchor_EastSouthOuterWall_04",
+    "Anchor_ExitMarker_left_portal",
+    "Anchor_ExitMarker_right_portal",
+    "Anchor_HeroCover",
+    "Anchor_HeroDryFloor",
+    "Anchor_HeroPickup",
+    "Anchor_HeroPortalOpening",
+    "Anchor_HeroWall",
+    "Anchor_LeftPortal",
+    "Anchor_LeftPortalPipe",
+    "Anchor_Platform",
+    "Anchor_RightPortal",
+    "Anchor_RightPortalPipe",
+    "Anchor_SpecialPickupCenter",
+    "Anchor_WestCausewayCube",
+    "Anchor_WestNorthCoverFar",
+    "Anchor_WestNorthCoverOuter",
+    "Anchor_WestNorthOuterWall_00",
+    "Anchor_WestNorthOuterWall_03",
+    "Anchor_WestSouthCoverFar",
+    "Anchor_WestSouthCoverOuter",
+    "Anchor_WestSouthOuterWall_04",
+    "Anchor_YellowPickupNorthEast",
+    "Anchor_YellowPickupNorthWest",
+    "Anchor_YellowPickupSouthEast",
+    "Anchor_YellowPickupSouthWest",
+    "Anchor_spawn_north_east",
+    "Anchor_spawn_north_west",
+    "Anchor_spawn_south_east",
+    "Anchor_spawn_south_west"
+  ],
+  "geometry_audit": {
+    "outline_simple": true,
+    "production_outline_simple": true,
+    "production_outline_covers_safe_collision": true,
+    "portal_mouths_mounted_on_platform": true,
+    "portal_mouth_platform_min_inset": 0.305177,
+    "portal_mouth_platform_max_inset": 0.305177,
+    "wall_pipe_min_clearance": 1.963492,
+    "south_wall_boundary_max_gap": 0.0,
+    "portal_aperture_min_clearance": 0.220999,
+    "portal_normal_min_alignment": 1.0,
+    "pipe_min_bend_radius": 9.894314,
+    "causeway_overlap_area": 0.0,
+    "trim_blocker_min_clearance": 0.408923,
+    "trim_path_count": 4,
+    "dynamic_envelope": {
+      "ring_scale_multiplier": 0.88,
+      "ring_pulse_amplitude": 0.018,
+      "foam_outer_radius_multiplier": 1.12,
+      "foam_pulse_amplitude": 0.026,
+      "inner_foam_outer_radius_multiplier": 1.04,
+      "core_scale_multiplier": 0.92
+    }
+  },
+  "contracts": {
+    "visual_only": true,
+    "collision_in_glb": false,
+    "camera_in_glb": false,
+    "light_in_glb": false,
+    "character_in_glb": false,
+    "weapon_in_glb": false,
+    "dynamic_portal_ring_in_glb": false,
+    "floor_water_marks": false,
+    "structure_frozen": true,
+    "pbr_texture_families": [
+      "coral",
+      "cyan",
+      "cyan_dark",
+      "dry_cream"
+    ],
+    "editable_blend_unbatched": true,
+    "export_static_batched_by_material": true,
+    "causeway_visual_width": 16.0,
+    "safety_trim_visible_width": 0.38,
+    "safety_trim_lift": 0.02
+  }
+}
