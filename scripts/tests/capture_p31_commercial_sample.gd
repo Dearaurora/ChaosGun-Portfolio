@@ -13,11 +13,11 @@ const START_FRAME := 24
 const CAMERA_PUSH_START_FRAME := 48
 const CAMERA_PUSH_END_FRAME := 120
 const PICKUP_FRAME := 116
-const RETURN_FIRE_FRAME := 138
-const FIRE_FRAME := 150
-const RINGOUT_STAGE_FRAME := 188
-const FORCE_RINGOUT_FRAME := 236
-const END_FRAME := 288
+const RETURN_FIRE_FRAME := 166
+const FIRE_FRAME := 180
+const RINGOUT_STAGE_FRAME := 216
+const FORCE_RINGOUT_FRAME := 260
+const END_FRAME := 294
 
 var _arena: Node3D
 var _characters: Array[BaseCharacter] = []
