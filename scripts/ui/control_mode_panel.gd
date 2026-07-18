@@ -102,8 +102,7 @@ func _set_mode(mode: String) -> void:
 	_refresh()
 
 func _restart_match() -> void:
-	get_tree().paused = false
-	get_tree().reload_current_scene()
+	MatchConfig.restart_current_match(get_tree())
 
 func _refresh() -> void:
 	var current = _current_mode()

@@ -27,6 +27,8 @@ func _initialize() -> void:
 	_verify_strafing_blends_smoothly(visual)
 	_verify_backpedal_blends_against_facing(visual)
 	_verify_idle_decays_smoothly(visual)
+	_verify_turn_anticipation_and_settle(visual)
+	await _verify_weapon_choreography_profiles(visual)
 	await _verify_action_feedback(visual)
 	await _finish(visual)
 
@@ -81,6 +83,8 @@ func _verify_strafing_blends_smoothly(visual: CharacterVisual) -> void:
 	if absf(visual.rotation.z) < 0.035:
 		_fail("Strafe movement should visibly lean the bean model sideways")
 	var motion_debug := visual.call("get_motion_debug") as Dictionary
+	if float(motion_debug.get("locomotion_start_impulse", 0.0)) < 0.50:
+		_fail("Starting movement should create a readable drive impulse")
 	var leg_swing := motion_debug.get("leg_swing", Vector2.ZERO) as Vector2
 	if maxf(absf(leg_swing.x), absf(leg_swing.y)) < 0.012:
 		_fail("Moving hero should alternate its rigged leg pose")
@@ -104,6 +108,9 @@ func _verify_backpedal_blends_against_facing(visual: CharacterVisual) -> void:
 func _verify_idle_decays_smoothly(visual: CharacterVisual) -> void:
 	var before := absf(float(visual.call("get_locomotion_forward_amount")))
 	visual.animate_locomotion(Vector3.ZERO, Vector3.FORWARD, 0.0, 1.0 / 60.0)
+	var stop_debug := visual.call("get_motion_debug") as Dictionary
+	if float(stop_debug.get("locomotion_stop_impulse", 0.0)) < 0.50:
+		_fail("Stopping movement should create a readable settle impulse")
 	var after_one := absf(float(visual.call("get_locomotion_forward_amount")))
 	if after_one <= 0.01:
 		_fail("Idle decay should be smooth, not snap to zero")
@@ -115,6 +122,51 @@ func _verify_idle_decays_smoothly(visual: CharacterVisual) -> void:
 	else:
 		print("OK  idle locomotion decay")
 
+func _verify_turn_anticipation_and_settle(visual: CharacterVisual) -> void:
+	visual.animate_locomotion(Vector3.ZERO, Vector3.FORWARD, 0.0, 1.0 / 60.0)
+	visual.animate_locomotion(Vector3.ZERO, Vector3.RIGHT, 0.0, 1.0 / 60.0)
+	var turn_debug := visual.call("get_motion_debug") as Dictionary
+	var turn_impulse := absf(float(turn_debug.get("turn_anticipation", 0.0)))
+	if turn_impulse < 0.14 or absf(visual.rotation.y) < 0.025:
+		_fail("A sharp facing change should create a short counter-turn impulse")
+	for _i in range(48):
+		visual.animate_locomotion(Vector3.ZERO, Vector3.RIGHT, 0.0, 1.0 / 60.0)
+	var settled_debug := visual.call("get_motion_debug") as Dictionary
+	if absf(float(settled_debug.get("turn_anticipation", 1.0))) > 0.015 or absf(visual.rotation.y) > 0.025:
+		_fail("Turn anticipation should settle cleanly after the facing direction stabilizes")
+	else:
+		print("OK  sharp-turn anticipation and settle")
+
+func _verify_weapon_choreography_profiles(visual: CharacterVisual) -> void:
+	if not visual.has_method("get_fire_profile_debug"):
+		_fail("CharacterVisual must expose deterministic weapon fire profiles")
+		return
+	var smg := visual.call("get_fire_profile_debug", &"smg") as Dictionary
+	var ak := visual.call("get_fire_profile_debug", &"ak_rifle") as Dictionary
+	var sniper := visual.call("get_fire_profile_debug", &"sniper") as Dictionary
+	var gatling := visual.call("get_fire_profile_debug", &"gatling") as Dictionary
+	var shotgun := visual.call("get_fire_profile_debug", &"shotgun") as Dictionary
+	if float(sniper.get("pitch", 0.0)) <= float(ak.get("pitch", 0.0)):
+		_fail("Sniper recoil pitch should exceed the AK profile")
+	if float(ak.get("pitch", 0.0)) <= float(smg.get("pitch", 0.0)):
+		_fail("AK recoil pitch should exceed the SMG profile")
+	if float(shotgun.get("compression", 0.0)) <= float(sniper.get("compression", 0.0)):
+		_fail("Shotgun should use the strongest braced compression pose")
+	if float(gatling.get("recovery", 0.0)) <= float(smg.get("recovery", 0.0)):
+		_fail("Gatling micro-recoil should settle faster than SMG recoil")
+
+	visual.set_weapon_visual(&"smg")
+	await process_frame
+	visual.animate_fire(&"smg")
+	var first_yaw := float((visual.call("get_motion_debug") as Dictionary).get("recoil_yaw", 0.0))
+	visual.animate_fire(&"smg")
+	var second_yaw := float((visual.call("get_motion_debug") as Dictionary).get("recoil_yaw", 0.0))
+	if first_yaw * second_yaw >= 0.0 or absf(second_yaw) < 0.015:
+		_fail("Automatic weapon recoil should alternate a readable lateral impulse")
+	visual.set_weapon_visual(&"sniper")
+	await create_timer(0.24).timeout
+	print("OK  six weapon-specific recoil silhouettes and alternating automatic cadence")
+
 func _verify_action_feedback(visual: CharacterVisual) -> void:
 	if not visual.has_method("animate_fire") or not visual.has_method("animate_respawn") or not visual.has_method("get_motion_debug"):
 		_fail("CharacterVisual must expose fire, respawn, and motion debug feedback")
@@ -124,6 +176,9 @@ func _verify_action_feedback(visual: CharacterVisual) -> void:
 	var fire_debug := visual.call("get_motion_debug") as Dictionary
 	if float(fire_debug.get("weapon_kick", 0.0)) < 0.12 or float(fire_debug.get("recoil_pitch", 0.0)) < 0.09:
 		_fail("Sniper fire should create a readable high-recoil impulse")
+	if float(fire_debug.get("fire_compression", 0.0)) < 0.045:
+		_fail("Heavy fire should add a readable braced compression pose")
+	await process_frame
 	await process_frame
 	var rigged_fire_debug := visual.call("get_motion_debug") as Dictionary
 	var holder := visual.get_node_or_null("WeaponHolder") as Node3D

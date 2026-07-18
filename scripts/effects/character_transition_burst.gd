@@ -11,13 +11,28 @@ func configure(mode: StringName, color: Color, radius: float) -> void:
 	_mode = mode
 	_color = color
 	_radius = radius
-	_lifetime = 0.30 if mode == &"respawn" else 0.24
+	match mode:
+		&"match_spawn":
+			_lifetime = 0.46
+		&"winner":
+			_lifetime = 0.68
+		&"respawn":
+			_lifetime = 0.30
+		_:
+			_lifetime = 0.24
 	_build()
 
 func _ready() -> void:
 	if not _built:
 		_build()
-	scale = Vector3.ONE * (0.35 if _mode == &"respawn" else 0.70)
+	var initial_scale := 0.70
+	if _mode == &"respawn":
+		initial_scale = 0.35
+	elif _mode == &"match_spawn":
+		initial_scale = 0.24
+	elif _mode == &"winner":
+		initial_scale = 0.42
+	scale = Vector3.ONE * initial_scale
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(self, "scale", Vector3.ONE, _lifetime).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	for child in get_children():
@@ -65,6 +80,19 @@ func _build() -> void:
 	ring.material_override = _material(Color(_color.r, _color.g, _color.b, 0.82), _color, 1.3)
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(ring)
+	if _mode == &"match_spawn" or _mode == &"winner":
+		var inner_ring := MeshInstance3D.new()
+		inner_ring.name = "TransitionRingInner"
+		var inner_torus := TorusMesh.new()
+		inner_torus.inner_radius = _radius * 0.38
+		inner_torus.outer_radius = _radius * 0.50
+		inner_torus.rings = 32
+		inner_torus.ring_segments = 8
+		inner_ring.mesh = inner_torus
+		inner_ring.position.y = 0.13
+		inner_ring.material_override = _material(_color.lerp(Color.WHITE, 0.32), _color, 1.55)
+		inner_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(inner_ring)
 
 	var core := MeshInstance3D.new()
 	core.name = "TransitionCore"
@@ -74,13 +102,16 @@ func _build() -> void:
 	core_mesh.radial_segments = 16
 	core_mesh.rings = 8
 	core.mesh = core_mesh
-	core.position.y = 0.72 if _mode == &"respawn" else 1.10
-	core.scale = Vector3(_radius * 0.44, 0.62 if _mode == &"respawn" else 0.38, _radius * 0.44)
+	var is_arrival := _mode == &"respawn" or _mode == &"match_spawn"
+	core.position.y = 0.72 if is_arrival else 1.10
+	core.scale = Vector3(_radius * 0.44, 0.62 if is_arrival else 0.38, _radius * 0.44)
 	core.material_override = _material(Color(_color.r, _color.g, _color.b, 0.42), _color, 0.8)
 	core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(core)
 
 	var ray_count := 4 if _mode == &"respawn" else 6
+	if _mode == &"winner":
+		ray_count = 8
 	for i in range(ray_count):
 		var angle := TAU * float(i) / float(ray_count)
 		var ray := MeshInstance3D.new()
@@ -88,9 +119,9 @@ func _build() -> void:
 		var ray_mesh := BoxMesh.new()
 		ray_mesh.size = Vector3.ONE
 		ray.mesh = ray_mesh
-		var distance := _radius * (0.48 if _mode == &"respawn" else 0.62)
+		var distance := _radius * (0.48 if is_arrival else 0.62)
 		ray.position = Vector3(cos(angle) * distance, 0.66 + float(i % 2) * 0.24, sin(angle) * distance)
-		ray.scale = Vector3(0.12, 0.34 if _mode == &"respawn" else 0.22, _radius * 0.56)
+		ray.scale = Vector3(0.12, 0.34 if is_arrival else 0.22, _radius * 0.56)
 		ray.rotation.y = -angle
 		ray.rotation.z = deg_to_rad(12.0 if i % 2 == 0 else -12.0)
 		ray.material_override = _material(_color.lerp(Color.WHITE, 0.42), _color, 1.45)

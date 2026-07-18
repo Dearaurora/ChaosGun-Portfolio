@@ -17,7 +17,6 @@ func _initialize() -> void:
 
 	feedback.set_shield_active(true)
 	feedback.play_hit(Vector3(10.0, 0.0, 4.0), 1.0)
-	await process_frame
 	var feedback_debug := feedback.get_visual_debug()
 	if not bool(feedback_debug.get("shield_active", false)):
 		_fail("Respawn shield must expose an active visual state")
@@ -27,14 +26,22 @@ func _initialize() -> void:
 		_fail("Hit feedback must create one directional accent")
 	if _count_prefixed(feedback, "ImpactSlash_") != 3:
 		_fail("Directional hit accent should contain exactly three slashes")
+	if _count_prefixed(feedback, "ImpactContact") != 1:
+		_fail("Directional hit accent should include one dark contact anchor")
 	feedback.update_motion_feedback(Vector3(18.0, -4.0, 3.0), true, true)
 	var motion_debug := feedback.get_visual_debug()
 	if not bool(motion_debug.get("flight_active", false)):
 		_fail("Recent airborne knockback must activate flight trails")
-	if int(motion_debug.get("flight_streak_count", 0)) != 2:
-		_fail("Knockback flight feedback should use exactly two short streaks")
+	if int(motion_debug.get("flight_streak_count", 0)) != 3:
+		_fail("Knockback flight feedback should use a three-streak speed ribbon")
+	if float(motion_debug.get("flight_speed", 0.0)) < 17.0:
+		_fail("Knockback flight feedback should expose its horizontal speed tier")
 	if not bool(motion_debug.get("danger_active", false)):
 		_fail("Missing ground or falling state must activate ringout warning")
+	if int(motion_debug.get("danger_segment_count", 0)) != 3:
+		_fail("Ringout warning should use three broken directional segments")
+	if _count_prefixed(feedback, "DangerRing") != 0 or _count_prefixed(feedback, "DangerArcSegment_") != 3:
+		_fail("Ringout warning should remain distinct from circular powerup auras")
 	if _count_prefixed(feedback, "DangerChevron_") != 2:
 		_fail("Ringout warning should use two forward chevrons")
 	feedback.update_motion_feedback(Vector3.ZERO, false, false)

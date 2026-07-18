@@ -2,6 +2,7 @@
 ## Dynamic battle scene driven by MatchConfig.
 
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
+const CombatProfileLoader = preload("res://scripts/globals/combat_profile_loader.gd")
 
 @onready var weapon_spawner = $WeaponSpawner
 
@@ -34,6 +35,9 @@ func _ready() -> void:
 	_setup_control_mode_panel()
 
 func _process(delta: float) -> void:
+	if has_method("_update_map_runtime_camera"):
+		call("_update_map_runtime_camera", delta)
+		return
 	if _uses_fixed_runtime_camera():
 		return
 	if _ta_runtime and is_instance_valid(_ta_runtime) and _ta_runtime.has_method("update_runtime_camera"):
@@ -60,10 +64,13 @@ func _get_spawn_points() -> Array:
 	return DEFAULT_SPAWN_POINTS.duplicate()
 
 func _apply_shared_runtime_config() -> void:
+	var game_config = RuntimeGlobals.game_config()
+	if game_config:
+		CombatProfileLoader.apply_party_shooter_v1(game_config)
+
 	var respawn_points: Array[Vector3] = []
 	for point in _get_spawn_points():
 		respawn_points.append(point as Vector3)
-	var game_config = RuntimeGlobals.game_config()
 	if game_config:
 		game_config.set("respawn_points", respawn_points)
 
@@ -147,13 +154,17 @@ func _on_character_eliminated(_character: BaseCharacter) -> void:
 	if survivors.size() <= 1:
 		_match_ended = true
 		if survivors.size() == 1:
-			var winner = survivors[0]
+			var winner := survivors[0] as BaseCharacter
 			var winner_name: String = winner.name
 			var slot_index := _characters.find(winner)
 			var winner_color: Color = MatchConfig.PLAYER_COLORS[slot_index] if slot_index < MatchConfig.PLAYER_COLORS.size() else Color.WHITE
-			_victory_screen.show_victory(winner_name, winner_color, _characters)
+			_present_match_result(winner, winner_name, winner_color)
 		else:
-			_victory_screen.show_victory("DRAW", Color.WHITE, _characters)
+			_present_match_result(null, "DRAW", Color.WHITE)
+
+func _present_match_result(_winner: BaseCharacter, winner_name: String, winner_color: Color) -> void:
+	if _victory_screen:
+		_victory_screen.show_victory(winner_name, winner_color, _characters)
 
 func _build_kaykit_floor() -> void:
 	var path_base = "res://assets/models/kaykit_platformer/KayKit_Platformer_Pack_1.0_FREE/KayKit_Platformer_Pack_1.0_FREE/Assets/gltf/green/"

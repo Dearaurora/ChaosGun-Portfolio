@@ -4,6 +4,7 @@ class_name BaseCharacter
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
 const CharacterCombatFeedbackScript = preload("res://scripts/effects/character_combat_feedback.gd")
 const CharacterTransitionBurstScene: PackedScene = preload("res://scenes/effects/character_transition_burst.tscn")
+const POWERUP_CONTROLLER_PATH := "res://scripts/powerups/powerup_controller.gd"
 
 @onready var weapon_point: Marker3D = get_node_or_null("WeaponPoint")
 @onready var weapon_manager: WeaponManager = get_node_or_null("WeaponManager")
@@ -11,11 +12,14 @@ const CharacterTransitionBurstScene: PackedScene = preload("res://scenes/effects
 signal eliminated(character: BaseCharacter)
 
 # 音效
-var _sfx_hit_light: AudioStream = preload("res://assets/audio/sfx/hit_light.ogg")
+var _sfx_hit_light: AudioStream = preload("res://assets/audio/generated/combat/impact_light_v2.ogg")
 var _sfx_hit_light2: AudioStream = preload("res://assets/audio/sfx/hit_light2.ogg")
-var _sfx_hit_heavy: AudioStream = preload("res://assets/audio/sfx/hit_heavy.ogg")
-var _sfx_fall: AudioStream = preload("res://assets/audio/sfx/fall_death.ogg")
+var _sfx_hit_heavy: AudioStream = preload("res://assets/audio/generated/combat/impact_heavy_v2.ogg")
+var _sfx_fall: AudioStream = preload("res://assets/audio/generated/combat/ringout_v2.ogg")
 var _sfx_shield: AudioStream = preload("res://assets/audio/sfx/shield_up.ogg")
+var _last_hit_feedback_msec: int = -1000
+var _last_hit_feedback_weight: int = 0
+var _hit_feedback_serial: int = 0
 
 # ============================================================
 #  生命与复活系统
@@ -37,6 +41,10 @@ var _was_on_floor: bool = true
 var _combat_feedback: CharacterCombatFeedback = null
 var _last_safe_visual_position := Vector3.ZERO
 var _knockback_feedback_timer := 0.0
+var movement_speed_multiplier := 1.0
+var outgoing_knockback_multiplier := 1.0
+var combat_owner: BaseCharacter = null
+var _powerup_controller: Node = null
 
 func _game_config() -> Node:
 	return RuntimeGlobals.game_config()
@@ -84,6 +92,7 @@ func _ready() -> void:
 	_sync_weapon_muzzle(&"pistol")
 	_last_safe_visual_position = global_position
 	_ensure_combat_feedback()
+	_ensure_powerup_controller()
 	# 禁用接触摩擦，水平减速完全由 horizontal_damp 控制，
 	# 避免高重力下法向力过大导致角色走不动。
 	var mat = PhysicsMaterial.new()
@@ -155,6 +164,34 @@ func jump() -> void:
 		if visual:
 			visual.animate_stretch(1.4, 0.7)
 
+func get_movement_speed() -> float:
+	return _game_config_float("character_speed", 550.0) * movement_speed_multiplier
+
+func get_outgoing_knockback_multiplier() -> float:
+	return outgoing_knockback_multiplier
+
+func apply_powerup(powerup_id: StringName) -> bool:
+	_ensure_powerup_controller()
+	if _powerup_controller == null:
+		return false
+	return bool(_powerup_controller.call("apply_powerup", powerup_id))
+
+func get_powerup_state_debug() -> Dictionary:
+	_ensure_powerup_controller()
+	if _powerup_controller == null:
+		return {}
+	return _powerup_controller.call("get_state_debug") as Dictionary
+
+func get_combat_identity() -> BaseCharacter:
+	if combat_owner and is_instance_valid(combat_owner):
+		return combat_owner
+	return self
+
+func is_friendly_to(other: BaseCharacter) -> bool:
+	if other == null or not is_instance_valid(other):
+		return false
+	return get_combat_identity() == other.get_combat_identity()
+
 func _check_fall() -> void:
 	if global_position.y < _game_config_float("fall_threshold", -120.0):
 		_die()
@@ -197,12 +234,17 @@ func apply_recoil(impulse: Vector3) -> void:
 		h_impulse *= _game_config_float("edge_recoil_multiplier", 0.25)
 	apply_central_impulse(h_impulse)
 
-func apply_hit(impulse: Vector3, damage: float = 0.0, attacker: Node3D = null) -> void:
+func apply_hit(
+	impulse: Vector3,
+	damage: float = 0.0,
+	attacker: Node3D = null,
+	weapon_id: StringName = &""
+) -> void:
 	## 被敌人子弹击中时调用：施加冲量 + 扣血 + 受击闪白 + 顿帧/震屏
 	if is_invincible or is_dead:
 		return
 	if attacker is BaseCharacter:
-		last_hit_by = attacker
+		last_hit_by = (attacker as BaseCharacter).get_combat_identity()
 	apply_knockback(impulse)
 	var visual = get_visual()
 	if visual:
@@ -210,24 +252,69 @@ func apply_hit(impulse: Vector3, damage: float = 0.0, attacker: Node3D = null) -
 	if _combat_feedback:
 		_combat_feedback.play_hit(impulse, clampf(damage / 70.0, 0.45, 1.35))
 	
-	# 受击音效与震屏/顿帧 (Hitstop & Screenshake)
-	if damage >= 50.0:  # 狙击枪重击
-		_play_sfx(_sfx_hit_heavy, -3.0)
-		var heavy_game_feel = _game_feel()
-		if heavy_game_feel:
-			heavy_game_feel.hitstop(0.08)
-			heavy_game_feel.screen_shake(0.35, 0.15)
-	else:
-		_play_sfx([_sfx_hit_light, _sfx_hit_light2].pick_random(), -8.0)
-		var light_game_feel = _game_feel()
-		if light_game_feel:
-			light_game_feel.hitstop(0.03)
-			light_game_feel.screen_shake(0.15, 0.08)
+	_play_hit_feedback(weapon_id, damage, impulse)
 	if damage > 0.0:
 		current_hp -= damage
 		if current_hp <= 0.0:
 			current_hp = 0.0
 			_die()
+
+func _play_hit_feedback(weapon_id: StringName, damage: float, impulse: Vector3) -> void:
+	var profile := get_hit_feedback_profile_debug(weapon_id, damage)
+	var feedback_weight := 2 if bool(profile["heavy"]) else 1
+	var now_msec := Time.get_ticks_msec()
+	if now_msec - _last_hit_feedback_msec < 48 and feedback_weight <= _last_hit_feedback_weight:
+		return
+	_last_hit_feedback_msec = now_msec
+	_last_hit_feedback_weight = feedback_weight
+	_hit_feedback_serial += 1
+	var stream := _sfx_hit_heavy if bool(profile["heavy"]) else _sfx_hit_light
+	if not bool(profile["heavy"]) and weapon_id in [&"pistol", &"ak_rifle"] and randf() > 0.58:
+		stream = _sfx_hit_light2
+	_play_sfx(
+		stream,
+		float(profile["volume_db"]),
+		float(profile["pitch_min"]),
+		float(profile["pitch_max"])
+	)
+	var game_feel := _game_feel()
+	if game_feel == null:
+		return
+	var hitstop_duration := float(profile["hitstop"])
+	if hitstop_duration > 0.0:
+		game_feel.hitstop(hitstop_duration)
+	game_feel.screen_shake(float(profile["shake"]), float(profile["shake_duration"]))
+	if game_feel.has_method("camera_kick"):
+		game_feel.camera_kick(
+			impulse,
+			float(profile["kick"]),
+			float(profile["kick_duration"])
+		)
+
+func get_hit_feedback_profile_debug(weapon_id: StringName, damage: float = 0.0) -> Dictionary:
+	match weapon_id:
+		&"smg":
+			return {"heavy": false, "volume_db": -10.0, "pitch_min": 0.96, "pitch_max": 1.06, "hitstop": 0.006, "shake": 0.025, "shake_duration": 0.040, "kick": 0.012, "kick_duration": 0.060}
+		&"ak_rifle":
+			return {"heavy": false, "volume_db": -5.5, "pitch_min": 0.96, "pitch_max": 1.03, "hitstop": 0.028, "shake": 0.120, "shake_duration": 0.075, "kick": 0.050, "kick_duration": 0.100}
+		&"sniper":
+			return {"heavy": true, "volume_db": -1.0, "pitch_min": 0.98, "pitch_max": 1.02, "hitstop": 0.075, "shake": 0.320, "shake_duration": 0.150, "kick": 0.180, "kick_duration": 0.180}
+		&"gatling":
+			return {"heavy": false, "volume_db": -13.0, "pitch_min": 0.97, "pitch_max": 1.07, "hitstop": 0.0, "shake": 0.012, "shake_duration": 0.028, "kick": 0.006, "kick_duration": 0.045}
+		&"shotgun":
+			return {"heavy": true, "volume_db": -2.5, "pitch_min": 0.97, "pitch_max": 1.02, "hitstop": 0.050, "shake": 0.230, "shake_duration": 0.120, "kick": 0.130, "kick_duration": 0.150}
+		&"pistol":
+			return {"heavy": false, "volume_db": -7.5, "pitch_min": 0.96, "pitch_max": 1.04, "hitstop": 0.018, "shake": 0.080, "shake_duration": 0.060, "kick": 0.025, "kick_duration": 0.080}
+	if damage >= 50.0:
+		return {"heavy": true, "volume_db": -2.0, "pitch_min": 0.97, "pitch_max": 1.03, "hitstop": 0.070, "shake": 0.300, "shake_duration": 0.140, "kick": 0.160, "kick_duration": 0.170}
+	return {"heavy": false, "volume_db": -8.0, "pitch_min": 0.94, "pitch_max": 1.06, "hitstop": 0.018, "shake": 0.080, "shake_duration": 0.060, "kick": 0.025, "kick_duration": 0.080}
+
+func get_hit_feedback_debug() -> Dictionary:
+	return {
+		"serial": _hit_feedback_serial,
+		"last_feedback_msec": _last_hit_feedback_msec,
+		"last_feedback_weight": _last_hit_feedback_weight,
+	}
 
 func _is_near_edge(push_dir: Vector3) -> bool:
 	var space_state = get_world_3d().direct_space_state
@@ -239,6 +326,8 @@ func _is_near_edge(push_dir: Vector3) -> bool:
 func _die() -> void:
 	if is_dead:
 		return
+	if _powerup_controller:
+		_powerup_controller.call("clear_timed_powerups")
 		
 	# 击杀慢动作 (Kill slowmo) + 强震屏
 	var death_game_feel = _game_feel()
@@ -318,10 +407,34 @@ func _spawn_character_transition(mode: StringName, color: Color, radius: float) 
 	var burst := CharacterTransitionBurstScene.instantiate() as Node3D
 	if burst == null:
 		return
-	burst.name = "RespawnBurst" if mode == &"respawn" else "RingoutBurst"
+	match mode:
+		&"respawn":
+			burst.name = "RespawnBurst"
+		&"match_spawn":
+			burst.name = "MatchSpawnBurst"
+		&"winner":
+			burst.name = "WinnerBurst"
+		_:
+			burst.name = "RingoutBurst"
 	burst.call("configure", mode, color, radius)
-	scene_root.add_child(burst)
+	scene_root.add_child(burst, true)
 	burst.global_position = effect_pos
+
+func play_match_spawn_presentation(color: Color) -> void:
+	visible = true
+	var visual := get_visual()
+	if visual:
+		if visual.has_method("animate_match_spawn"):
+			visual.call("animate_match_spawn")
+		else:
+			visual.animate_respawn()
+	_spawn_character_transition(&"match_spawn", color, 1.34)
+
+func play_match_winner_presentation(color: Color) -> void:
+	var visual := get_visual()
+	if visual and visual.has_method("animate_match_winner"):
+		visual.call("animate_match_winner")
+	_spawn_character_transition(&"winner", color, 1.72)
 
 
 func _ensure_combat_feedback() -> void:
@@ -331,6 +444,17 @@ func _ensure_combat_feedback() -> void:
 	_combat_feedback = CharacterCombatFeedbackScript.new() as CharacterCombatFeedback
 	_combat_feedback.name = "CombatFeedback"
 	add_child(_combat_feedback)
+
+func _ensure_powerup_controller() -> void:
+	if _powerup_controller and is_instance_valid(_powerup_controller):
+		return
+	var controller_script := load(POWERUP_CONTROLLER_PATH) as Script
+	if controller_script == null:
+		return
+	_powerup_controller = controller_script.new() as Node
+	_powerup_controller.name = "PowerupController"
+	add_child(_powerup_controller)
+	_powerup_controller.call("setup", self)
 
 func _update_ringout_motion_feedback(on_floor: bool) -> void:
 	if _combat_feedback == null:
@@ -386,7 +510,12 @@ func _sync_weapon_muzzle(weapon_id: StringName) -> void:
 # ============================================================
 #  音效辅助
 # ============================================================
-func _play_sfx(stream: AudioStream, volume_db: float = -6.0) -> void:
+func _play_sfx(
+	stream: AudioStream,
+	volume_db: float = -6.0,
+	pitch_min: float = 0.92,
+	pitch_max: float = 1.08
+) -> void:
 	if not stream or not is_inside_tree():
 		return
 	if RuntimeGlobals.runtime_audio_disabled():
@@ -394,7 +523,9 @@ func _play_sfx(stream: AudioStream, volume_db: float = -6.0) -> void:
 	var sfx = AudioStreamPlayer3D.new()
 	sfx.stream = stream
 	sfx.volume_db = volume_db
-	sfx.pitch_scale = randf_range(0.92, 1.08)
+	sfx.pitch_scale = randf_range(pitch_min, pitch_max)
+	sfx.unit_size = 18.0
+	sfx.max_distance = 180.0
 	var scene_root = RuntimeGlobals.active_scene(get_tree())
 	if scene_root == null:
 		return

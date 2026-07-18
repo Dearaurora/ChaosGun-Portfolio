@@ -19,6 +19,7 @@ const REQUIRED_NODES := [
 	"OpenRingoutCovers",
 	"OpenRingoutEdgeGlow",
 	"OpenRingoutHUD",
+	"OpenRingoutCameraDirector",
 	"WeaponSpawner",
 	"GlobalCamera",
 ]
@@ -57,6 +58,7 @@ func _initialize() -> void:
 	_verify_ringout_hud(arena)
 	_verify_art_asset_layer(arena)
 	_verify_visual_cover_collision(arena)
+	await _verify_landmark_collision(arena)
 	_verify_floor_color_logic(arena)
 	_verify_bridge_connector_visibility(arena)
 	_verify_bridge_surface_integrity(arena)
@@ -143,7 +145,7 @@ func _verify_spawn_points(arena: Node) -> void:
 		_fail("GameConfig.respawn_points count does not match arena spawn points")
 
 func _verify_weapon_spawns(arena: Node) -> void:
-	print("\n--- Weapon Spawns ---")
+	print("\n--- Pickup Spawns ---")
 	var spawner = arena.get_node_or_null("WeaponSpawner")
 	if spawner == null:
 		_fail("WeaponSpawner missing")
@@ -158,10 +160,10 @@ func _verify_weapon_spawns(arena: Node) -> void:
 	var legacy_points: Array = legacy_points_value if legacy_points_value is Array else []
 	var legacy_clusters: Array = legacy_clusters_value if legacy_clusters_value is Array else []
 	if fixed_points.size() != 1:
-		_fail("Expected exactly one fixed center weapon spawn, got %d" % fixed_points.size())
+		_fail("Expected exactly one fixed center pickup spawn, got %d" % fixed_points.size())
 		return
 	if (fixed_points[0] as Vector3).distance_to(Vector3(0, 1.65, 0)) > 0.1:
-		_fail("Fixed weapon spawn must stay at the center pad: %s" % str(fixed_points[0]))
+		_fail("Fixed pickup spawn must stay at the center pad: %s" % str(fixed_points[0]))
 	if random_points.size() < 4:
 		_fail("Expected at least four random weapon candidate points, got %d" % random_points.size())
 		return
@@ -177,16 +179,24 @@ func _verify_weapon_spawns(arena: Node) -> void:
 		_fail("Legacy multi-point weapon spawn pools should be disabled for the open ringout slice")
 	if int(spawner.get("max_active_pickups")) != 2:
 		_fail("Open ringout weapon spawner should allow only center + one random pickup")
+	if not is_equal_approx(float(spawner.get("fixed_spawn_interval")), 17.0):
+		_fail("Center pickup spawn interval should be 17 seconds, got %.2f" % float(spawner.get("fixed_spawn_interval")))
+	if not is_equal_approx(float(spawner.get("stay_duration")), 10.0):
+		_fail("Center pickup lifetime should be 10 seconds, got %.2f" % float(spawner.get("stay_duration")))
+	if not bool(spawner.get("center_powerups_enabled")):
+		_fail("Center pickup pool must include powerups")
 	if not is_equal_approx(float(spawner.get("random_spawn_interval")), 22.5):
 		_fail("Random weapon spawn interval should be 22.5 seconds, got %.2f" % float(spawner.get("random_spawn_interval")))
-	if not is_equal_approx(float(spawner.get("respawn_cooldown")), 4.5):
-		_fail("Center weapon respawn cooldown should be 4.5 seconds, got %.2f" % float(spawner.get("respawn_cooldown")))
 	if float(spawner.get("random_stay_duration")) >= float(spawner.get("random_spawn_interval")):
 		_fail("Random weapon lifetime must be shorter than its spawn interval")
+	var center_contents := spawner.call("get_center_content_pool_ids_debug") as Array[String]
+	for expected in ["powerup:speed", "powerup:clone", "powerup:fury"]:
+		if expected not in center_contents:
+			_fail("Center pickup pool is missing %s" % expected)
 
 	var points = fixed_points + random_points
 	if points.size() < 5:
-		_fail("Expected center plus random weapon spawn candidates")
+		_fail("Expected center plus random pickup spawn candidates")
 		return
 
 	var playable = arena.get_node_or_null("OpenRingoutPlayable") as Node3D
@@ -230,17 +240,18 @@ func _verify_weapon_pickup_visual(arena: Node) -> void:
 	pickup.queue_free()
 
 func _verify_runtime_weapon_pickup_spawn(arena: Node) -> void:
-	print("\n--- Runtime Weapon Pickup Spawn ---")
+	print("\n--- Runtime Mixed Pickup Spawn ---")
 	await create_timer(0.60).timeout
 	await process_frame
 
-	var active_pickups: Array[WeaponPickup] = []
-	for node in get_nodes_in_group("weapon_pickup"):
-		if node is WeaponPickup and _host != null and _host.is_ancestor_of(node):
-			active_pickups.append(node as WeaponPickup)
+	var active_pickups: Array[Node3D] = []
+	for group_name in ["weapon_pickup", "powerup_pickup"]:
+		for node in get_nodes_in_group(group_name):
+			if node is Node3D and _host != null and _host.is_ancestor_of(node) and node not in active_pickups:
+				active_pickups.append(node as Node3D)
 
 	if active_pickups.is_empty():
-		_fail("No runtime weapon pickups spawned after configured initial delay")
+		_fail("No runtime pickups spawned after configured initial delay")
 		return
 
 	var has_center_pickup := false
@@ -250,8 +261,10 @@ func _verify_runtime_weapon_pickup_spawn(arena: Node) -> void:
 			has_center_pickup = true
 		else:
 			random_pickups += 1
-		if pickup.get_node_or_null("ToyPickupVisual/PickupWeaponIcon") == null:
-			_fail("Runtime pickup is missing toy weapon icon: %s" % pickup.name)
+		if pickup is WeaponPickup and pickup.get_node_or_null("ToyPickupVisual/PickupWeaponIcon") == null:
+			_fail("Runtime weapon pickup is missing its toy icon: %s" % pickup.name)
+		if pickup is PowerupPickup and pickup.get_node_or_null("PowerupPickupVisual/PowerupIcon") == null:
+			_fail("Runtime powerup pickup is missing its authored icon: %s" % pickup.name)
 
 	if active_pickups.size() != 2:
 		_fail("Expected exactly two active pickups: center plus one random, got %d" % active_pickups.size())
@@ -267,7 +280,7 @@ func _verify_runtime_weapon_pickup_spawn(arena: Node) -> void:
 		if _host != null and _host.is_ancestor_of(pedestal):
 			owned_pedestals.append(pedestal)
 	if owned_pedestals.size() != 5:
-		_fail("Expected one premium and four outer weapon pedestals, got %d" % owned_pedestals.size())
+		_fail("Expected one premium center and four outer pickup pedestals, got %d" % owned_pedestals.size())
 	else:
 		print("OK  persistent weapon pedestals: ", owned_pedestals.size())
 		var active_pedestals := 0
@@ -311,6 +324,8 @@ func _verify_ringout_hud(arena: Node) -> void:
 		if panel == null:
 			_fail("HUD missing %s" % panel_name)
 			continue
+		if panel.size.x > 220.0 or panel.size.y > 92.0:
+			_fail("%s exceeds the P15 compact HUD footprint: %s" % [panel_name, panel.size])
 
 		for path in required_paths:
 			if panel.get_node_or_null(path) == null:
@@ -562,6 +577,9 @@ func _verify_visual_cover_collision(arena: Node) -> void:
 		["ChunkyCoverClusterWest", "OpenRingoutCovers/WestChunkyCoverCollision", "west chunky cover"],
 		["ChunkyCoverClusterWest_CushionA", "OpenRingoutCovers/WestChunkyCushionACollision", "west orange cushion"],
 		["ChunkyCoverClusterWest_CushionB", "OpenRingoutCovers/WestChunkyCushionBCollision", "west orange cushion"],
+		["V10EastBlueCrateBody", "OpenRingoutCovers/EastBlueCrateCollision", "east blue crate"],
+		["V10EastGoldCrateBody", "OpenRingoutCovers/EastGoldCrateCollision", "east gold crate"],
+		["V10EastRedCrateBody", "OpenRingoutCovers/EastRedCrateCollision", "east red crate"],
 	]:
 		var visual_name := check[0] as String
 		var collision_path := check[1] as String
@@ -590,6 +608,83 @@ func _verify_visual_cover_collision(arena: Node) -> void:
 			_fail("%s collision footprint %s is too small for visual %s" % [label, str(collision_size), str(Vector2(visual_size.x, visual_size.z))])
 		else:
 			print("OK  ", label)
+
+func _verify_landmark_collision(arena: Node) -> void:
+	print("\n--- Gameplay Landmark Collision ---")
+	var v2_root = arena.get_node_or_null("OpenRingoutBlenderVisuals/SunsetV2GameplayVisuals") as Node3D
+	if v2_root == null:
+		_fail("Cannot verify landmark collision without Sunset V2 visuals")
+		return
+
+	var checks = [
+		["V4NorthWindmillBase", "OpenRingoutCovers/NorthWindmillCollision", "north windmill", 2.40, 5.30],
+		["V3SouthBarrelRed", "OpenRingoutCovers/SouthBarrelRedCollision", "red barrel", 0.90, 1.75],
+		["V3SouthBarrelBlue", "OpenRingoutCovers/SouthBarrelBlueCollision", "blue barrel", 0.90, 1.75],
+		["V3SouthBarrelGold", "OpenRingoutCovers/SouthBarrelGoldCollision", "gold barrel", 0.90, 1.75],
+		["V3WestTire_0", "OpenRingoutCovers/WestTireStackCollision", "west tire stack", 1.24, 1.80],
+		["V3EastTreeATrunk", "OpenRingoutCovers/EastTreeACollision", "east tree A", 1.40, 4.40],
+		["V3EastTreeBTrunk", "OpenRingoutCovers/EastTreeBCollision", "east tree B", 1.14, 3.60],
+		["V10NorthHeroTreeTrunk", "OpenRingoutCovers/NorthHeroTreeCollision", "north hero tree", 1.05, 3.20],
+		["V10NorthDuckABody", "OpenRingoutCovers/NorthDuckACollision", "north duck A", 0.55, 1.00],
+		["V10NorthDuckBBody", "OpenRingoutCovers/NorthDuckBCollision", "north duck B", 0.50, 0.95],
+	]
+	for check in checks:
+		var visual_name := check[0] as String
+		var collision_path := check[1] as String
+		var label := check[2] as String
+		var visual = _find_mesh_instance_by_name(v2_root, visual_name)
+		var proxy = arena.get_node_or_null(collision_path) as Node3D
+		if visual == null:
+			_fail("Missing landmark visual: %s" % visual_name)
+			continue
+		if proxy == null:
+			_fail("%s has no collision proxy: %s" % [label, collision_path])
+			continue
+		var shape = _find_collision_shape(proxy)
+		if shape == null or not (shape.shape is CylinderShape3D):
+			_fail("%s must use a CylinderShape3D proxy" % label)
+			continue
+		var cylinder := shape.shape as CylinderShape3D
+		if cylinder.radius < float(check[3]) or cylinder.height < float(check[4]):
+			_fail("%s collision is undersized: radius %.2f, height %.2f" % [label, cylinder.radius, cylinder.height])
+		var visual_center := _mesh_xz_center(visual)
+		var collision_center := Vector2(shape.global_position.x, shape.global_position.z)
+		if visual_center.distance_to(collision_center) > 0.12:
+			_fail("%s collision is not centered on its visual" % label)
+
+	await physics_frame
+	var space_state: PhysicsDirectSpaceState3D = arena.get_world_3d().direct_space_state
+	for check in checks:
+		var proxy = arena.get_node_or_null(check[1]) as Node3D
+		if proxy == null:
+			continue
+		var shape = _find_collision_shape(proxy)
+		if shape == null:
+			continue
+		var radius: float = (shape.shape as CylinderShape3D).radius
+		var center: Vector3 = shape.global_position
+		center.y = 1.25
+		var query := PhysicsRayQueryParameters3D.create(
+			center + Vector3(-radius - 0.45, 0.0, 0.0),
+			center + Vector3(radius + 0.45, 0.0, 0.0),
+			1
+		)
+		query.collide_with_areas = false
+		query.collide_with_bodies = true
+		var hit: Dictionary = space_state.intersect_ray(query)
+		var collider = hit.get("collider") as Node
+		if collider == null or not _is_descendant_of(collider, proxy):
+			_fail("%s did not block the gameplay physics ray" % String(check[2]))
+		else:
+			print("OK  %s solid gameplay collision" % String(check[2]))
+
+func _is_descendant_of(node: Node, ancestor: Node) -> bool:
+	var cursor := node
+	while cursor != null:
+		if cursor == ancestor:
+			return true
+		cursor = cursor.get_parent()
+	return false
 
 func _verify_floor_color_logic(arena: Node) -> void:
 	print("\n--- Floor Color Logic ---")
@@ -1019,18 +1114,30 @@ func _verify_visual_profile(arena: Node) -> void:
 			print("OK  ambient light: %.2f" % env.ambient_light_energy)
 		if not env.ssao_enabled:
 			_fail("SSAO must be enabled for soft toy contact shadows")
-		elif env.ssao_radius > 2.0 or env.ssao_intensity < 0.95:
-			_fail("SSAO should stay tight and strong enough for contact shadows")
-		if not env.glow_enabled or env.glow_intensity < 0.42:
-			_fail("Glow is too weak for toy edge and pickup highlights")
-		if not env.adjustment_enabled or env.adjustment_saturation < 1.15 or env.adjustment_saturation > 1.24:
-			_fail("Color grading must stay warm without returning to oversaturation")
+		elif env.ssao_radius > 1.6 or env.ssao_intensity < 0.88:
+			_fail("SSAO should stay tight and readable without dirtying the floor")
+		if not env.glow_enabled or env.glow_intensity < 0.30 or env.glow_intensity > 0.40:
+			_fail("Glow must preserve pickup highlights without blooming the frame")
+		if not env.adjustment_enabled or env.adjustment_saturation < 1.07 or env.adjustment_saturation > 1.13:
+			_fail("Color grading must stay warm and restrained")
 
 	var camera = arena.get_node_or_null("GlobalCamera") as Camera3D
 	if camera == null:
 		_fail("GlobalCamera missing during visual profile check")
-	elif camera.projection != Camera3D.PROJECTION_ORTHOGONAL or camera.size < 56.0 or camera.size > 62.0:
-		_fail("GlobalCamera is not locked to the approved orthographic screenshot framing")
+	elif camera.projection != Camera3D.PROJECTION_ORTHOGONAL:
+		_fail("GlobalCamera must preserve the approved orthographic composition")
+	elif camera.size < 35.5 or camera.size > 92.5:
+		_fail("GlobalCamera is outside the runtime director zoom envelope: %.2f" % camera.size)
+	elif not arena.has_method("get_runtime_camera_debug"):
+		_fail("Open Ring-Out is missing runtime camera diagnostics")
+	else:
+		var camera_debug = arena.call("get_runtime_camera_debug") as Dictionary
+		if int(camera_debug.get("tracked_count", 0)) != 4:
+			_fail("Runtime camera director should track all four active characters")
+		elif float(camera_debug.get("min_size", 0.0)) >= float(camera_debug.get("max_size", 0.0)):
+			_fail("Runtime camera director zoom envelope is invalid")
+		else:
+			print("OK  dynamic camera size: %.2f" % camera.size)
 
 	if arena.get_node_or_null("ToyFillLight") == null:
 		_fail("ToyFillLight missing")
@@ -1045,24 +1152,56 @@ func _verify_abyss_background_design(arena: Node) -> void:
 		return
 	if _has_collision_descendant(abyss_root):
 		_fail("Abyss visual depth layers must not contain collision")
+	var p14_root = arena.get_node_or_null("OpenRingoutBlenderVisuals/P14SunsetEnvironment") as Node3D
+	if p14_root == null:
+		_fail("P14 authored environment layer is missing")
+	else:
+		var p14_cloud_count := _count_descendants_with_prefix(p14_root, "P14CloudBank")
+		if p14_cloud_count != 10:
+			_fail("P14 should expose ten optimized authored cloud banks, got %d" % p14_cloud_count)
+		else:
+			print("OK  P14 authored cloud banks: ", p14_cloud_count)
+		for island_name in [
+			"P14DistantIslandNorthWestCliff",
+			"P14DistantIslandNorthCliff",
+			"P14DistantIslandNorthEastFarCliff",
+			"P14DistantIslandNorthEastCliff",
+			"P14DistantIslandWestCliff",
+			"P14DistantIslandEastCliff",
+			"P14DistantIslandSouthCliff",
+		]:
+			if not _has_named_descendant(p14_root, island_name):
+				_fail("P14 distant island is missing: %s" % island_name)
+		for balloon_name in [
+			"P14HotAirBalloonEnvelope",
+			"P14HotAirBalloonEnvelopeSeams",
+			"P14HotAirBalloonBasket",
+		]:
+			if not _has_named_descendant(p14_root, balloon_name):
+				_fail("P14 hot-air balloon is missing: %s" % balloon_name)
+		if _has_collision_descendant(p14_root):
+			_fail("P14 environment depth layer must remain collision-free")
+	var abyss_plane = abyss_root.get_node_or_null("AbyssPlane") as Node3D
+	if abyss_plane == null or abyss_plane.global_position.y > -25.0:
+		_fail("Abyss gradient plane must remain behind the complete P14 island silhouettes")
 
 	var mist_count := _count_descendants_with_prefix(abyss_root, "AbyssMist")
 	if mist_count < 16:
-		_fail("Abyss needs layered mist/cloud puffs, got %d" % mist_count)
+		_fail("Abyss fallback needs layered mist/cloud puffs, got %d" % mist_count)
 	else:
-		print("OK  abyss mist layers: ", mist_count)
+		print("OK  abyss fallback mist layers: ", mist_count)
 
 	var soft_cloud_count := _count_descendants_with_prefix(abyss_root, "AbyssSoftCloud")
 	if soft_cloud_count < 48:
-		_fail("Abyss needs soft volumetric-looking cloud puffs instead of hard flat marks, got %d" % soft_cloud_count)
+		_fail("Abyss fallback needs soft cloud puffs, got %d" % soft_cloud_count)
 	else:
-		print("OK  abyss soft cloud puffs: ", soft_cloud_count)
+		print("OK  abyss fallback soft cloud puffs: ", soft_cloud_count)
 
 	var mote_count := _count_descendants_with_prefix(abyss_root, "AbyssGlowMote")
 	if mote_count < 10:
-		_fail("Abyss needs small glowing depth motes, got %d" % mote_count)
+		_fail("Abyss fallback depth-mote structure is incomplete, got %d" % mote_count)
 	else:
-		print("OK  abyss glow motes: ", mote_count)
+		print("OK  hidden fallback glow motes: ", mote_count)
 
 	var backdrop_root = arena.get_node_or_null("OpenRingoutBackdrop") as Node3D
 	if backdrop_root == null:
@@ -1070,6 +1209,8 @@ func _verify_abyss_background_design(arena: Node) -> void:
 		return
 	if _has_collision_descendant(backdrop_root):
 		_fail("Backdrop islands must be visual only and non-colliding")
+	if backdrop_root.visible:
+		_fail("Procedural backdrop should be hidden after P14 loads")
 	for required_backdrop in [
 		"BackdropIslandLeftCliff",
 		"BackdropIslandRightCliff",
@@ -1094,6 +1235,9 @@ func _verify_abyss_background_design(arena: Node) -> void:
 				_fail("Blender background depth layer is missing %s" % required_depth_visual)
 			else:
 				print("OK  ", required_depth_visual)
+		var replaced_far_cloud = blender_root.find_child("FarAbyssCloudPuff_0", true, false) as Node3D
+		if replaced_far_cloud and replaced_far_cloud.visible:
+			_fail("Legacy far clouds should be hidden after P14 loads")
 
 func _verify_ringout_respawn(arena: Node) -> void:
 	print("\n--- Ring-Out Respawn ---")

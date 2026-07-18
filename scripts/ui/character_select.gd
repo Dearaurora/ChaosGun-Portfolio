@@ -24,6 +24,7 @@ var _slots: Array = []
 var _map_label: Label = null
 
 func _ready() -> void:
+	MatchConfig.configure_local_match()
 	# 初始化时从 MatchConfig 读取
 	_slots = MatchConfig.slots.duplicate()
 	_build_ui()
@@ -293,6 +294,7 @@ func _on_start() -> void:
 		return
 
 	# 写入全局配置
+	MatchConfig.configure_local_match()
 	MatchConfig.slots = _slots.duplicate()
 	get_tree().change_scene_to_file(MatchConfig.get_selected_map_path())
 

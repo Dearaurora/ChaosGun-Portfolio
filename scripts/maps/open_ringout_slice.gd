@@ -1,6 +1,8 @@
 extends "res://scripts/maps/battle_arena.gd"
 
 const RINGOUT_HUD_SCRIPT = preload("res://scripts/ui/ringout_hud.gd")
+const CAMERA_DIRECTOR_SCRIPT = preload("res://scripts/maps/open_ringout_camera_director.gd")
+const MATCH_PRESENTATION_SCRIPT = preload("res://scripts/maps/open_ringout_match_presentation.gd")
 
 const PLAYABLE_ROOT_NAME := "OpenRingoutPlayable"
 const COVER_ROOT_NAME := "OpenRingoutCovers"
@@ -12,6 +14,31 @@ const BLENDER_VISUAL_ROOT_NAME := "OpenRingoutBlenderVisuals"
 const BLENDER_VISUAL_SCENE_PATH := "res://assets/models/generated/open_ringout_slice/open_ringout_visuals.glb"
 const SUNSET_V2_VISUAL_ROOT_NAME := "SunsetV2GameplayVisuals"
 const SUNSET_V2_VISUAL_SCENE_PATH := "res://assets/models/generated/sunset_toy_sky_islands/open_ringout_v2_preview.glb"
+const P14_ENVIRONMENT_ROOT_NAME := "P14SunsetEnvironment"
+const P14_ENVIRONMENT_SCENE_PATH := "res://assets/models/generated/sunset_toy_sky_islands/p14_sunset_environment.glb"
+const SUNSET_SKY_BACKPLATE_ROOT_NAME := "SunsetSkyBackplate"
+const SUNSET_SKY_BACKPLATE_TEXTURE_PATH := "res://assets/textures/generated/sunset_toy_sky_islands/sunset_sky_backplate_v1.png"
+const P14_CLOSE_PARALLAX_PREFIXES := [
+	"P14CloudBankNorth",
+	"P14CloudBankGapNorthWest",
+	"P14DistantIslandNorth",
+]
+const P14_CLOSE_PARALLAX_START_SIZE := 48.0
+const P14_CLOSE_PARALLAX_END_SIZE := 36.0
+const P14_CLOSE_PARALLAX_SHIFT := Vector3(-8.12, 0.0, -11.34)
+const P25_HERO_WINDMILL_SPEED := 0.48
+const P25_DISTANT_WINDMILL_SPEED := 0.30
+const P14_REPLACED_BACKGROUND_PREFIXES := [
+	"WarmCloudBank",
+	"CoolCloudBank",
+	"FarAbyssCloudPuff_",
+	"FarAbyssGlowMote_",
+	"DistantToyIsland",
+	"A1DepthCloudRibbon",
+	"V3Cloud",
+	"V3DistantIsland",
+	"V3HotAirBalloon",
+]
 const SUNSET_V2_HIDDEN_LEGACY_PREFIXES := [
 	"main_deck_",
 	"main_west_lip_",
@@ -70,9 +97,26 @@ const SUNSET_V2_HIDDEN_LEGACY_PREFIXES := [
 const DRESSING_ASSET_BASE := "res://assets/models/third_party/kenney/curated_food_dojo/"
 
 var _ringout_hud: CanvasLayer = null
+var _camera_director: Node = null
+var _match_presentation: Node = null
+var _p14_close_parallax_nodes: Array[Node3D] = []
+var _p14_close_parallax_origins: Dictionary = {}
+var _p14_current_parallax_offset := Vector3.ZERO
+var _sunset_sky_backplate: CanvasLayer = null
+var _p25_motion_time := 0.0
+var _p25_rotor_pivots: Array[Node3D] = []
+var _p25_rotor_speeds: Dictionary = {}
+var _p25_balloon_pivot: Node3D = null
+var _p25_balloon_origin := Vector3.ZERO
+var _p25_cloud_nodes: Array[Node3D] = []
+var _p25_cloud_origins: Dictionary = {}
+var _p25_edge_gems: Array[Node3D] = []
+var _p25_edge_gem_scales: Dictionary = {}
+var _p25_motion_ready := false
 
 func _ready() -> void:
 	super._ready()
+	_setup_match_presentation()
 
 func _build_map_layout() -> void:
 	_clear_open_ringout_nodes()
@@ -114,7 +158,7 @@ func _build_map_layout() -> void:
 	var water_mat = _abyss_gradient_material()
 	var glow_mat = _emissive_material(Color(1.0, 0.42, 0.08, 0.86), Color("#ff8128"), 1.25)
 
-	_spawn_abyss_plane("AbyssPlane", Vector3(0, -12.28, 0), Vector2(260, 220), abyss_root, water_mat)
+	_spawn_abyss_plane("AbyssPlane", Vector3(0, -30.0, 0), Vector2(420, 380), abyss_root, water_mat)
 	_build_abyss_clouds(abyss_root)
 	_build_background_islands(backdrop_root)
 
@@ -134,6 +178,7 @@ func _build_map_layout() -> void:
 	_build_tile_lines(playable_root)
 	_build_edge_glow(glow_root, glow_mat)
 	_build_chunky_cover(cover_root, cover_orange_mat, cover_yellow_mat, cover_red_mat, cover_tan_mat, metal_mat)
+	_build_landmark_collisions(cover_root)
 	_build_center_pickup_pad(cover_root, glow_mat, metal_mat)
 	_build_art_dressing(art_root, cover_orange_mat, cover_yellow_mat, cover_red_mat, cover_tan_mat, metal_mat, glow_mat)
 	_build_blender_visual_layer()
@@ -174,23 +219,6 @@ func _configure_map_runtime() -> void:
 		config.set("respawn_delay", 1.15)
 		config.set("invincible_duration", 1.5)
 		config.set("fall_threshold", -16.0)
-		config.set("control_mode", "lock_on")
-		config.set("character_speed", 620.0)
-		config.set("character_horizontal_damp", 2.4)
-		config.set("character_air_horizontal_damp", 0.25)
-		config.set("character_gravity_scale", 24.0)
-		config.set("bullet_speed_multiplier", 1.0)
-		config.set("knockback_multiplier", 1.35)
-		config.set("knockback_lift_ratio", 0.24)
-		config.set("max_recoil_impulse", 9.5)
-		config.set("weapon_feel_overrides", {
-			"pistol": {"knockback_power": 92.0, "damage": 14.0, "bullet_lifetime": 1.45},
-			"smg": {"knockback_power": 68.0, "damage": 7.0, "bullet_lifetime": 1.25},
-			"ak_rifle": {"knockback_power": 92.0, "damage": 13.0, "bullet_lifetime": 1.55},
-			"sniper": {"knockback_power": 330.0, "damage": 42.0, "bullet_lifetime": 1.9},
-			"gatling": {"knockback_power": 58.0, "damage": 5.0, "bullet_lifetime": 1.25},
-			"shotgun": {"knockback_power": 25.0, "damage": 4.5, "bullet_lifetime": 0.85},
-		})
 
 	if weapon_spawner:
 		var center_points = [
@@ -203,7 +231,9 @@ func _configure_map_runtime() -> void:
 			Vector3(-43, 1.65, 8),
 		]
 		weapon_spawner.initial_delay = 0.45
-		weapon_spawner.stay_duration = 20.0
+		weapon_spawner.stay_duration = 10.0
+		weapon_spawner.fixed_spawn_interval = 17.0
+		weapon_spawner.center_powerups_enabled = true
 		weapon_spawner.random_spawn_interval = 22.5
 		weapon_spawner.random_stay_duration = 4.5
 		weapon_spawner.respawn_cooldown = 4.5
@@ -214,24 +244,27 @@ func _configure_map_runtime() -> void:
 		weapon_spawner.custom_spawn_points = []
 
 func _apply_map_visual_overrides() -> void:
+	_ensure_sunset_sky_backplate()
 	var camera = get_node_or_null("GlobalCamera") as Camera3D
 	if camera:
 		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 		camera.position = Vector3(40, 50, 55)
 		camera.look_at(Vector3(2, 0, 2), Vector3.UP)
-		camera.size = 58.5
+		camera.size = 50.0
 		camera.current = true
+		_setup_runtime_camera_director(camera)
 
 	var light = get_node_or_null("DirectionalLight3D") as DirectionalLight3D
 	if light:
-		light.light_color = Color("#ffd2a3")
-		light.light_energy = 1.06
+		light.light_color = Color("#ffd0a0")
+		light.light_energy = 1.08
 		light.shadow_enabled = true
-		light.shadow_blur = 2.6
-		light.rotation_degrees = Vector3(-48, 38, 0)
+		light.shadow_blur = 1.65
+		light.shadow_opacity = 0.76
+		light.rotation_degrees = Vector3(-52, 34, 0)
 
-	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#ffd0b2"), 0.18, 82.0)
-	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#9bbfff"), 0.32, 100.0)
+	_configure_toy_light("ToyFillLight", Vector3(-36, 26, 22), Color("#e7aab8"), 0.10, 82.0)
+	_configure_toy_light("ToyRimLight", Vector3(42, 24, -36), Color("#91b6ff"), 0.44, 100.0)
 
 	var env_node = get_node_or_null("WorldEnvironment") as WorldEnvironment
 	if env_node == null:
@@ -242,35 +275,64 @@ func _apply_map_visual_overrides() -> void:
 	var env = Environment.new()
 	var sky = Sky.new()
 	var sky_mat = ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color("#536fa6")
-	sky_mat.sky_horizon_color = Color("#f0b6aa")
-	sky_mat.ground_bottom_color = Color("#2e4778")
-	sky_mat.ground_horizon_color = Color("#f0b78e")
+	sky_mat.sky_top_color = Color("#414f91")
+	sky_mat.sky_horizon_color = Color("#d78aa6")
+	sky_mat.ground_bottom_color = Color("#293b78")
+	sky_mat.ground_horizon_color = Color("#c77e9b")
 	sky.sky_material = sky_mat
-	env.background_mode = Environment.BG_SKY
+	env.background_mode = Environment.BG_CANVAS
+	env.background_canvas_max_layer = -1
 	env.sky = sky
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 0.76
+	env.tonemap_exposure = 0.77
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.12
-	env.adjustment_saturation = 1.16
-	env.adjustment_brightness = 1.02
+	env.adjustment_contrast = 1.08
+	env.adjustment_saturation = 1.10
+	env.adjustment_brightness = 1.0
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("#f5c0a2")
-	env.ambient_light_energy = 0.14
+	env.ambient_light_color = Color("#aaa1cf")
+	env.ambient_light_energy = 0.18
 	env.fog_enabled = true
-	env.fog_light_color = Color("#c2a0bd")
-	env.fog_density = 0.0018
+	env.fog_light_color = Color("#b28fbd")
+	env.fog_density = 0.0012
 	env.fog_sun_scatter = 0.22
 	env.ssao_enabled = true
-	env.ssao_radius = 1.65
-	env.ssao_intensity = 1.05
-	env.ssao_power = 1.55
+	env.ssao_radius = 0.95
+	env.ssao_intensity = 1.10
+	env.ssao_power = 1.45
 	env.glow_enabled = true
-	env.glow_intensity = 0.44
-	env.glow_strength = 0.88
-	env.glow_bloom = 0.08
+	env.glow_intensity = 0.34
+	env.glow_strength = 0.76
+	env.glow_bloom = 0.05
 	env_node.environment = env
+
+func _ensure_sunset_sky_backplate() -> void:
+	if _sunset_sky_backplate and is_instance_valid(_sunset_sky_backplate):
+		return
+	var texture := load(SUNSET_SKY_BACKPLATE_TEXTURE_PATH) as Texture2D
+	if texture == null:
+		push_warning("Sunset sky backplate is not available: %s" % SUNSET_SKY_BACKPLATE_TEXTURE_PATH)
+		return
+	var existing := get_node_or_null(SUNSET_SKY_BACKPLATE_ROOT_NAME) as CanvasLayer
+	if existing:
+		_sunset_sky_backplate = existing
+		return
+	var layer := CanvasLayer.new()
+	layer.name = SUNSET_SKY_BACKPLATE_ROOT_NAME
+	layer.layer = -100
+	add_child(layer)
+	var backdrop := TextureRect.new()
+	backdrop.name = "BackdropTexture"
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	backdrop.texture = texture
+	backdrop.modulate = Color(0.88, 0.90, 0.96, 1.0)
+	layer.add_child(backdrop)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sunset_sky_backplate = layer
 
 func _configure_toy_light(name: String, pos: Vector3, color: Color, energy: float, light_range: float) -> void:
 	var light = get_node_or_null(name) as OmniLight3D
@@ -286,6 +348,53 @@ func _configure_toy_light(name: String, pos: Vector3, color: Color, energy: floa
 
 func _uses_fixed_runtime_camera() -> bool:
 	return true
+
+func _setup_runtime_camera_director(camera: Camera3D) -> void:
+	if _camera_director == null or not is_instance_valid(_camera_director):
+		_camera_director = CAMERA_DIRECTOR_SCRIPT.new()
+		_camera_director.name = "OpenRingoutCameraDirector"
+		add_child(_camera_director)
+	_camera_director.call("configure", camera)
+
+func _update_map_runtime_camera(delta: float) -> void:
+	if _camera_director and is_instance_valid(_camera_director):
+		_camera_director.call("update_camera", _characters, delta)
+	_update_p14_background_parallax()
+	_update_p25_environment_motion(delta)
+
+func set_runtime_camera_enabled(enabled: bool) -> void:
+	if _camera_director and is_instance_valid(_camera_director):
+		_camera_director.call("set_enabled", enabled)
+
+func get_runtime_camera_debug() -> Dictionary:
+	if _camera_director and is_instance_valid(_camera_director):
+		return _camera_director.call("get_debug_state") as Dictionary
+	return {}
+
+func _setup_match_presentation() -> void:
+	if _match_presentation and is_instance_valid(_match_presentation):
+		return
+	_match_presentation = MATCH_PRESENTATION_SCRIPT.new()
+	_match_presentation.name = "OpenRingoutMatchPresentation"
+	add_child(_match_presentation)
+	_match_presentation.call("configure", self, _camera_director, _characters)
+
+func _start_match_presentation() -> void:
+	if _match_presentation and is_instance_valid(_match_presentation):
+		_match_presentation.call("configure", self, _camera_director, _characters)
+		_match_presentation.call("start_intro")
+
+func get_match_presentation_debug() -> Dictionary:
+	if _match_presentation and is_instance_valid(_match_presentation):
+		return _match_presentation.call("get_debug_state") as Dictionary
+	return {}
+
+func _present_match_result(winner: BaseCharacter, winner_name: String, winner_color: Color) -> void:
+	if _match_presentation and is_instance_valid(_match_presentation):
+		await _match_presentation.call("present_result", winner, winner_color)
+	if not is_inside_tree():
+		return
+	super._present_match_result(winner, winner_name, winner_color)
 
 func _setup_control_mode_panel() -> void:
 	pass
@@ -309,6 +418,7 @@ func _spawn_characters() -> void:
 			old_hud.queue_free()
 		_face_character_toward_center(character)
 		_apply_slice_loadout(character, loadouts[i] if i < loadouts.size() else "pistol")
+	call_deferred("_start_match_presentation")
 
 func _face_character_toward_center(character: BaseCharacter) -> void:
 	var dir = -character.global_position
@@ -544,6 +654,257 @@ func _build_sunset_v2_visual_layer(parent: Node3D, legacy_visual: Node3D) -> voi
 	visual_scene.name = SUNSET_V2_VISUAL_ROOT_NAME
 	parent.add_child(visual_scene)
 	_set_sunset_v2_legacy_nodes_visible(legacy_visual, false)
+	_build_p14_environment_layer(parent, legacy_visual, visual_scene)
+
+func _build_p14_environment_layer(parent: Node3D, legacy_visual: Node3D, sunset_v2_visual: Node3D) -> void:
+	var packed_scene = load(P14_ENVIRONMENT_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_warning("P14 sunset environment is not available: %s" % P14_ENVIRONMENT_SCENE_PATH)
+		return
+	var environment_scene = packed_scene.instantiate() as Node3D
+	if environment_scene == null:
+		push_warning("P14 sunset environment could not be instantiated.")
+		return
+	environment_scene.name = P14_ENVIRONMENT_ROOT_NAME
+	parent.add_child(environment_scene)
+	_register_p14_close_parallax_nodes(environment_scene)
+
+	_set_replaced_background_nodes_visible(legacy_visual, false)
+	_set_replaced_background_nodes_visible(sunset_v2_visual, false)
+	var backdrop_root = get_node_or_null(BACKDROP_ROOT_NAME) as Node3D
+	if backdrop_root:
+		backdrop_root.visible = false
+	var abyss_root = get_node_or_null(ABYSS_ROOT_NAME) as Node3D
+	if abyss_root:
+		for child in abyss_root.get_children():
+			if child is Node3D:
+				(child as Node3D).visible = false
+	_setup_p25_environment_motion(sunset_v2_visual, environment_scene)
+
+func _register_p14_close_parallax_nodes(node: Node, ancestor_registered: bool = false) -> void:
+	var registered := ancestor_registered
+	if node is Node3D and not ancestor_registered:
+		for prefix in P14_CLOSE_PARALLAX_PREFIXES:
+			if String(node.name).begins_with(String(prefix)):
+				var node_3d := node as Node3D
+				_p14_close_parallax_nodes.append(node_3d)
+				_p14_close_parallax_origins[node_3d] = node_3d.position
+				registered = true
+				break
+	for child in node.get_children():
+		_register_p14_close_parallax_nodes(child, registered)
+
+func _update_p14_background_parallax() -> void:
+	var camera := get_node_or_null("GlobalCamera") as Camera3D
+	if camera == null or _p14_close_parallax_nodes.is_empty():
+		return
+	var close_amount := clampf(
+		(P14_CLOSE_PARALLAX_START_SIZE - camera.size)
+		/ (P14_CLOSE_PARALLAX_START_SIZE - P14_CLOSE_PARALLAX_END_SIZE),
+		0.0,
+		1.0
+	)
+	close_amount = close_amount * close_amount * (3.0 - 2.0 * close_amount)
+	var offset := P14_CLOSE_PARALLAX_SHIFT * close_amount
+	_p14_current_parallax_offset = offset
+	for node in _p14_close_parallax_nodes:
+		if not is_instance_valid(node):
+			continue
+		var origin_variant = _p14_close_parallax_origins.get(node)
+		if origin_variant is Vector3:
+			node.position = origin_variant + offset
+
+
+func _setup_p25_environment_motion(sunset_v2_visual: Node3D, environment_scene: Node3D) -> void:
+	_p25_motion_time = 0.0
+	_p25_rotor_pivots.clear()
+	_p25_rotor_speeds.clear()
+	_p25_cloud_nodes.clear()
+	_p25_cloud_origins.clear()
+	_p25_edge_gems.clear()
+	_p25_edge_gem_scales.clear()
+	_p25_balloon_pivot = null
+
+	_register_p25_rotor(
+		sunset_v2_visual,
+		"P25HeroWindmillRotor",
+		"V3NorthWindmillHub",
+		["V3NorthWindmillBlade_", "V4NorthWindmillBladeTip_"],
+		P25_HERO_WINDMILL_SPEED
+	)
+	_register_p25_rotor(
+		environment_scene,
+		"P25DistantWindmillRotor",
+		"P14DistantIslandNorthWestWindmillHub",
+		["P14DistantIslandNorthWestWindmillBlade"],
+		P25_DISTANT_WINDMILL_SPEED
+	)
+	_register_p25_balloon(environment_scene)
+
+	_p25_cloud_nodes = _p25_descendants_with_prefixes(environment_scene, ["P14CloudBank"])
+	for cloud in _p25_cloud_nodes:
+		_p25_cloud_origins[cloud] = cloud.position
+
+	_p25_edge_gems = _p25_descendants_containing(sunset_v2_visual, "EdgeGem_")
+	for gem in _p25_edge_gems:
+		_p25_edge_gem_scales[gem] = gem.scale
+	_p25_motion_ready = not _p25_rotor_pivots.is_empty() and _p25_balloon_pivot != null
+
+
+func _register_p25_rotor(
+	visual_root: Node3D,
+	pivot_name: String,
+	hub_name: String,
+	part_prefixes: Array,
+	rotation_speed: float
+) -> void:
+	var hub := visual_root.find_child(hub_name, true, false) as Node3D
+	if hub == null:
+		return
+	var rotor_parts := _p25_descendants_with_prefixes(visual_root, part_prefixes)
+	if rotor_parts.is_empty():
+		return
+	var pivot := Node3D.new()
+	pivot.name = pivot_name
+	visual_root.add_child(pivot)
+	pivot.global_transform = Transform3D(Basis.IDENTITY, hub.global_position)
+	for part in rotor_parts:
+		part.reparent(pivot, true)
+	_p25_rotor_pivots.append(pivot)
+	_p25_rotor_speeds[pivot] = rotation_speed
+
+
+func _register_p25_balloon(environment_scene: Node3D) -> void:
+	var envelope := environment_scene.find_child("P14HotAirBalloonEnvelope", true, false) as Node3D
+	if envelope == null:
+		return
+	var balloon_parts := _p25_descendants_with_prefixes(environment_scene, ["P14HotAirBalloon"])
+	if balloon_parts.is_empty():
+		return
+	var pivot := Node3D.new()
+	pivot.name = "P25HotAirBalloonMotion"
+	environment_scene.add_child(pivot)
+	pivot.global_transform = Transform3D(Basis.IDENTITY, envelope.global_position)
+	for part in balloon_parts:
+		part.reparent(pivot, true)
+	_p25_balloon_pivot = pivot
+	_p25_balloon_origin = pivot.position
+
+
+func _update_p25_environment_motion(delta: float) -> void:
+	if not _p25_motion_ready:
+		return
+	var safe_delta := maxf(delta, 0.0)
+	_p25_motion_time = fmod(_p25_motion_time + safe_delta, 3600.0)
+	for pivot in _p25_rotor_pivots:
+		if not is_instance_valid(pivot):
+			continue
+		pivot.rotation.z += float(_p25_rotor_speeds.get(pivot, 0.0)) * safe_delta
+
+	if is_instance_valid(_p25_balloon_pivot):
+		var balloon_phase := _p25_motion_time * 0.44
+		_p25_balloon_pivot.position = _p25_balloon_origin + Vector3(
+			sin(balloon_phase * 0.73) * 0.22,
+			sin(balloon_phase) * 0.34,
+			cos(balloon_phase * 0.61) * 0.14
+		)
+		_p25_balloon_pivot.rotation = Vector3(
+			sin(balloon_phase * 0.79) * 0.007,
+			0.0,
+			cos(balloon_phase * 0.67) * 0.012
+		)
+
+	for index in range(_p25_cloud_nodes.size()):
+		var cloud := _p25_cloud_nodes[index]
+		if not is_instance_valid(cloud):
+			continue
+		var origin_variant = _p25_cloud_origins.get(cloud)
+		if not (origin_variant is Vector3):
+			continue
+		var phase := float(index) * 1.37
+		var drift := Vector3(
+			sin(_p25_motion_time * 0.075 + phase) * 0.52,
+			sin(_p25_motion_time * 0.11 + phase * 0.73) * 0.09,
+			cos(_p25_motion_time * 0.058 + phase) * 0.30
+		)
+		var parallax_offset := _p14_current_parallax_offset if _p14_close_parallax_origins.has(cloud) else Vector3.ZERO
+		cloud.position = origin_variant + parallax_offset + drift
+
+	for index in range(_p25_edge_gems.size()):
+		var gem := _p25_edge_gems[index]
+		if not is_instance_valid(gem):
+			continue
+		var base_scale_variant = _p25_edge_gem_scales.get(gem)
+		if not (base_scale_variant is Vector3):
+			continue
+		var pulse := 1.0 + sin(_p25_motion_time * 1.28 + float(index) * 0.72) * 0.055
+		gem.scale = base_scale_variant * pulse
+
+
+func _p25_descendants_with_prefixes(node: Node, prefixes: Array) -> Array[Node3D]:
+	var matches: Array[Node3D] = []
+	for child in node.get_children():
+		if child is Node3D:
+			for prefix in prefixes:
+				if String(child.name).begins_with(String(prefix)):
+					matches.append(child as Node3D)
+					break
+		matches.append_array(_p25_descendants_with_prefixes(child, prefixes))
+	return matches
+
+
+func _p25_descendants_containing(node: Node, fragment: String) -> Array[Node3D]:
+	var matches: Array[Node3D] = []
+	for child in node.get_children():
+		if child is Node3D and String(child.name).contains(fragment):
+			matches.append(child as Node3D)
+		matches.append_array(_p25_descendants_containing(child, fragment))
+	return matches
+
+
+func get_environment_motion_debug() -> Dictionary:
+	var hero_rotor_rotation := 0.0
+	if not _p25_rotor_pivots.is_empty() and is_instance_valid(_p25_rotor_pivots[0]):
+		hero_rotor_rotation = _p25_rotor_pivots[0].rotation.z
+	var balloon_offset := Vector3.ZERO
+	if is_instance_valid(_p25_balloon_pivot):
+		balloon_offset = _p25_balloon_pivot.position - _p25_balloon_origin
+	var cloud_offset := Vector3.ZERO
+	if not _p25_cloud_nodes.is_empty() and is_instance_valid(_p25_cloud_nodes[0]):
+		var cloud := _p25_cloud_nodes[0]
+		var origin_variant = _p25_cloud_origins.get(cloud)
+		if origin_variant is Vector3:
+			var parallax_offset := _p14_current_parallax_offset if _p14_close_parallax_origins.has(cloud) else Vector3.ZERO
+			cloud_offset = cloud.position - origin_variant - parallax_offset
+	var edge_scale_ratio := 1.0
+	if not _p25_edge_gems.is_empty() and is_instance_valid(_p25_edge_gems[0]):
+		var gem := _p25_edge_gems[0]
+		var base_scale_variant = _p25_edge_gem_scales.get(gem)
+		if base_scale_variant is Vector3 and base_scale_variant.x > 0.0001:
+			edge_scale_ratio = gem.scale.x / base_scale_variant.x
+	return {
+		"ready": _p25_motion_ready,
+		"time": _p25_motion_time,
+		"rotor_count": _p25_rotor_pivots.size(),
+		"hero_rotor_rotation": hero_rotor_rotation,
+		"balloon_offset": balloon_offset,
+		"cloud_count": _p25_cloud_nodes.size(),
+		"cloud_offset": cloud_offset,
+		"edge_gem_count": _p25_edge_gems.size(),
+		"edge_scale_ratio": edge_scale_ratio,
+	}
+
+func _set_replaced_background_nodes_visible(node: Node, is_visible: bool) -> void:
+	_set_prefixed_nodes_visible(node, P14_REPLACED_BACKGROUND_PREFIXES, is_visible)
+
+func _set_prefixed_nodes_visible(node: Node, prefixes: Array, is_visible: bool) -> void:
+	if node is Node3D:
+		for prefix in prefixes:
+			if String(node.name).begins_with(String(prefix)):
+				(node as Node3D).visible = is_visible
+				break
+	for child in node.get_children():
+		_set_prefixed_nodes_visible(child, prefixes, is_visible)
 
 func _set_sunset_v2_legacy_nodes_visible(node: Node, is_visible: bool) -> void:
 	if node is Node3D and _is_sunset_v2_replaced_legacy_name(String(node.name)):
@@ -750,6 +1111,47 @@ func _build_chunky_cover(
 	_spawn_collision_box("WestChunkyCushionACollision", Vector3(-15.7, 1.78, 5.7), Vector3(1.40, 1.46, 2.25), parent, 5.0)
 	_spawn_collision_box("WestChunkyCushionBCollision", Vector3(-11.0, 1.78, 5.4), Vector3(1.35, 1.46, 2.25), parent, 5.0)
 
+func _build_landmark_collisions(parent: Node3D) -> void:
+	_spawn_collision_cylinder("NorthWindmillCollision", Vector3(7.0, 2.75, -31.0), 2.45, 5.40, parent)
+	_spawn_collision_cylinder("NorthHeroTreeCollision", Vector3(12.0, 1.65, -33.4), 1.10, 3.30, parent)
+	_spawn_collision_cylinder("NorthDuckACollision", Vector3(-3.8, 0.84, -28.4), 0.58, 1.12, parent)
+	_spawn_collision_cylinder("NorthDuckBCollision", Vector3(12.5, 0.78, -27.0), 0.52, 1.00, parent)
+
+	_spawn_collision_cylinder("SouthBarrelRedCollision", Vector3(3.8, 1.05, 29.0), 0.92, 1.80, parent)
+	_spawn_collision_cylinder("SouthBarrelBlueCollision", Vector3(6.0, 1.05, 31.2), 0.92, 1.80, parent)
+	_spawn_collision_cylinder("SouthBarrelGoldCollision", Vector3(8.2, 1.05, 28.8), 0.92, 1.80, parent)
+
+	_spawn_collision_cylinder("WestTireStackCollision", Vector3(-41.5, 1.28, 0.5), 1.28, 1.85, parent)
+	_spawn_collision_cylinder("EastTreeACollision", Vector3(38.5, 2.25, -0.5), 1.45, 4.50, parent)
+	_spawn_collision_cylinder("EastTreeBCollision", Vector3(43.0, 1.85, 5.5), 1.18, 3.70, parent)
+	_spawn_collision_box("EastBlueCrateCollision", Vector3(44.1, 1.35, -3.2), Vector3(3.0, 2.30, 3.0), parent, 0.0)
+	_spawn_collision_box("EastGoldCrateCollision", Vector3(44.1, 3.20, -3.2), Vector3(2.25, 1.45, 2.25), parent, 0.0)
+	_spawn_collision_box("EastRedCrateCollision", Vector3(46.1, 1.25, 0.2), Vector3(2.45, 2.10, 2.45), parent, 0.0)
+
+func _spawn_collision_cylinder(
+	name: String,
+	center: Vector3,
+	radius: float,
+	height: float,
+	parent: Node3D
+) -> Node3D:
+	var root = Node3D.new()
+	root.name = name
+	root.position = center
+	parent.add_child(root)
+
+	var body = StaticBody3D.new()
+	body.name = "StaticBody3D"
+	var shape = CollisionShape3D.new()
+	shape.name = "CollisionShape3D"
+	var cylinder = CylinderShape3D.new()
+	cylinder.radius = radius
+	cylinder.height = height
+	shape.shape = cylinder
+	body.add_child(shape)
+	root.add_child(body)
+	return root
+
 func _spawn_collision_box(
 	name: String,
 	center: Vector3,
@@ -887,28 +1289,54 @@ func _build_center_pickup_pad(parent: Node3D, glow_mat: Material, metal_mat: Mat
 	var pad = Node3D.new()
 	pad.name = "CenterPickupPad"
 	parent.add_child(pad)
+	var plum_mat = _material(Color("#4a304f"), 0.72, 0.12)
+	var gold_mat = _material(Color("#e2a43a"), 0.68, 0.10)
 
 	var base = MeshInstance3D.new()
 	var base_mesh = CylinderMesh.new()
 	base_mesh.top_radius = 3.0
 	base_mesh.bottom_radius = 3.2
-	base_mesh.height = 0.35
-	base_mesh.radial_segments = 24
+	base_mesh.height = 0.42
+	base_mesh.radial_segments = 32
 	base.mesh = base_mesh
 	base.position = Vector3(0, 1.12, 0)
-	base.material_override = metal_mat
+	base.material_override = plum_mat
 	pad.add_child(base)
+
+	var ring = MeshInstance3D.new()
+	var ring_mesh = CylinderMesh.new()
+	ring_mesh.top_radius = 2.68
+	ring_mesh.bottom_radius = 2.82
+	ring_mesh.height = 0.18
+	ring_mesh.radial_segments = 32
+	ring.mesh = ring_mesh
+	ring.position = Vector3(0, 1.40, 0)
+	ring.material_override = gold_mat
+	pad.add_child(ring)
 
 	var glow = MeshInstance3D.new()
 	var glow_mesh = CylinderMesh.new()
-	glow_mesh.top_radius = 2.1
-	glow_mesh.bottom_radius = 2.1
-	glow_mesh.height = 0.08
-	glow_mesh.radial_segments = 24
+	glow_mesh.top_radius = 2.02
+	glow_mesh.bottom_radius = 2.12
+	glow_mesh.height = 0.12
+	glow_mesh.radial_segments = 32
 	glow.mesh = glow_mesh
-	glow.position = Vector3(0, 1.36, 0)
+	glow.position = Vector3(0, 1.55, 0)
 	glow.material_override = glow_mat
 	pad.add_child(glow)
+
+	for index in range(8):
+		var angle := TAU * float(index) / 8.0
+		var bolt = MeshInstance3D.new()
+		var bolt_mesh = CylinderMesh.new()
+		bolt_mesh.top_radius = 0.14
+		bolt_mesh.bottom_radius = 0.16
+		bolt_mesh.height = 0.11
+		bolt_mesh.radial_segments = 16
+		bolt.mesh = bolt_mesh
+		bolt.position = Vector3(cos(angle) * 2.48, 1.56, sin(angle) * 2.48)
+		bolt.material_override = metal_mat
+		pad.add_child(bolt)
 
 func _build_background_islands(parent: Node3D) -> void:
 	var cliff_mat = _material(Color("#3f385a"), 0.98, 0.04)
@@ -1114,18 +1542,56 @@ func _abyss_gradient_material() -> ShaderMaterial:
 shader_type spatial;
 render_mode unshaded, cull_disabled;
 
-uniform vec4 deep_color : source_color = vec4(0.12, 0.20, 0.42, 1.0);
-uniform vec4 horizon_color : source_color = vec4(0.33, 0.43, 0.70, 1.0);
-uniform vec4 warm_haze : source_color = vec4(0.88, 0.52, 0.58, 1.0);
+uniform vec4 cool_sky : source_color = vec4(0.17, 0.23, 0.60, 1.0);
+uniform vec4 violet_sky : source_color = vec4(0.39, 0.31, 0.64, 1.0);
+uniform vec4 sunset_pink : source_color = vec4(0.86, 0.49, 0.62, 1.0);
+uniform vec4 sunset_peach : source_color = vec4(0.97, 0.63, 0.48, 1.0);
+uniform vec4 sunset_gold : source_color = vec4(1.0, 0.77, 0.50, 1.0);
+
+varying vec3 world_position;
+
+float soft_ellipse(vec2 point, vec2 center, vec2 radius) {
+	vec2 local = (point - center) / radius;
+	return exp(-dot(local, local) * 2.1);
+}
+
+void vertex() {
+	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
 
 void fragment() {
-	vec2 p = UV - vec2(0.5);
-	float radial = smoothstep(0.08, 0.72, length(p));
-	float vertical_warmth = smoothstep(0.20, 0.90, UV.y);
-	vec3 base = mix(horizon_color.rgb, deep_color.rgb, radial);
-	base = mix(base, warm_haze.rgb, vertical_warmth * 0.08);
+	float screen_axis = world_position.x * 0.81 - world_position.z * 0.58;
+	float depth_axis = world_position.x * 0.58 + world_position.z * 0.81;
+	float horizontal_mix = smoothstep(-48.0, 48.0, screen_axis);
+	float lower_depth = smoothstep(-78.0, 34.0, depth_axis);
+	vec3 warm_side = mix(sunset_peach.rgb, sunset_pink.rgb, lower_depth * 0.78);
+	vec3 base = mix(warm_side, cool_sky.rgb, horizontal_mix);
+	base = mix(base, violet_sky.rgb, 0.06 + lower_depth * 0.10);
+
+	vec2 sun_delta = vec2((screen_axis + 34.0) / 38.0, (depth_axis + 76.0) / 34.0);
+	float sun_haze = exp(-dot(sun_delta, sun_delta) * 1.8);
+	base = mix(base, sunset_gold.rgb, sun_haze * 0.58);
+
+	float horizon_veil = exp(-pow((depth_axis + 55.0) / 62.0, 2.0));
+	base = mix(base, mix(sunset_pink.rgb, violet_sky.rgb, horizontal_mix), horizon_veil * 0.07);
+
+	vec2 backdrop_point = vec2(screen_axis, depth_axis);
+	float distant_haze = 0.0;
+	distant_haze += soft_ellipse(backdrop_point, vec2(-43.0, -84.0), vec2(16.0, 10.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(-21.0, -80.0), vec2(22.0, 9.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(2.0, -86.0), vec2(19.0, 10.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(25.0, -80.0), vec2(21.0, 9.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(46.0, -85.0), vec2(16.0, 10.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(-45.0, -45.0), vec2(13.0, 22.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(46.0, -40.0), vec2(14.0, 22.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(-28.0, -9.0), vec2(28.0, 12.0));
+	distant_haze += soft_ellipse(backdrop_point, vec2(22.0, -7.0), vec2(29.0, 13.0));
+	float cloud_veil = 1.0 - exp(-distant_haze * 0.72);
+	cloud_veil = smoothstep(0.10, 0.78, cloud_veil);
+	vec3 haze_color = mix(vec3(0.97, 0.76, 0.73), vec3(0.56, 0.53, 0.77), horizontal_mix);
+	base = mix(base, haze_color, cloud_veil * 0.20);
 	ALBEDO = base;
-	EMISSION = base * 0.06;
+	EMISSION = base * 0.07;
 }
 "
 	var shader_mat = ShaderMaterial.new()

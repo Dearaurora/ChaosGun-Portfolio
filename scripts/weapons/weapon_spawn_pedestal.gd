@@ -9,6 +9,8 @@ var _accent_color := Color("#6a7382")
 var _state_ring: MeshInstance3D
 var _state_disc: MeshInstance3D
 var _light_nodes: Array[MeshInstance3D] = []
+var _light_base_angles: Array[float] = []
+var _light_radius := 0.0
 var _phase := 0.0
 
 func _ready() -> void:
@@ -30,6 +32,8 @@ func get_visual_debug() -> Dictionary:
 		"state": _state,
 		"light_count": _light_nodes.size(),
 		"radius": 1.82 if _premium else 1.38,
+		"light_radius": _light_radius,
+		"orbit_angle": _status_light_orbit_angle(),
 	}
 
 func _process(delta: float) -> void:
@@ -47,12 +51,15 @@ func _process(delta: float) -> void:
 	_state_ring.scale = Vector3.ONE * pulse
 	if _state_disc:
 		_state_disc.scale = Vector3.ONE * (0.98 + sin(_phase * 2.8) * 0.015 if _state == VisualState.ACTIVE else 1.0)
+	_update_status_light_orbit()
 
 func _build() -> void:
 	for child in get_children():
 		child.queue_free()
 	_light_nodes.clear()
+	_light_base_angles.clear()
 	var radius := 1.82 if _premium else 1.38
+	_light_radius = radius * 0.78
 	var dark := _material(Color("#303545"), Color("#303545"), 0.0, false)
 	var trim := _material(Color("#596273"), Color("#596273"), 0.0, false)
 
@@ -75,9 +82,10 @@ func _build() -> void:
 	var light_count := 6 if _premium else 4
 	for i in range(light_count):
 		var angle := TAU * float(i) / float(light_count)
+		_light_base_angles.append(angle)
 		var light := _add_box(
 			"StatusLight_%d" % i,
-			Vector3(cos(angle) * radius * 0.78, -0.12, sin(angle) * radius * 0.78),
+			Vector3(cos(angle) * _light_radius, -0.12, sin(angle) * _light_radius),
 			Vector3(0.22 if _premium else 0.18, 0.07, 0.10),
 			trim
 		)
@@ -95,6 +103,27 @@ func _build() -> void:
 				dark
 			)
 			clamp.rotation.y = -angle
+
+
+func _status_light_orbit_angle() -> float:
+	match _state:
+		VisualState.PREWARM:
+			return _phase * 1.25
+		VisualState.ACTIVE:
+			return _phase * 0.48
+		_:
+			return 0.0
+
+
+func _update_status_light_orbit() -> void:
+	var orbit_angle := _status_light_orbit_angle()
+	for index in range(mini(_light_nodes.size(), _light_base_angles.size())):
+		var light := _light_nodes[index]
+		if not is_instance_valid(light):
+			continue
+		var angle := _light_base_angles[index] + orbit_angle
+		light.position = Vector3(cos(angle) * _light_radius, -0.12, sin(angle) * _light_radius)
+		light.rotation.y = -angle
 
 func _apply_state_materials() -> void:
 	if _state_ring == null:

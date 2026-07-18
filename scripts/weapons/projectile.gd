@@ -3,6 +3,11 @@ class_name Projectile
 
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
 const HitEffectScene: PackedScene = preload("res://scenes/effects/hit_effect.tscn")
+const CombatVisualResourceCache = preload("res://scripts/effects/combat_visual_resource_cache.gd")
+
+const BULLET_GOLD := Color("#ffc83d")
+const BULLET_WHITE := Color("#fff8d8")
+const BULLET_TRAIL_GOLD := Color("#ffb72f")
 
 ## 鐢?Weapon 鍦ㄥ彂灏勬椂娉ㄥ叆锛屼笉鍐嶇‖缂栫爜
 var speed: float = 60.0
@@ -17,6 +22,8 @@ var _close_range_knockback_multiplier: float = 1.0
 var _knockback_falloff_start: float = 0.0
 var _knockback_falloff_end: float = 0.0
 var _far_range_knockback_multiplier: float = 1.0
+var _collision_exclusions: Array[RID] = []
+var _credited_attacker: Node3D = null
 
 var _visual_weapon_id: StringName = &"pistol"
 var _visual_profile: Dictionary = {}
@@ -24,13 +31,16 @@ var _visual_root: Node3D = null
 var _rim: MeshInstance3D = null
 var _core: MeshInstance3D = null
 var _trail: MeshInstance3D = null
+var _trail_core: MeshInstance3D = null
 var _trajectory_underlay: MeshInstance3D = null
 var _trajectory_core: MeshInstance3D = null
 var _lead_spark: MeshInstance3D = null
+var _visual_build_count := 0
 var _hit := false  # 闃叉灏勭嚎鍜?Area3D 淇″彿閲嶅瑙﹀彂
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
+	_cache_collision_exclusions()
 	get_tree().create_timer(lifetime).timeout.connect(queue_free)
 	_hide_scene_placeholder_meshes()
 	_rebuild_projectile_visual()
@@ -48,10 +58,12 @@ func _physics_process(delta: float) -> void:
 		var query = PhysicsRayQueryParameters3D.create(
 			global_position, global_position + move_vec)
 		# 鎺掗櫎灏勬墜鐨勭鎾炰綋
-		if shooter:
-			query.exclude = [shooter.get_rid()]
+		query.exclude = _collision_exclusions
 		var result = space_state.intersect_ray(query)
 		if result:
+			if _is_friendly_character(result.collider):
+				global_position += move_vec
+				return
 			# 灏勭嚎鍛戒腑 鈫?绉诲姩鍒板懡涓偣骞惰Е鍙戝嚮涓?
 			global_position = result.position
 			_handle_hit(result.collider)
@@ -65,29 +77,62 @@ func _physics_process(delta: float) -> void:
 		var body_length := _profile_float("body_length", 0.72)
 		var pulse := 0.94 + sin(Time.get_ticks_msec() * 0.018) * 0.04
 		_trail.scale.z = trail_length * pulse
-		_trail.position.z = body_length * 0.48 + _trail.scale.z * 0.5
+		_trail.position.z = body_length * 0.12
+		if _trail_core:
+			_trail_core.scale.z = trail_length * 0.48 * pulse
+			_trail_core.position.z = body_length * 0.10
 
 func _on_body_entered(body: Node3D) -> void:
 	if _hit:
 		return
-	if body == shooter:
+	if is_instance_valid(shooter) and body == shooter:
+		return
+	if _is_friendly_character(body):
 		return
 	_handle_hit(body)
 
 func _handle_hit(body: Node3D) -> void:
 	if _hit:
 		return
+	if _is_friendly_character(body):
+		return
 	_hit = true
 	var distance_multiplier := get_knockback_multiplier_for_distance(
 		_knockback_origin.distance_to(global_position)
 	)
+	var attacker := _credited_attacker if is_instance_valid(_credited_attacker) else null
 	if body.has_method("apply_hit"):
-		body.apply_hit(direction * knockback_power * distance_multiplier, damage, shooter)
+		body.apply_hit(
+			direction * knockback_power * distance_multiplier,
+			damage,
+			attacker,
+			_visual_weapon_id
+		)
 	elif body.has_method("apply_knockback"):
 		body.apply_knockback(direction * knockback_power * distance_multiplier)
 	# 鍑讳腑鐗规晥
 	_spawn_hit_effect()
 	queue_free()
+
+func _cache_collision_exclusions() -> void:
+	_collision_exclusions.clear()
+	_credited_attacker = null
+	if not is_instance_valid(shooter):
+		return
+	_credited_attacker = shooter
+	if shooter is CollisionObject3D:
+		_collision_exclusions.append((shooter as CollisionObject3D).get_rid())
+	if not (shooter is BaseCharacter):
+		return
+	_credited_attacker = (shooter as BaseCharacter).get_combat_identity()
+	for node in get_tree().get_nodes_in_group("player"):
+		if node is BaseCharacter and (shooter as BaseCharacter).is_friendly_to(node as BaseCharacter):
+			var rid := (node as BaseCharacter).get_rid()
+			if rid not in _collision_exclusions:
+				_collision_exclusions.append(rid)
+
+func _is_friendly_character(body: Node) -> bool:
+	return is_instance_valid(_credited_attacker) and _credited_attacker is BaseCharacter and body is BaseCharacter and (_credited_attacker as BaseCharacter).is_friendly_to(body as BaseCharacter)
 
 func configure_visual_profile(weapon_id: StringName, color: Color) -> void:
 	_visual_weapon_id = weapon_id
@@ -125,10 +170,15 @@ func get_visual_profile_debug() -> Dictionary:
 		_visual_profile = _profile_for_weapon(_visual_weapon_id)
 	var copy := _visual_profile.duplicate(true)
 	copy["weapon_id"] = String(_visual_weapon_id)
-	copy["core_color"] = projectile_color
+	copy["core_color"] = BULLET_WHITE
+	copy["shell_color"] = BULLET_GOLD
+	copy["trail_color"] = BULLET_TRAIL_GOLD
+	copy["weapon_accent_color"] = projectile_color
+	copy["build_count"] = _visual_build_count
 	return copy
 
 func _rebuild_projectile_visual() -> void:
+	_visual_build_count += 1
 	if _visual_profile.is_empty():
 		_visual_profile = _profile_for_weapon(_visual_weapon_id)
 	if _visual_root and is_instance_valid(_visual_root):
@@ -143,34 +193,42 @@ func _rebuild_projectile_visual() -> void:
 	var trail_length := _profile_float("trail_length", 0.62)
 	var trail_width := _profile_float("trail_width", body_radius * 0.72)
 	var trail_alpha := _profile_float("trail_alpha", 0.34)
-	var rim_color := Color("#141826")
 	_trajectory_underlay = null
 	_trajectory_core = null
-	_rim = _add_blob_mesh(
+	_rim = _add_bolt_mesh(
 		"BulletRim",
 		Vector3(0.0, -0.018, 0.0),
-		Vector3(body_radius + 0.045, body_radius * 0.46, body_length * 0.52 + 0.035),
-		_make_projectile_material(rim_color, rim_color, 0.0, 1.0, false)
+		body_length,
+		body_radius,
+		_make_projectile_material(BULLET_GOLD, BULLET_GOLD, 0.92, 1.0, false)
 	)
-	_core = _add_blob_mesh(
+	_core = _add_bolt_mesh(
 		"BulletCore",
-		Vector3(0.0, 0.028, -0.035),
-		Vector3(body_radius, body_radius * 0.40, body_length * 0.48),
-		_make_projectile_material(projectile_color, projectile_color, 1.15, 0.96, false)
+		Vector3(0.0, 0.016, -body_length * 0.12),
+		body_length * 0.52,
+		body_radius * 0.42,
+		_make_projectile_material(BULLET_WHITE, BULLET_WHITE, 1.20, 1.0, false)
 	)
 	_lead_spark = null
 
-	_trail = MeshInstance3D.new()
-	_trail.name = "ShortTrail"
-	var trail_mesh := BoxMesh.new()
-	trail_mesh.size = Vector3(1.0, 1.0, 1.0)
-	_trail.mesh = trail_mesh
-	_trail.position = Vector3(0.0, 0.0, body_length * 0.48 + trail_length * 0.5)
-	_trail.scale = Vector3(trail_width, body_radius * 0.18, trail_length)
-	_trail.material_override = _make_projectile_material(projectile_color, projectile_color, 1.7, trail_alpha, true)
-	_visual_root.add_child(_trail)
+	_trail = _add_tail_mesh(
+		"ShortTrail",
+		Vector3(0.0, 0.0, body_length * 0.12),
+		trail_width,
+		_make_projectile_material(BULLET_TRAIL_GOLD, BULLET_TRAIL_GOLD, 0.86, trail_alpha + 0.10, true)
+	)
+	_trail.scale = Vector3(trail_width * 1.16, 1.0, trail_length)
+	_trail_core = _add_tail_mesh(
+		"ShortTrailCore",
+		Vector3(0.0, 0.010, body_length * 0.10),
+		trail_width * 0.28,
+		_make_projectile_material(BULLET_WHITE, BULLET_WHITE, 1.18, minf(0.68, trail_alpha + 0.25), true)
+	)
+	_trail_core.scale = Vector3(trail_width * 0.28, 1.0, trail_length * 0.48)
 
 func set_projectile_color(color: Color) -> void:
+	if projectile_color.is_equal_approx(color):
+		return
 	projectile_color = color
 	if is_inside_tree():
 		_rebuild_projectile_visual()
@@ -185,24 +243,37 @@ func _hide_scene_placeholder_meshes() -> void:
 func _add_blob_mesh(mesh_name: String, pos: Vector3, visual_scale: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = mesh_name
-	var mesh := SphereMesh.new()
-	mesh.radius = 1.0
-	mesh.height = 2.0
-	mesh.radial_segments = 14
-	mesh.rings = 6
-	mesh_instance.mesh = mesh
+	mesh_instance.mesh = CombatVisualResourceCache.sphere_mesh(14, 6)
 	mesh_instance.position = pos
 	mesh_instance.scale = visual_scale
 	mesh_instance.material_override = mat
 	_visual_root.add_child(mesh_instance)
 	return mesh_instance
 
+func _add_bolt_mesh(mesh_name: String, pos: Vector3, bolt_length: float, bolt_radius: float, mat: StandardMaterial3D) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = mesh_name
+	mesh_instance.mesh = CombatVisualResourceCache.teardrop_mesh(bolt_length, bolt_radius)
+	mesh_instance.position = pos
+	mesh_instance.material_override = mat
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_visual_root.add_child(mesh_instance)
+	return mesh_instance
+
+func _add_tail_mesh(mesh_name: String, pos: Vector3, _trail_width: float, mat: StandardMaterial3D) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = mesh_name
+	mesh_instance.mesh = CombatVisualResourceCache.tail_mesh()
+	mesh_instance.position = pos
+	mesh_instance.material_override = mat
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_visual_root.add_child(mesh_instance)
+	return mesh_instance
+
 func _add_box_mesh(mesh_name: String, pos: Vector3, visual_scale: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = mesh_name
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3.ONE
-	mesh_instance.mesh = mesh
+	mesh_instance.mesh = CombatVisualResourceCache.box_mesh()
 	mesh_instance.position = pos
 	mesh_instance.scale = visual_scale
 	mesh_instance.material_override = mat
@@ -210,16 +281,7 @@ func _add_box_mesh(mesh_name: String, pos: Vector3, visual_scale: Vector3, mat: 
 	return mesh_instance
 
 func _make_projectile_material(albedo: Color, emission: Color, energy: float, alpha: float, additive: bool) -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if alpha < 0.99 else BaseMaterial3D.TRANSPARENCY_DISABLED
-	mat.albedo_color = Color(albedo.r, albedo.g, albedo.b, alpha)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.emission_enabled = energy > 0.0
-	mat.emission = emission
-	mat.emission_energy_multiplier = energy
-	if additive:
-		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	return mat
+	return CombatVisualResourceCache.material(albedo, emission, energy, alpha, additive)
 
 func _profile_float(key: String, fallback: float) -> float:
 	if _visual_profile.has(key):
@@ -230,57 +292,63 @@ func _profile_for_weapon(weapon_id: StringName) -> Dictionary:
 	match weapon_id:
 		&"smg":
 			return {
-				"body_length": 0.78,
-				"body_radius": 0.16,
-				"trail_length": 0.64,
-				"trail_width": 0.12,
+				"body_length": 0.52,
+				"body_radius": 0.14,
+				"trail_length": 0.42,
+				"trail_width": 0.11,
 				"trail_alpha": 0.30,
+				"shape": "yellow_white_teardrop",
 			}
 		&"ak_rifle":
 			return {
-				"body_length": 1.18,
-				"body_radius": 0.28,
-				"trail_length": 0.88,
-				"trail_width": 0.18,
+				"body_length": 0.72,
+				"body_radius": 0.19,
+				"trail_length": 0.62,
+				"trail_width": 0.15,
 				"trail_alpha": 0.34,
+				"shape": "yellow_white_teardrop",
 			}
 		&"sniper":
 			return {
-				"body_length": 1.40,
+				"body_length": 0.82,
 				"body_radius": 0.16,
-				"trail_length": 1.16,
-				"trail_width": 0.11,
+				"trail_length": 0.86,
+				"trail_width": 0.13,
 				"trail_alpha": 0.38,
+				"shape": "yellow_white_teardrop",
 			}
 		&"gatling":
 			return {
-				"body_length": 0.72,
-				"body_radius": 0.14,
-				"trail_length": 0.56,
-				"trail_width": 0.10,
+				"body_length": 0.48,
+				"body_radius": 0.12,
+				"trail_length": 0.38,
+				"trail_width": 0.09,
 				"trail_alpha": 0.28,
+				"shape": "yellow_white_teardrop",
 			}
 		&"shotgun":
 			return {
-				"body_length": 0.72,
-				"body_radius": 0.20,
+				"body_length": 0.60,
+				"body_radius": 0.18,
 				"trail_length": 0.48,
-				"trail_width": 0.13,
+				"trail_width": 0.14,
 				"trail_alpha": 0.27,
+				"shape": "yellow_white_teardrop",
 			}
 		_:
 			return {
-				"body_length": 0.98,
-				"body_radius": 0.24,
-				"trail_length": 0.75,
-				"trail_width": 0.16,
+				"body_length": 0.62,
+				"body_radius": 0.18,
+				"trail_length": 0.56,
+				"trail_width": 0.14,
 				"trail_alpha": 0.32,
+				"shape": "yellow_white_teardrop",
 			}
 
 func _spawn_hit_effect() -> void:
 	var hit = HitEffectScene.instantiate() as Node3D
 	if hit and hit.has_method("configure"):
-		hit.call("configure", projectile_color, _visual_weapon_id)
+		hit.call("configure", projectile_color, _visual_weapon_id, direction)
 	var scene_root = RuntimeGlobals.active_scene(get_tree())
 	if scene_root == null:
 		return

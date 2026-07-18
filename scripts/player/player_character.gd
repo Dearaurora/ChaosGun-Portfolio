@@ -2,7 +2,7 @@ extends BaseCharacter
 class_name PlayerCharacter
 
 ## 本地多人版 —— 朝向射击 + 瞄准辅助
-## 通过 input_prefix 区分不同玩家的输入（p1_ / p2_）
+## 通过 input_prefix 区分不同玩家的输入（p1_ - p4_）
 
 const AIM_ASSIST_CONE_DEG := 42.0
 const AIM_ASSIST_CLOSE_CONE_DEG := 100.0
@@ -16,7 +16,7 @@ const CONTROL_MODE_LANE := "lane_2d"
 const CONTROL_MODE_TWIN_STICK := "twin_stick"
 const CONTROL_MODE_LOCK_ON := "lock_on"
 
-## 输入前缀：由对战场景在生成时设置（"p1_" 或 "p2_"）
+## 输入前缀：由对战场景在生成时设置（"p1_" - "p4_"）
 var input_prefix: String = "p1_"
 ## 玩家槽位索引（0-3）
 var slot_index: int = 0
@@ -65,7 +65,7 @@ func _physics_process(delta: float) -> void:
 	_visual_move_dir = direction if direction.length() > 0.1 else Vector3.ZERO
 	_visual_move_speed_ratio = 1.0 if direction.length() > 0.1 else 0.0
 
-	var grounded_speed = _game_config_float("character_speed", 550.0)
+	var grounded_speed = get_movement_speed()
 	var air_control = _game_config_float("character_air_control_multiplier", 0.2)
 	var current_speed = grounded_speed if is_on_floor() else grounded_speed * air_control
 
@@ -95,7 +95,7 @@ func _physics_process(delta: float) -> void:
 	# --- 射击 ---
 	_handle_fire_input()
 
-	# --- 武器切换 ---
+	# --- 丢弃当前主武器 ---
 	_handle_weapon_input()
 
 # ------------------------------------------------------------------
@@ -190,6 +190,7 @@ func _find_lane_target() -> BaseCharacter:
 		if not (node is BaseCharacter): continue
 		var target := node as BaseCharacter
 		if target.is_dead: continue
+		if is_friendly_to(target): continue
 		var to_target = target.global_position - global_position
 		if absf(to_target.z) > LANE_TARGET_Z_TOLERANCE: continue
 		var x_gap = absf(to_target.x)
@@ -210,7 +211,7 @@ func _get_lock_on_fire_dir(base_dir: Vector3) -> Vector3:
 	return _get_aim_assisted_dir(base_dir)
 
 func _get_lock_target() -> BaseCharacter:
-	if _lock_target and is_instance_valid(_lock_target) and not _lock_target.is_dead:
+	if _lock_target and is_instance_valid(_lock_target) and not _lock_target.is_dead and not is_friendly_to(_lock_target):
 		var cached_offset := _lock_target.global_position - global_position
 		cached_offset.y = 0.0
 		if cached_offset.length() <= LOCK_ON_RANGE:
@@ -226,6 +227,7 @@ func _get_lock_target() -> BaseCharacter:
 		if not (node is BaseCharacter): continue
 		var target := node as BaseCharacter
 		if target.is_dead: continue
+		if is_friendly_to(target): continue
 		var to_target = target.global_position - global_position
 		to_target.y = 0.0
 		var dist := to_target.length()
@@ -302,6 +304,7 @@ func _get_aim_assisted_dir(base_dir: Vector3) -> Vector3:
 		if not (node is BaseCharacter): continue
 		var target := node as BaseCharacter
 		if target.is_dead: continue
+		if is_friendly_to(target): continue
 		var to_target = target.global_position - global_position
 		to_target.y = 0
 		var dist := to_target.length()
@@ -329,9 +332,9 @@ func _get_aim_assisted_dir(base_dir: Vector3) -> Vector3:
 func _handle_weapon_input() -> void:
 	if not weapon_manager:
 		return
-	var cycle_action = input_prefix + "weapon_cycle"
-	if Input.is_action_just_pressed(cycle_action):
-		weapon_manager.cycle_weapon()
+	var drop_action = input_prefix + "drop_weapon"
+	if Input.is_action_just_pressed(drop_action):
+		weapon_manager.discard_current_weapon()
 
 # ------------------------------------------------------------------
 func _on_weapon_dropped(drop_position: Vector3) -> void:

@@ -112,8 +112,7 @@ func _on_resume() -> void:
 	_toggle_pause()
 
 func _on_restart() -> void:
-	get_tree().paused = false
-	get_tree().reload_current_scene()
+	MatchConfig.restart_current_match(get_tree())
 
 func _on_main_menu() -> void:
 	get_tree().paused = false

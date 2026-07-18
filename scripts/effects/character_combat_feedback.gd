@@ -10,10 +10,12 @@ var _shield_phase := 0.0
 var _hit_serial := 0
 var _flight_root: Node3D
 var _flight_streaks: Array[MeshInstance3D] = []
+var _flight_streak_base_lengths: Array[float] = []
 var _danger_root: Node3D
 var _flight_active := false
 var _danger_active := false
 var _motion_phase := 0.0
+var _flight_speed := 0.0
 
 func _ready() -> void:
 	_build_shield()
@@ -40,6 +42,15 @@ func play_hit(impact_direction: Vector3, strength: float = 1.0) -> void:
 	accent.look_at(accent.global_position + flat_direction.normalized(), Vector3.UP)
 
 	var clamped_strength := clampf(strength, 0.45, 1.35)
+	var contact := _add_piece(
+		accent,
+		"ImpactContact",
+		Vector3(0.0, 0.02, 0.025),
+		Vector3(0.28, 0.24, 0.035) * clamped_strength,
+		Color("#241827"),
+		0.0
+	)
+	contact.rotation_degrees.z = 45.0
 	for i in range(3):
 		var offset_x := (float(i) - 1.0) * 0.18
 		var shard_rotation := -24.0 + float(i) * 24.0
@@ -48,8 +59,8 @@ func play_hit(impact_direction: Vector3, strength: float = 1.0) -> void:
 			"ImpactSlash_%d" % i,
 			Vector3(offset_x, (1.0 - absf(float(i) - 1.0)) * 0.12, 0.0),
 			Vector3(0.10, 0.40 - absf(float(i) - 1.0) * 0.06, 0.06) * clamped_strength,
-			Color("#fff0c4"),
-			1.65
+			Color("#fff0c4") if i == 1 else Color("#ff8a52"),
+			1.35 if i == 1 else 0.95
 		)
 		shard.rotation_degrees.z = shard_rotation
 
@@ -61,7 +72,8 @@ func play_hit(impact_direction: Vector3, strength: float = 1.0) -> void:
 
 func update_motion_feedback(world_velocity: Vector3, launched: bool, danger: bool) -> void:
 	var horizontal_velocity := Vector3(world_velocity.x, 0.0, world_velocity.z)
-	_flight_active = launched and horizontal_velocity.length() > 7.0
+	_flight_speed = horizontal_velocity.length()
+	_flight_active = launched and _flight_speed > 6.5
 	_danger_active = danger
 	if _flight_root:
 		_flight_root.visible = _flight_active
@@ -73,10 +85,12 @@ func update_motion_feedback(world_velocity: Vector3, launched: bool, danger: boo
 	var motion_basis := Basis.looking_at(local_direction, Vector3.UP)
 	if _flight_root:
 		_flight_root.basis = motion_basis
-		var trail_length := clampf(horizontal_velocity.length() / 13.0, 0.70, 1.55)
-		for streak in _flight_streaks:
-			streak.scale.z = trail_length
-			streak.position.z = 0.30 + trail_length * 0.5
+		var trail_length := clampf(_flight_speed / 13.0, 0.70, 1.65)
+		for index in range(_flight_streaks.size()):
+			var streak := _flight_streaks[index]
+			var streak_length := trail_length * _flight_streak_base_lengths[index]
+			streak.scale.z = streak_length
+			streak.position.z = 0.34
 	if _danger_root:
 		_danger_root.basis = motion_basis
 
@@ -87,7 +101,9 @@ func get_visual_debug() -> Dictionary:
 		"hit_serial": _hit_serial,
 		"flight_active": _flight_active,
 		"flight_streak_count": _flight_streaks.size(),
+		"flight_speed": _flight_speed,
 		"danger_active": _danger_active,
+		"danger_segment_count": 3,
 	}
 
 func _process(delta: float) -> void:
@@ -148,42 +164,46 @@ func _build_motion_feedback() -> void:
 	_flight_root = Node3D.new()
 	_flight_root.name = "KnockbackFlightTrails"
 	add_child(_flight_root)
-	for i in range(2):
-		var side := -1.0 if i == 0 else 1.0
-		var streak := _add_piece(
+	var streak_offsets := [-0.42, 0.0, 0.42]
+	var streak_lengths := [0.82, 1.16, 0.82]
+	for i in range(3):
+		var side: float = streak_offsets[i]
+		var is_center := i == 1
+		var streak := _add_ribbon_piece(
 			_flight_root,
 			"FlightStreak_%d" % i,
-			Vector3(side * 0.36, 1.14 + float(i) * 0.20, 1.10),
-			Vector3(0.10, 0.055, 1.0),
-			Color(0.95, 0.97, 1.0, 0.72),
-			0.65
+			Vector3(side, 1.06 + (0.16 if is_center else 0.0), 1.10),
+			0.14 if is_center else 0.18,
+			streak_lengths[i],
+			Color("#79def1") if is_center else Color(0.95, 0.92, 0.84, 0.66),
+			0.90 if is_center else 0.38
 		)
 		_flight_streaks.append(streak)
+		_flight_streak_base_lengths.append(streak_lengths[i])
 	_flight_root.visible = false
 
 	_danger_root = Node3D.new()
 	_danger_root.name = "RingoutDangerWarning"
 	add_child(_danger_root)
-	var danger_ring := MeshInstance3D.new()
-	danger_ring.name = "DangerRing"
-	var torus := TorusMesh.new()
-	torus.inner_radius = 1.34
-	torus.outer_radius = 1.52
-	torus.rings = 28
-	torus.ring_segments = 8
-	danger_ring.mesh = torus
-	danger_ring.position.y = 0.12
-	danger_ring.material_override = _material(Color(1.0, 0.20, 0.28, 0.82), Color("#ff4357"), 0.65, true)
-	danger_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_danger_root.add_child(danger_ring)
+	for i in range(3):
+		var segment_angle := deg_to_rad(-42.0 + float(i) * 42.0)
+		var segment := _add_piece(
+			_danger_root,
+			"DangerArcSegment_%d" % i,
+			Vector3(sin(segment_angle) * 1.30, 0.12, -cos(segment_angle) * 1.30),
+			Vector3(0.12, 0.055, 0.42),
+			Color(1.0, 0.24, 0.30, 0.76),
+			0.58
+		)
+		segment.rotation.y = segment_angle
 	for i in range(2):
 		var chevron := _add_piece(
 			_danger_root,
 			"DangerChevron_%d" % i,
 			Vector3((-0.24 if i == 0 else 0.24), 0.20, -1.48),
 			Vector3(0.11, 0.065, 0.48),
-			Color("#fff0c4"),
-			1.0
+			Color("#ffb052"),
+			0.86
 		)
 		chevron.rotation.y = deg_to_rad(-28.0 if i == 0 else 28.0)
 	_danger_root.visible = false
@@ -201,6 +221,28 @@ func _add_piece(parent: Node3D, piece_name: String, pos: Vector3, size: Vector3,
 	parent.add_child(piece)
 	return piece
 
+func _add_ribbon_piece(parent: Node3D, piece_name: String, pos: Vector3, width: float, length: float, color: Color, emission: float) -> MeshInstance3D:
+	var piece := MeshInstance3D.new()
+	piece.name = piece_name
+	var mesh := ArrayMesh.new()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([
+		Vector3(-width * 0.5, 0.0, 0.0),
+		Vector3(width * 0.5, 0.0, 0.0),
+		Vector3(width * 0.12, 0.0, 1.0),
+		Vector3(-width * 0.12, 0.0, 1.0),
+	])
+	arrays[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 1, 2, 0, 2, 3])
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	piece.mesh = mesh
+	piece.position = pos
+	piece.scale.z = length
+	piece.material_override = _material(color, color, emission, color.a < 0.99)
+	piece.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(piece)
+	return piece
+
 func _material(albedo: Color, emission: Color, energy: float, transparent: bool) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = albedo
@@ -210,4 +252,5 @@ func _material(albedo: Color, emission: Color, energy: float, transparent: bool)
 	material.emission_enabled = energy > 0.0
 	material.emission = emission
 	material.emission_energy_multiplier = energy
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return material

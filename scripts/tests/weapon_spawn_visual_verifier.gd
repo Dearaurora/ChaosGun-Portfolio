@@ -20,6 +20,8 @@ func _initialize() -> void:
 	outer.configure(false)
 	outer.set_state(WeaponSpawnPedestal.VisualState.ACTIVE, Color("#79d946"))
 	await process_frame
+	premium.call("_process", 1.0)
+	outer.call("_process", 1.0)
 	_verify_pedestal(premium, true, 6)
 	_verify_pedestal(outer, false, 4)
 
@@ -66,6 +68,14 @@ func _verify_pedestal(pedestal: WeaponSpawnPedestal, premium: bool, lights: int)
 		_fail("Pedestal light count mismatch for premium=%s" % premium)
 	if pedestal.get_node_or_null("StateRing") == null or pedestal.get_node_or_null("StateDisc") == null:
 		_fail("Pedestal must expose deterministic state ring and disc")
+	var orbit_angle := float(debug.get("orbit_angle", 0.0))
+	if orbit_angle < 0.35:
+		_fail("Active pedestal status lights must visibly orbit")
+	var status_light := pedestal.get_node_or_null("StatusLight_0") as MeshInstance3D
+	var light_radius := float(debug.get("light_radius", 0.0))
+	var expected_position := Vector3(cos(orbit_angle) * light_radius, -0.12, sin(orbit_angle) * light_radius)
+	if status_light == null or status_light.position.distance_to(expected_position) > 0.01:
+		_fail("Pedestal status lights are not synchronized with the P25 orbit phase")
 
 func _fail(message: String) -> void:
 	_failures.append(message)

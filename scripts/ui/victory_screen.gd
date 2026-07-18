@@ -95,8 +95,7 @@ func _build_ui(winner_name: String, winner_color: Color, characters: Array) -> v
 
 	var restart_btn = _create_btn("REMATCH", COL_PRIMARY, btn_x, btn_y, btn_w, btn_h)
 	restart_btn.pressed.connect(func():
-		get_tree().paused = false
-		get_tree().reload_current_scene()
+		MatchConfig.restart_current_match(get_tree())
 	)
 	card.add_child(restart_btn)
 

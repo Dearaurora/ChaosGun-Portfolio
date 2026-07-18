@@ -39,23 +39,16 @@ func try_fire(fire_point: Marker3D, direction: Vector3, shooter: Node3D) -> bool
 	return did_fire
 
 # ------------------------------------------------------------------
-#  武器切换
+#  武器状态
 # ------------------------------------------------------------------
-func switch_to_slot(slot: int) -> void:
-	if is_switching:
-		return
-	if slot == 0 and current_weapon != sidearm:
-		_perform_switch(sidearm)
-	elif slot == 1 and primary and current_weapon != primary:
-		_perform_switch(primary)
-
-func cycle_weapon() -> void:
-	if is_switching:
-		return
-	if current_weapon == sidearm and primary:
-		_perform_switch(primary)
-	elif current_weapon != sidearm:
-		_perform_switch(sidearm)
+func discard_current_weapon() -> bool:
+	if primary == null or current_weapon == sidearm:
+		return false
+	is_switching = false
+	_switch_timer = 0.0
+	_drop_primary()
+	_perform_switch(sidearm)
+	return true
 
 func _perform_switch(target: Weapon) -> void:
 	is_switching = true

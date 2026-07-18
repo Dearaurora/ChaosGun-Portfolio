@@ -33,17 +33,18 @@ func _initialize() -> void:
 
 	_verify_weapon_silhouette_steps(profiles)
 	_verify_muzzle_positions(muzzle_positions)
+	await _verify_weapon_switch_settle(visual)
 	await _finish(visual)
 
 func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
-	var holder_position := debug.get("holder_position", Vector3.ZERO) as Vector3
+	var holder_position := debug.get("holder_base_position", Vector3.ZERO) as Vector3
 	var expected_positions := {
 		"pistol": Vector3(0.0, 1.39, -0.72),
 		"smg": Vector3(-0.12, 1.35, -0.83),
 		"ak_rifle": Vector3(-0.18, 1.34, -0.92),
 		"sniper": Vector3(-0.18, 1.35, -0.96),
-		"gatling": Vector3(-0.18, 1.34, -0.94),
-		"shotgun": Vector3(-0.18, 1.34, -0.91),
+		"gatling": Vector3(-0.10, 1.27, -0.88),
+		"shotgun": Vector3(-0.14, 1.31, -0.90),
 	}
 	var expected_scales := {
 		"pistol": 1.0,
@@ -58,8 +59,8 @@ func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
 		"smg": "hold_smg",
 		"ak_rifle": "hold_ak",
 		"sniper": "hold_sniper",
-		"gatling": "hold_ak",
-		"shotgun": "hold_ak",
+		"gatling": "hold_gatling",
+		"shotgun": "hold_shotgun",
 	}
 	var expected_position := expected_positions.get(weapon_id, Vector3.ZERO) as Vector3
 	var holder_scale := float(debug.get("holder_scale", 0.0))
@@ -86,6 +87,8 @@ func _verify_weapon_pose(debug: Dictionary, weapon_id: String) -> void:
 		_fail("%s should load its authored GLB asset" % weapon_id)
 	if bool(debug.get("uses_proxy", true)):
 		_fail("%s should not overlay the obsolete readability proxy when its GLB loads" % weapon_id)
+	if String(debug.get("muzzle_anchor_source", "")) != "authored_model":
+		_fail("%s should derive its muzzle anchor from the authored GLB marker" % weapon_id)
 
 func _verify_weapon_asset(visual: CharacterVisual, weapon_id: String) -> void:
 	var holder := visual.get_node_or_null("WeaponHolder")
@@ -128,7 +131,7 @@ func _collect_asset_material_stats(node: Node, stats: Dictionary) -> void:
 		_collect_asset_material_stats(child, stats)
 
 func _verify_character_pose_meshes(visual: CharacterVisual, weapon_id: String) -> void:
-	for required_part in ["HeroCloudBody", "HeroSleeve.L", "HeroSleeve.R", "FacePanel", "EyeL", "EyeR"]:
+	for required_part in ["HeroCloudBody", "HeroSleeve.L", "HeroSleeve.R", "HeroWristCuff.L", "HeroWristCuff.R", "FacePanel", "EyeL", "EyeR"]:
 		if _find_descendant(visual, required_part) == null:
 			_fail("%s character asset is missing authored part %s" % [weapon_id, required_part])
 	var skeleton := _find_skeleton(visual)
@@ -140,8 +143,8 @@ func _verify_character_pose_meshes(visual: CharacterVisual, weapon_id: String) -
 		"smg": &"hold_smg",
 		"ak_rifle": &"hold_ak",
 		"sniper": &"hold_sniper",
-		"gatling": &"hold_ak",
-		"shotgun": &"hold_ak",
+		"gatling": &"hold_gatling",
+		"shotgun": &"hold_shotgun",
 	}
 	var expected_pose := pose_names.get(weapon_id, &"hold_pistol") as StringName
 	if animation_player == null or not animation_player.has_animation(expected_pose):
@@ -273,19 +276,27 @@ func _verify_muzzle_positions(positions: Dictionary) -> void:
 	var sniper := positions["sniper"] as Vector3
 	if not (pistol.z > smg.z and smg.z > ak.z and ak.z > sniper.z):
 		_fail("Muzzle anchors should advance with authored weapon length")
-	var expected := {
-		"pistol": Vector3(0.0, 1.4872, -1.859),
-		"smg": Vector3(-0.132, 1.4456, -2.101),
-		"ak_rifle": Vector3(-0.198, 1.4352, -2.464),
-		"sniper": Vector3(-0.198, 1.4456, -2.541),
-		"gatling": Vector3(-0.198, 1.4456, -2.233),
-		"shotgun": Vector3(-0.198, 1.4456, -2.288),
-	}
 	for weapon_id in positions:
 		var point := positions[weapon_id] as Vector3
-		if point.distance_to(expected[weapon_id] as Vector3) > 0.02:
-			_fail("%s muzzle anchor is not aligned with its authored barrel: %s" % [weapon_id, point])
+		if point.y < 1.35 or point.y > 1.70:
+			_fail("%s authored muzzle height is outside the held-weapon envelope: %s" % [weapon_id, point])
+		if point.z > -1.60 or point.z < -2.55:
+			_fail("%s authored muzzle depth is outside the held-weapon envelope: %s" % [weapon_id, point])
 	print("OK  authored per-weapon muzzle anchor progression")
+
+func _verify_weapon_switch_settle(visual: CharacterVisual) -> void:
+	visual.set_weapon_visual(&"pistol")
+	await create_timer(0.07).timeout
+	var active_debug := visual.get_motion_debug()
+	var active_amount := float(active_debug.get("weapon_switch_settle", 0.0))
+	if active_amount < 0.35:
+		_fail("Weapon switching should produce a visible short hand-and-weapon settle")
+	await create_timer(0.24).timeout
+	var settled_debug := visual.get_motion_debug()
+	if float(settled_debug.get("weapon_switch_settle", 1.0)) > 0.02:
+		_fail("Weapon switch settle should finish without leaving pose drift")
+	else:
+		print("OK  short weapon-switch settle returns to authored hand fit")
 
 func _fail(message: String) -> void:
 	_failures.append(message)

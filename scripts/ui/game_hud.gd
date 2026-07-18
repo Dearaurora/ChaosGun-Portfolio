@@ -15,6 +15,7 @@ const COL_HEART := Color("#ff6e81")                # 粉红（生命心）
 const COL_HEART_DIM := Color(1.0, 0.431, 0.506, 0.25)  # 心形暗淡（已损失生命）
 const COL_TEXT := Color("#e5e3ff")                  # 标准文字
 const COL_WHITE := Color.WHITE
+const CAMERA_OCCLUDER_GROUP := &"party_shooter_camera_occluder"
 const COL_GLOW_GREEN := Color(0.792, 0.992, 0.0, 0.15)   # 绿色辉光
 const COL_GLOW_ORANGE := Color(1.0, 0.455, 0.255, 0.15)   # 橙色辉光
 
@@ -41,6 +42,10 @@ var _score_label: Label
 var _p_kill_label: Label
 var _a_kill_label: Label
 var _profile_badge_label: Label
+var _player_panel: Control = null
+var _ai_panel: Control = null
+var _scoreboard_panel: Control = null
+var _profile_badge_panel: Control = null
 
 # Game Over
 var _game_over_container: PanelContainer
@@ -56,35 +61,45 @@ var _a_last_lives: int = -1
 #  初始化
 # ============================================================
 func _ready() -> void:
+	# _ready intentionally waits one frame to discover opponents. Keep per-frame
+	# updates disabled until every label exists so rendered benchmark launches do
+	# not race _process against the asynchronous UI build.
+	set_process(false)
+	if not get_viewport().size_changed.is_connected(_layout_viewport_ui):
+		get_viewport().size_changed.connect(_layout_viewport_ui)
 	_player = get_parent() as BaseCharacter
 	# 延迟一帧查找 AI
 	await get_tree().process_frame
 	var scene = get_tree().current_scene
 	if scene == null:
 		_build_ui()
+		set_process(true)
 		return
 	for n in scene.get_children():
 		if n is BaseCharacter and n != _player:
 			_ai = n
 			break
 	_build_ui()
+	set_process(true)
 
 func _build_ui() -> void:
 	# --- 玩家面板（左上） ---
-	var p_panel = _create_player_panel("PLAYER", COL_PRIMARY, COL_GLOW_GREEN, false)
-	p_panel.position = Vector2(24, 24)
-	add_child(p_panel)
+	_player_panel = _create_player_panel("PLAYER", COL_PRIMARY, COL_GLOW_GREEN, false)
+	_player_panel.name = "PlayerStatusPanel"
+	add_child(_player_panel)
+	_player_panel.add_to_group(CAMERA_OCCLUDER_GROUP)
 
 	# --- AI 面板（右上） ---
-	var a_panel = _create_player_panel("AI BOT", COL_SECONDARY, COL_GLOW_ORANGE, true)
+	_ai_panel = _create_player_panel("AI BOT", COL_SECONDARY, COL_GLOW_ORANGE, true)
+	_ai_panel.name = "AIStatusPanel"
 	# 右对齐：视口宽度 - 面板宽度 - 边距
-	a_panel.position = Vector2(
-		get_viewport().get_visible_rect().size.x - 280 - 24, 24)
-	add_child(a_panel)
+	add_child(_ai_panel)
+	_ai_panel.add_to_group(CAMERA_OCCLUDER_GROUP)
 
 	# --- 中央计分板 ---
 	_build_scoreboard()
 	_build_profile_badge()
+	_layout_viewport_ui()
 
 	# --- Game Over ---
 	_build_game_over()
@@ -248,12 +263,11 @@ func _create_player_panel(title: String, accent: Color, glow: Color, is_right: b
 #  中央计分板
 # ============================================================
 func _build_scoreboard() -> void:
-	var vp_w = get_viewport().get_visible_rect().size.x
 	var board_w := 240.0
 	var board_h := 56.0
 
 	var board = Panel.new()
-	board.position = Vector2((vp_w - board_w) / 2.0, 24)
+	board.name = "ScoreboardPanel"
 	board.size = Vector2(board_w, board_h)
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(COL_PANEL.r, COL_PANEL.g, COL_PANEL.b, 0.8)
@@ -270,6 +284,8 @@ func _build_scoreboard() -> void:
 	style.shadow_size = 16
 	board.add_theme_stylebox_override("panel", style)
 	add_child(board)
+	board.add_to_group(CAMERA_OCCLUDER_GROUP)
+	_scoreboard_panel = board
 
 	# 玩家击杀数
 	_p_kill_label = Label.new()
@@ -318,9 +334,8 @@ func _build_profile_badge() -> void:
 	var profile_id = _get_active_profile_id()
 	if profile_id.is_empty():
 		return
-	var vp_w = get_viewport().get_visible_rect().size.x
 	var badge = Panel.new()
-	badge.position = Vector2((vp_w - 260.0) / 2.0, 86)
+	badge.name = "ProfileBadgePanel"
 	badge.size = Vector2(260, 28)
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0, 0, 0, 0.45)
@@ -335,6 +350,8 @@ func _build_profile_badge() -> void:
 	style.border_color = Color(COL_PRIMARY.r, COL_PRIMARY.g, COL_PRIMARY.b, 0.35)
 	badge.add_theme_stylebox_override("panel", style)
 	add_child(badge)
+	badge.add_to_group(CAMERA_OCCLUDER_GROUP)
+	_profile_badge_panel = badge
 
 	_profile_badge_label = Label.new()
 	_profile_badge_label.text = "FEEL: %s" % profile_id.to_upper()
@@ -344,6 +361,18 @@ func _build_profile_badge() -> void:
 	_profile_badge_label.add_theme_font_size_override("font_size", 12)
 	_profile_badge_label.add_theme_color_override("font_color", COL_TEXT)
 	badge.add_child(_profile_badge_label)
+
+
+func _layout_viewport_ui() -> void:
+	var viewport_width := get_viewport().get_visible_rect().size.x
+	if _player_panel and is_instance_valid(_player_panel):
+		_player_panel.position = Vector2(24.0, 24.0)
+	if _ai_panel and is_instance_valid(_ai_panel):
+		_ai_panel.position = Vector2(viewport_width - 304.0, 24.0)
+	if _scoreboard_panel and is_instance_valid(_scoreboard_panel):
+		_scoreboard_panel.position = Vector2((viewport_width - 240.0) * 0.5, 24.0)
+	if _profile_badge_panel and is_instance_valid(_profile_badge_panel):
+		_profile_badge_panel.position = Vector2((viewport_width - 260.0) * 0.5, 86.0)
 
 func _get_active_profile_id() -> String:
 	var game_config = RuntimeGlobals.game_config()
@@ -387,7 +416,7 @@ func _build_game_over() -> void:
 	restart_btn.text = "↻  RESTART  (R)"
 	restart_btn.custom_minimum_size = Vector2(260, 48)
 	_style_go_button(restart_btn, COL_PRIMARY)
-	restart_btn.pressed.connect(func(): get_tree().reload_current_scene())
+	restart_btn.pressed.connect(func(): MatchConfig.restart_current_match(get_tree()))
 	vbox.add_child(restart_btn)
 
 	# 间距
@@ -497,4 +526,4 @@ func _check_game_over() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _game_over_container and _game_over_container.visible:
 		if event is InputEventKey and event.pressed and event.keycode == KEY_R:
-			get_tree().reload_current_scene()
+			MatchConfig.restart_current_match(get_tree())

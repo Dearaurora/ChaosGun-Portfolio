@@ -30,21 +30,28 @@ func _initialize() -> void:
 	await process_frame
 	await create_timer(0.65).timeout
 	var ringout_motion_frame := OS.get_cmdline_user_args().has("--ringout-motion")
-	var feedback_frame := OS.get_cmdline_user_args().has("--feedback-frame") or ringout_motion_frame
+	var authored_motion_frame := OS.get_cmdline_user_args().has("--authored-motion")
+	var feedback_frame := OS.get_cmdline_user_args().has("--feedback-frame") or ringout_motion_frame or authored_motion_frame
 	if not _stage_showcase_shots(arena, not feedback_frame):
 		return
-	if ringout_motion_frame:
+	if authored_motion_frame:
+		await _stage_authored_motion_frame(arena)
+	elif ringout_motion_frame:
 		_stage_ringout_motion_feedback(arena)
 	elif feedback_frame:
 		_stage_combat_feedback(arena)
 	_apply_detail_camera_if_requested(arena)
-	if OS.get_cmdline_user_args().has("--combat-frame"):
+	if OS.get_cmdline_user_args().has("--outer-spread"):
+		await create_timer(1.4).timeout
+	elif OS.get_cmdline_user_args().has("--combat-frame"):
 		await process_frame
-	elif feedback_frame:
+	elif feedback_frame and not authored_motion_frame:
 		await create_timer(0.065).timeout
 	else:
 		await create_timer(0.18).timeout
 	await process_frame
+	if OS.get_cmdline_user_args().has("--debug-background"):
+		_print_background_projection(arena)
 
 	var viewport_texture := root.get_texture()
 	if viewport_texture == null:
@@ -66,6 +73,31 @@ func _initialize() -> void:
 	print("Saved screenshot: %s" % ProjectSettings.globalize_path(out_path))
 	quit(0)
 
+func _print_background_projection(arena: Node) -> void:
+	var camera := arena.get_node_or_null("GlobalCamera") as Camera3D
+	var p14_root := arena.get_node_or_null("OpenRingoutBlenderVisuals/P14SunsetEnvironment")
+	if camera == null or p14_root == null:
+		return
+	print("BACKGROUND_VIEW  viewport=%s camera_size=%.2f camera_position=%s" % [root.size, camera.size, camera.global_position])
+	for child in _background_nodes(p14_root):
+		var child_name := String(child.name)
+		if child_name.begins_with("P14CloudBank") or (child_name.begins_with("P14DistantIsland") and child_name.ends_with("Cliff")) or child_name in ["P14HotAirBalloonEnvelope", "P14HotAirBalloonBasket"]:
+			print("BACKGROUND_PROJECTION  %s -> %s" % [child.name, camera.unproject_position(child.global_position)])
+	var blender_root := arena.get_node_or_null("OpenRingoutBlenderVisuals")
+	for child in _background_nodes(blender_root):
+		if String(child.name) in ["V3HotAirBalloonBody", "V3HotAirBalloonBasket"]:
+			print("BACKGROUND_PROJECTION  %s -> %s" % [child.name, camera.unproject_position(child.global_position)])
+
+func _background_nodes(node: Node) -> Array[Node3D]:
+	var nodes: Array[Node3D] = []
+	if node == null:
+		return nodes
+	if node is Node3D:
+		nodes.append(node as Node3D)
+	for child in node.get_children():
+		nodes.append_array(_background_nodes(child))
+	return nodes
+
 func _resolve_output_path() -> String:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--output="):
@@ -76,15 +108,34 @@ func _resolve_output_path() -> String:
 	return DEFAULT_OUT_PATH
 
 func _apply_detail_camera_if_requested(arena: Node) -> void:
-	if not OS.get_cmdline_user_args().has("--detail"):
+	var character_closeup := OS.get_cmdline_user_args().has("--character-closeup")
+	var hero_slice := OS.get_cmdline_user_args().has("--hero-slice")
+	var west_bridge_detail := OS.get_cmdline_user_args().has("--west-bridge-detail")
+	if not OS.get_cmdline_user_args().has("--detail") and not character_closeup and not hero_slice and not west_bridge_detail:
 		return
+	if arena.has_method("set_runtime_camera_enabled"):
+		arena.call("set_runtime_camera_enabled", false)
+	if hero_slice or west_bridge_detail:
+		for hud_name in ["OpenRingoutHUD", "HUDRoot"]:
+			var hud := arena.find_child(hud_name, true, false)
+			if hud:
+				hud.set("visible", false)
 	var camera := arena.get_node_or_null("GlobalCamera") as Camera3D
 	if camera == null:
 		return
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.position = Vector3(34.0, 43.0, 48.0)
-	camera.look_at(Vector3(0.0, 0.0, 1.0), Vector3.UP)
-	camera.size = 38.0
+	if west_bridge_detail:
+		camera.position = Vector3(-5.0, 31.0, 42.0)
+		camera.look_at(Vector3(-29.0, 0.0, 2.0), Vector3.UP)
+		camera.size = 23.0
+	elif hero_slice:
+		camera.position = Vector3(26.0, 31.0, 24.0)
+		camera.look_at(Vector3(3.0, 0.0, -16.0), Vector3.UP)
+		camera.size = 31.0
+	else:
+		camera.position = Vector3(22.0, 28.0, 31.0) if character_closeup else Vector3(34.0, 43.0, 48.0)
+		camera.look_at(Vector3(0.0, 0.0, 1.0), Vector3.UP)
+		camera.size = 20.0 if character_closeup else 38.0
 
 func _fail(message: String) -> void:
 	push_error(message)
@@ -126,6 +177,20 @@ func _stage_showcase_shots(arena: Node, fire_shots: bool = true) -> bool:
 			{"pos": Vector3(17.5, 1.15, -7.0), "look": Vector3(32.0, 1.15, 8.0), "weapon": &"shotgun"},
 			{"pos": Vector3(-15.0, 1.15, 11.0), "look": Vector3(3.0, 1.15, 20.0), "weapon": &"smg"},
 			{"pos": Vector3(12.0, 1.15, 12.0), "look": Vector3(26.0, 1.15, 24.0), "weapon": &"ak_rifle"},
+		]
+	if OS.get_cmdline_user_args().has("--character-closeup"):
+		poses = [
+			{"pos": Vector3(-4.8, 1.15, -3.5), "look": Vector3(0.0, 1.15, 1.0), "weapon": &"gatling"},
+			{"pos": Vector3(4.8, 1.15, -3.5), "look": Vector3(0.0, 1.15, 1.0), "weapon": &"shotgun"},
+			{"pos": Vector3(-4.8, 1.15, 5.0), "look": Vector3(0.0, 1.15, 0.0), "weapon": &"pistol"},
+			{"pos": Vector3(4.8, 1.15, 5.0), "look": Vector3(0.0, 1.15, 0.0), "weapon": &"sniper"},
+		]
+	if OS.get_cmdline_user_args().has("--outer-spread"):
+		poses = [
+			{"pos": Vector3(-3.0, 1.15, -32.0), "look": Vector3(2.0, 1.15, 2.0), "weapon": &"gatling"},
+			{"pos": Vector3(43.0, 1.15, 1.0), "look": Vector3(2.0, 1.15, 2.0), "weapon": &"shotgun"},
+			{"pos": Vector3(13.0, 1.15, 31.0), "look": Vector3(2.0, 1.15, 2.0), "weapon": &"smg"},
+			{"pos": Vector3(-43.0, 1.15, 8.0), "look": Vector3(2.0, 1.15, 2.0), "weapon": &"ak_rifle"},
 		]
 	for i in range(4):
 		var character := chars[i] as BaseCharacter
@@ -182,6 +247,38 @@ func _stage_ringout_motion_feedback(arena: Node) -> void:
 		falling_feedback.update_motion_feedback(Vector3(14.0, -8.0, 5.0), true, true)
 	ringout.call("_spawn_character_transition", &"ringout", Color("#ff4d62"), 1.45)
 	ringout.visible = false
+
+func _stage_authored_motion_frame(arena: Node) -> void:
+	var chars = arena.get("_characters") as Array
+	if chars.size() < 4:
+		return
+	for character_node in chars:
+		var character := character_node as BaseCharacter
+		if character != null:
+			character.set_physics_process(false)
+	var hit_triggered := false
+	for frame in range(60):
+		var elapsed := float(frame) / 60.0
+		for index in range(4):
+			var character := chars[index] as BaseCharacter
+			var visual := character.get_visual() if character != null else null
+			if visual == null:
+				continue
+			match index:
+				0:
+					var starts_now := elapsed >= 0.80
+					visual.animate_locomotion(Vector3.FORWARD if starts_now else Vector3.ZERO, Vector3.FORWARD, 1.0 if starts_now else 0.0, 1.0 / 60.0)
+				1:
+					visual.animate_locomotion(Vector3.FORWARD, Vector3.FORWARD, 1.0, 1.0 / 60.0)
+				2:
+					var still_running := elapsed < 0.80
+					visual.animate_locomotion(Vector3.FORWARD if still_running else Vector3.ZERO, Vector3.FORWARD, 1.0 if still_running else 0.0, 1.0 / 60.0)
+				3:
+					visual.animate_locomotion(Vector3.ZERO, Vector3.FORWARD, 0.0, 1.0 / 60.0)
+					if elapsed >= 0.90 and not hit_triggered:
+						visual.animate_hit(Vector3.RIGHT, 1.0)
+						hit_triggered = true
+		await create_timer(1.0 / 60.0).timeout
 
 func _pose_character(character: BaseCharacter, pose: Dictionary) -> void:
 	if character == null:

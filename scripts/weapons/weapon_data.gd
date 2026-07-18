@@ -54,7 +54,7 @@ static func create_pistol() -> WeaponData:
 	d.recoil_force = 8.0
 	d.damage = 25.0
 	d.projectile_scene = load("res://scenes/weapons/pistol_projectile.tscn")
-	d.shoot_sound = load("res://assets/audio/sfx/shoot_pistol.ogg")
+	d.shoot_sound = load("res://assets/audio/generated/combat/shot_pistol_v2.ogg")
 	d.has_infinite_ammo = true
 	return d
 
@@ -78,7 +78,7 @@ static func create_smg() -> WeaponData:
 	d.recoil_force = 4.0
 	d.damage = 12.0
 	d.projectile_scene = load("res://scenes/weapons/smg_projectile.tscn")
-	d.shoot_sound = load("res://assets/audio/sfx/shoot_smg.ogg")
+	d.shoot_sound = load("res://assets/audio/generated/combat/shot_smg_v2.ogg")
 	d.has_infinite_ammo = false
 	return d
 
@@ -102,7 +102,7 @@ static func create_ak_rifle() -> WeaponData:
 	d.recoil_force = 10.0
 	d.damage = 20.0
 	d.projectile_scene = load("res://scenes/weapons/ak_projectile.tscn")
-	d.shoot_sound = load("res://assets/audio/sfx/shoot_ak.ogg")
+	d.shoot_sound = load("res://assets/audio/generated/combat/shot_ak_v2.ogg")
 	d.has_infinite_ammo = false
 	return d
 
@@ -126,7 +126,7 @@ static func create_sniper() -> WeaponData:
 	d.recoil_force = 28.0
 	d.damage = 80.0
 	d.projectile_scene = load("res://scenes/weapons/sniper_projectile.tscn")
-	d.shoot_sound = load("res://assets/audio/sfx/shoot_sniper.ogg")
+	d.shoot_sound = load("res://assets/audio/generated/combat/shot_sniper_v2.ogg")
 	d.has_infinite_ammo = false
 	return d
 
@@ -150,7 +150,7 @@ static func create_gatling() -> WeaponData:
 	d.recoil_force = 1.5
 	d.damage = 5.0
 	d.projectile_scene = load("res://scenes/weapons/gatling_projectile.tscn")
-	d.shoot_sound = load("res://assets/audio/sfx/shoot_smg.ogg")
+	d.shoot_sound = load("res://assets/audio/generated/combat/shot_gatling_v2.ogg")
 	d.has_infinite_ammo = false
 	return d
 
@@ -180,7 +180,7 @@ static func create_shotgun() -> WeaponData:
 	d.knockback_falloff_end = 26.0
 	d.far_range_knockback_multiplier = 0.55
 	d.projectile_scene = load("res://scenes/weapons/shotgun_projectile.tscn")
-	d.shoot_sound = load("res://assets/audio/sfx/shoot_ak.ogg")
+	d.shoot_sound = load("res://assets/audio/generated/combat/shot_shotgun_v2.ogg")
 	d.has_infinite_ammo = false
 	return d
 
@@ -190,6 +190,9 @@ static func get_spawnable_weapons() -> Array[Callable]:
 
 static func get_center_spawnable_weapons() -> Array[Callable]:
 	return [create_smg, create_ak_rifle, create_shotgun]
+
+static func get_special_spawnable_weapons() -> Array[Callable]:
+	return [create_gatling, create_sniper]
 
 static func get_outer_spawnable_weapons() -> Array[Callable]:
 	return get_spawnable_weapons()

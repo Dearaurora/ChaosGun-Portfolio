@@ -1,11 +1,18 @@
 extends Node3D
 class_name ShotTracer
 
+const CombatVisualResourceCache = preload("res://scripts/effects/combat_visual_resource_cache.gd")
+const TRACER_GOLD := Color("#ffc83d")
+const TRACER_WHITE := Color("#fff8d8")
+
 var _length: float = 5.5
 var _width: float = 0.22
 var _lifetime: float = 0.10
 var _color: Color = Color("#ffce3a")
 var _timer_started := false
+var _style: StringName = &"yellow_white_teardrop"
+var _accent_count: int = 0
+var _visual_build_count := 0
 
 func setup(start_position: Vector3, direction: Vector3, color: Color, profile: Dictionary = {}) -> void:
 	if is_inside_tree():
@@ -16,6 +23,7 @@ func setup(start_position: Vector3, direction: Vector3, color: Color, profile: D
 	_length = clampf(float(profile.get("length", _length)), 1.0, 6.0)
 	_width = clampf(float(profile.get("width", _width)), 0.08, 0.32)
 	_lifetime = clampf(float(profile.get("lifetime", _lifetime)), 0.035, 0.10)
+	_style = &"yellow_white_teardrop"
 
 	var aim_dir := direction
 	aim_dir.y = 0.0
@@ -32,7 +40,12 @@ func get_visual_debug() -> Dictionary:
 		"length": _length,
 		"width": _width,
 		"lifetime": _lifetime,
-		"color": _color,
+		"color": TRACER_GOLD,
+		"core_color": TRACER_WHITE,
+		"weapon_accent_color": _color,
+		"shape": String(_style),
+		"accent_count": _accent_count,
+		"build_count": _visual_build_count,
 	}
 
 func _ready() -> void:
@@ -42,22 +55,51 @@ func _ready() -> void:
 		_start_lifetime()
 
 func _build_visual() -> void:
+	_visual_build_count += 1
 	for child in get_children():
-		child.queue_free()
+		child.free()
+	_accent_count = 0
 
-	var dark := Color("#111420")
-	_add_box(
-		"TracerUnderlay",
-		Vector3(0.0, -0.020, -_length * 0.50),
-		Vector3(_width + 0.11, 0.030, _length),
-		_make_material(dark, dark, 0.0, 0.56, false)
+	_add_teardrop(
+		"TracerGlow",
+		_length,
+		_width,
+		Vector3(0.0, 0.0, -_length * 0.50),
+		_make_material(TRACER_GOLD, TRACER_GOLD, 0.92, 0.82, true)
 	)
-	_add_box(
+	_add_teardrop(
 		"TracerCore",
-		Vector3(0.0, 0.012, -_length * 0.52),
-		Vector3(_width * 1.08, 0.020, _length * 0.90),
-		_make_material(_color, _color, 2.8, 0.66, true)
+		_length * 0.52,
+		_width * 0.42,
+		Vector3(0.0, 0.014, -_length * 0.70),
+		_make_material(TRACER_WHITE, TRACER_WHITE, 1.18, 0.92, true)
 	)
+
+
+func _add_teardrop(
+	mesh_name: String,
+	length: float,
+	radius: float,
+	pos: Vector3,
+	mat: StandardMaterial3D
+) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = mesh_name
+	mesh_instance.mesh = CombatVisualResourceCache.teardrop_mesh(length, radius)
+	mesh_instance.position = pos
+	mesh_instance.material_override = mat
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mesh_instance)
+	return mesh_instance
+
+func _add_tracer_head(head_scale: float) -> void:
+	_add_sphere(
+		"TracerAccent_%d" % _accent_count,
+		Vector3(0.0, 0.014, -_length * head_scale),
+		Vector3(_width * 0.78, 0.014, _width * 1.15),
+		_make_material(_color.lightened(0.10), _color, 1.85, 0.82, true)
+	)
+	_accent_count += 1
 
 func _start_lifetime() -> void:
 	_timer_started = true
@@ -71,39 +113,34 @@ func _start_lifetime() -> void:
 func _add_box(mesh_name: String, pos: Vector3, visual_scale: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = mesh_name
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3.ONE
-	mesh_instance.mesh = mesh
+	mesh_instance.mesh = CombatVisualResourceCache.box_mesh()
 	mesh_instance.position = pos
 	mesh_instance.scale = visual_scale
 	mesh_instance.material_override = mat
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mesh_instance)
+	return mesh_instance
+
+func _add_tapered_streak(mesh_name: String, streak_length: float, streak_width: float, y_offset: float, mat: StandardMaterial3D) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = mesh_name
+	mesh_instance.mesh = CombatVisualResourceCache.tapered_streak_mesh(streak_length, streak_width)
+	mesh_instance.position.y = y_offset
+	mesh_instance.material_override = mat
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mesh_instance)
 	return mesh_instance
 
 func _add_sphere(mesh_name: String, pos: Vector3, visual_scale: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.name = mesh_name
-	var mesh := SphereMesh.new()
-	mesh.radius = 1.0
-	mesh.height = 2.0
-	mesh.radial_segments = 14
-	mesh.rings = 6
-	mesh_instance.mesh = mesh
+	mesh_instance.mesh = CombatVisualResourceCache.sphere_mesh(14, 6)
 	mesh_instance.position = pos
 	mesh_instance.scale = visual_scale
 	mesh_instance.material_override = mat
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mesh_instance)
 	return mesh_instance
 
 func _make_material(albedo: Color, emission: Color, energy: float, alpha: float, additive: bool) -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if alpha < 0.99 else BaseMaterial3D.TRANSPARENCY_DISABLED
-	mat.albedo_color = Color(albedo.r, albedo.g, albedo.b, alpha)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.emission_enabled = energy > 0.0
-	mat.emission = emission
-	mat.emission_energy_multiplier = energy
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	if additive:
-		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	return mat
+	return CombatVisualResourceCache.material(albedo, emission, energy, alpha, additive)

@@ -3,6 +3,7 @@ extends Node
 
 ## 槽位类型
 enum SlotType { EMPTY, HUMAN, AI }
+enum MatchMode { LOCAL_CUSTOM, QUICK_AI }
 
 ## 每个槽位的配置
 var slots: Array = [SlotType.HUMAN, SlotType.AI, SlotType.EMPTY, SlotType.EMPTY]
@@ -15,16 +16,18 @@ var PLAYER_COLORS: Array = [
 	Color(0.9, 0.3, 0.8),     # P4 紫
 ]
 
-## P1/P2 的输入前缀映射
-var INPUT_PREFIXES: Array = ["p1_", "p2_", "", ""]
+## 四名本地玩家的输入前缀映射
+var INPUT_PREFIXES: Array = ["p1_", "p2_", "p3_", "p4_"]
 
 ## 可选地图列表 [显示名, 场景路径]
 var MAPS: Array = [
 	["Open Ring-Out Slice", "res://scenes/maps/open_ringout_slice.tscn"],
+	["Twin Bays Splash Arena", "res://scenes/maps/twin_bays_splash_arena.tscn"],
 ]
 
 ## 当前选择的地图索引
 var selected_map_index: int = 0
+var match_mode: MatchMode = MatchMode.LOCAL_CUSTOM
 
 func get_selected_map_path() -> String:
 	_normalize_selected_map_index()
@@ -36,6 +39,28 @@ func get_selected_map_name() -> String:
 
 func select_default_playable_map() -> void:
 	selected_map_index = 0
+
+func select_random_playable_map(forced_roll: int = -1) -> void:
+	if MAPS.is_empty():
+		selected_map_index = 0
+		return
+	var roll := forced_roll if forced_roll >= 0 else randi()
+	selected_map_index = posmod(roll, MAPS.size())
+
+func configure_quick_ai_match(forced_roll: int = -1) -> void:
+	match_mode = MatchMode.QUICK_AI
+	slots = [SlotType.HUMAN, SlotType.AI, SlotType.EMPTY, SlotType.EMPTY]
+	select_random_playable_map(forced_roll)
+
+func configure_local_match() -> void:
+	match_mode = MatchMode.LOCAL_CUSTOM
+
+func restart_current_match(scene_tree: SceneTree, forced_roll: int = -1) -> Error:
+	scene_tree.paused = false
+	if match_mode == MatchMode.QUICK_AI:
+		select_random_playable_map(forced_roll)
+		return scene_tree.change_scene_to_file(get_selected_map_path())
+	return scene_tree.reload_current_scene()
 
 func _normalize_selected_map_index() -> void:
 	if MAPS.is_empty():
@@ -51,7 +76,7 @@ func get_active_count() -> int:
 			count += 1
 	return count
 
-## 获取第 n 个 human 玩家的输入前缀（按槽位顺序分配 p1_, p2_）
+## 获取第 n 个 human 玩家的输入前缀（按槽位顺序分配 p1_ - p4_）
 func get_human_input_prefix(slot_index: int) -> String:
 	var human_idx := 0
 	for i in range(slot_index):

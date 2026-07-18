@@ -4,13 +4,26 @@ class_name RingoutHUD
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
 const WEAPON_ICON_SCRIPT = preload("res://scripts/ui/weapon_silhouette_icon.gd")
 
-const PANEL_SIZE := Vector2(254, 116)
-const PANEL_MARGIN := Vector2(18, 18)
+const PANEL_SIZE := Vector2(212, 86)
+const PANEL_MARGIN := Vector2(12, 12)
+const CAMERA_OCCLUSION_GUTTER := 8.0
 const HEART_CODE := 0x2665
 
 var _characters: Array = []
 var _panel_data: Array[Dictionary] = []
 var _root: Control = null
+
+static func camera_occlusion_rects(viewport_size: Vector2, panel_count: int = 4) -> Array[Rect2]:
+	var footprint := PANEL_MARGIN + PANEL_SIZE + Vector2.ONE * CAMERA_OCCLUSION_GUTTER
+	var right := maxf(viewport_size.x - footprint.x, 0.0)
+	var bottom := maxf(viewport_size.y - footprint.y, 0.0)
+	var all_rects: Array[Rect2] = [
+		Rect2(Vector2.ZERO, footprint),
+		Rect2(Vector2(right, 0.0), footprint),
+		Rect2(Vector2(0.0, bottom), footprint),
+		Rect2(Vector2(right, bottom), footprint),
+	]
+	return all_rects.slice(0, clampi(panel_count, 0, all_rects.size()))
 
 func set_characters(characters: Array) -> void:
 	_characters = characters.duplicate()
@@ -56,53 +69,55 @@ func _build_panel(character: BaseCharacter, index: int) -> Control:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.047, 0.070, 0.86)
-	style.border_color = accent.lerp(Color.WHITE, 0.10)
-	style.border_width_left = 3
-	style.border_width_right = 3
-	style.border_width_top = 3
-	style.border_width_bottom = 3
-	style.corner_radius_top_left = 20
-	style.corner_radius_top_right = 20
-	style.corner_radius_bottom_left = 20
-	style.corner_radius_bottom_right = 20
-	style.shadow_color = Color(0.0, 0.0, 0.0, 0.34)
-	style.shadow_size = 14
-	style.shadow_offset = Vector2(0, 5)
+	var panel_tint := Color("#211c31").lerp(accent.darkened(0.60), 0.16)
+	panel_tint.a = 0.88
+	style.bg_color = panel_tint
+	style.border_color = accent.lerp(Color.WHITE, 0.12)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.shadow_color = Color(0.05, 0.03, 0.10, 0.30)
+	style.shadow_size = 8
+	style.shadow_offset = Vector2(0, 3)
 	panel.add_theme_stylebox_override("panel", style)
 
 	var avatar = Panel.new()
 	avatar.name = "Avatar"
-	avatar.position = Vector2(12, 16)
-	avatar.size = Vector2(70, 70)
-	avatar.add_theme_stylebox_override("panel", _round_style(accent.darkened(0.08), accent.lerp(Color.WHITE, 0.38), 35, 3))
+	avatar.position = Vector2(9, 16)
+	avatar.size = Vector2(52, 52)
+	avatar.add_theme_stylebox_override("panel", _round_style(accent.darkened(0.08), accent.lerp(Color.WHITE, 0.38), 26, 2))
 	panel.add_child(avatar)
 
 	var avatar_shine = Panel.new()
 	avatar_shine.name = "AvatarShine"
-	avatar_shine.position = Vector2(12, 9)
-	avatar_shine.size = Vector2(32, 15)
-	avatar_shine.add_theme_stylebox_override("panel", _round_style(Color(1, 1, 1, 0.20), Color(1, 1, 1, 0.0), 8, 0))
+	avatar_shine.position = Vector2(9, 7)
+	avatar_shine.size = Vector2(24, 9)
+	avatar_shine.add_theme_stylebox_override("panel", _round_style(Color(1, 1, 1, 0.18), Color(1, 1, 1, 0.0), 5, 0))
 	avatar.add_child(avatar_shine)
 
 	var visor = Panel.new()
 	visor.name = "Visor"
-	visor.position = Vector2(16, 24)
-	visor.size = Vector2(40, 24)
-	visor.add_theme_stylebox_override("panel", _round_style(Color("#dff7ff"), Color("#26314a"), 9, 3))
+	visor.position = Vector2(11, 19)
+	visor.size = Vector2(31, 19)
+	visor.add_theme_stylebox_override("panel", _round_style(Color("#dff7ff"), Color("#2a2742"), 7, 2))
 	avatar.add_child(visor)
 
 	var visor_glint = Panel.new()
 	visor_glint.name = "VisorGlint"
-	visor_glint.position = Vector2(7, 5)
-	visor_glint.size = Vector2(22, 6)
+	visor_glint.position = Vector2(5, 4)
+	visor_glint.size = Vector2(17, 4)
 	visor_glint.add_theme_stylebox_override("panel", _round_style(Color(1, 1, 1, 0.55), Color(1, 1, 1, 0.0), 3, 0))
 	visor.add_child(visor_glint)
 
-	var player_tag = _make_label("PlayerTag", _player_tag(index), Vector2(92, 9), Vector2(48, 20), 16, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	var player_tag = _make_label("PlayerTag", _player_tag(index), Vector2(69, 6), Vector2(64, 18), 14, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
 	panel.add_child(player_tag)
 
-	var life_label = _make_label("LifeLabel", "LIFE 4", Vector2(142, 10), Vector2(76, 18), 11, Color("#aeb8c9"), HORIZONTAL_ALIGNMENT_RIGHT)
+	var life_label = _make_label("LifeLabel", "LIFE 4", Vector2(146, 7), Vector2(54, 15), 9, Color("#c7c1d4"), HORIZONTAL_ALIGNMENT_RIGHT)
 	panel.add_child(life_label)
 
 	var hearts: Array[Label] = []
@@ -110,33 +125,37 @@ func _build_panel(character: BaseCharacter, index: int) -> Control:
 		var heart = Label.new()
 		heart.name = "Heart%d" % i
 		heart.text = String.chr(HEART_CODE)
-		heart.position = Vector2(92 + i * 25, 26)
-		heart.size = Vector2(22, 24)
+		heart.position = Vector2(68 + i * 22, 23)
+		heart.size = Vector2(20, 21)
 		heart.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		heart.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		heart.add_theme_font_size_override("font_size", 23)
+		heart.add_theme_font_size_override("font_size", 20)
 		heart.add_theme_color_override("font_color", Color("#ff496a"))
 		panel.add_child(heart)
 		hearts.append(heart)
 
 	var weapon_box = Panel.new()
 	weapon_box.name = "WeaponBox"
-	weapon_box.position = Vector2(86, 54)
-	weapon_box.size = Vector2(154, 50)
-	weapon_box.add_theme_stylebox_override("panel", _round_style(Color(0.014, 0.020, 0.032, 0.80), accent.darkened(0.08), 12, 2))
+	weapon_box.position = Vector2(66, 48)
+	weapon_box.size = Vector2(136, 29)
+	var weapon_box_color := Color("#151426")
+	weapon_box_color.a = 0.78
+	var weapon_border := accent.darkened(0.12)
+	weapon_border.a = 0.72
+	weapon_box.add_theme_stylebox_override("panel", _round_style(weapon_box_color, weapon_border, 6, 1))
 	panel.add_child(weapon_box)
 
 	var weapon_icon = WEAPON_ICON_SCRIPT.new()
 	weapon_icon.name = "WeaponSilhouette"
-	weapon_icon.position = Vector2(5, 6)
-	weapon_icon.size = Vector2(90, 38)
+	weapon_icon.position = Vector2(3, 2)
+	weapon_icon.size = Vector2(77, 25)
 	weapon_icon.set_weapon("pistol", accent)
 	weapon_box.add_child(weapon_icon)
 
-	var weapon_name = _make_label("WeaponName", "PISTOL", Vector2(99, 6), Vector2(49, 16), 10, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
+	var weapon_name = _make_label("WeaponName", "PISTOL", Vector2(82, 1), Vector2(49, 11), 8, Color("#f4f0f6"), HORIZONTAL_ALIGNMENT_LEFT)
 	weapon_box.add_child(weapon_name)
 
-	var ammo_label = _make_label("AmmoLabel", "INF", Vector2(99, 25), Vector2(49, 18), 13, Color("#d7e3f4"), HORIZONTAL_ALIGNMENT_LEFT)
+	var ammo_label = _make_label("AmmoLabel", "INF", Vector2(82, 11), Vector2(49, 16), 11, Color("#e8dfed"), HORIZONTAL_ALIGNMENT_LEFT)
 	weapon_box.add_child(ammo_label)
 
 	_panel_data.append({
@@ -187,7 +206,7 @@ func _update_life_label(data: Dictionary, lives: int) -> void:
 	if life_label == null:
 		return
 	life_label.text = "LIFE %d" % max(lives, 0)
-	life_label.add_theme_color_override("font_color", Color("#aeb8c9") if lives > 1 else Color("#ff8b62"))
+	life_label.add_theme_color_override("font_color", Color("#c7c1d4") if lives > 1 else Color("#ff9b72"))
 
 func _update_weapon_info(data: Dictionary, character: BaseCharacter) -> void:
 	var weapon_id := "pistol"
@@ -213,7 +232,7 @@ func _update_weapon_info(data: Dictionary, character: BaseCharacter) -> void:
 	var ammo_label = data.get("ammo_label") as Label
 	if ammo_label != null:
 		ammo_label.text = ammo_text
-		ammo_label.add_theme_color_override("font_color", Color("#d7e3f4") if infinite_ammo else Color.WHITE)
+		ammo_label.add_theme_color_override("font_color", Color("#e8dfed") if infinite_ammo else Color.WHITE)
 
 	if data.get("weapon_id", "") == weapon_id:
 		return

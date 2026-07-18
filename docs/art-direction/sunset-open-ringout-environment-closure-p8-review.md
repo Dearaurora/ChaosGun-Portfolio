@@ -2,7 +2,7 @@
 
 Gameplay screenshot: `reports/open_ringout_environment_closure_p8_screenshot.png`
 
-Decision: ENVIRONMENT CLOSURE PASS / FINAL CONCEPT MATCH HOLD
+Decision: ENVIRONMENT BASE PASS / FINAL GAPS COMPLETED IN P14
 
 ## Visible Changes
 
@@ -28,9 +28,10 @@ Total: 28/35
 
 ## Remaining Environment Gaps
 
-1. Replace the geometric cloud banks with softer authored cloud assets during final polish.
-2. Add a small number of higher-quality landmark variants instead of increasing prop count.
-3. Revisit final color grading only after production character materials are integrated.
+These historical gaps were closed in `sunset-environment-p14-review.md`: authored
+cloud banks replaced the provisional layers, four landmark-varied distant islands
+were added, and the final grade was completed after production character material
+integration.
 
 ## Next Stage
 
@@ -41,4 +42,5 @@ The environment dependency is sufficiently stable for the character, weapon, and
 - Sunset runtime integration verifier: PASS, including compressed texture inspection.
 - Open Ring-Out full gameplay verifier: PASS.
 - Open Ring-Out asset verifier: PASS, 1098 mesh instances and 82 materials.
-- Locked gameplay screenshot review: PASS for environment closure; final concept match remains HOLD.
+- Locked P8 gameplay screenshot review: PASS for the environment base; P14 now
+  supersedes the former final-concept hold.

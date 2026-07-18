@@ -11,6 +11,10 @@ const CAMERA_PADDING := 1.10
 func apply_pipeline(arena: Node3D) -> void:
 	_apply_lighting(arena)
 	_apply_environment(arena)
+	if arena.has_method("_update_map_runtime_camera"):
+		_keep_authored_camera(arena)
+		print("TA Pipeline: map camera director + art pass active")
+		return
 	if _arena_uses_fixed_runtime_camera(arena):
 		_keep_authored_camera(arena)
 		print("TA Pipeline: art pass active, runtime camera locked")

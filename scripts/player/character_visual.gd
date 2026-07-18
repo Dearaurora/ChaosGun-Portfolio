@@ -8,18 +8,40 @@ class_name CharacterVisual
 @export var show_vest: bool = false
 @export var show_visor: bool = true
 
-const HERO_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/hero_character_rig_v1.glb"
+const HERO_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/hero_character_rig_v2.glb"
 const LEGACY_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/bean_character.glb"
 const WEAPON_MODEL_ROOT := "res://assets/models/generated/weapons/"
-const HERO_RUNTIME_SCALE := Vector3(1.10, 1.04, 1.10)
+const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
+const FOOTSTEP_STREAMS: Array[AudioStream] = [
+	preload("res://assets/audio/impact-sounds/Audio/footstep_wood_001.ogg"),
+	preload("res://assets/audio/impact-sounds/Audio/footstep_wood_002.ogg"),
+	preload("res://assets/audio/impact-sounds/Audio/footstep_wood_004.ogg"),
+]
+const HERO_RUNTIME_SCALE := Vector3(1.14, 1.06, 1.14)
 const CONTACT_SHADOW_Y_OFFSET := -0.075
 const HERO_RECOIL_SCALE := 0.62
+const HERO_RECOIL_YAW_SCALE := 0.72
+const HERO_RECOIL_ROLL_SCALE := 0.68
 const HERO_WEAPON_KICK_SCALE := 0.32
 const HERO_SPINE_PIVOT := Vector3(0.0, 0.62, 0.0)
-const SUIT_ROUGHNESS := 0.58
+const WEAPON_SWITCH_DURATION := 0.22
+const WEAPON_SWITCH_DIP_RADIANS := 0.10
+const LOCOMOTION_START_DECAY := 5.6
+const LOCOMOTION_STOP_DECAY := 4.8
+const AUTHORED_MOTION_BLEND := 0.065
+const AUTHORED_HIT_BLEND := 0.035
+const SUIT_ROUGHNESS := 0.54
 const RUBBER_COLOR := Color("#412853")
 const FACE_PANEL_COLOR := Color("#171126")
 const EYE_COLOR := Color("#ffd45a")
+
+enum AuthoredMotionState {
+	HOLD,
+	START,
+	RUN,
+	STOP,
+	HIT,
+}
 
 var _weapon_holder: Node3D
 var _bounce_time: float = 0.0
@@ -48,14 +70,37 @@ var _upper_body_recoil_angle: float = 0.0
 var _locomotion_forward_amount: float = 0.0
 var _locomotion_right_amount: float = 0.0
 var _locomotion_speed_ratio: float = 0.0
+var _last_facing_dir: Vector3 = Vector3.ZERO
+var _turn_anticipation_angle: float = 0.0
 var _current_weapon_id: StringName = &"pistol"
 var _action_scale: Vector3 = Vector3.ONE
 var _stride_scale: Vector3 = Vector3.ONE
 var _recoil_pitch: float = 0.0
+var _recoil_yaw: float = 0.0
+var _recoil_roll: float = 0.0
 var _impact_pitch: float = 0.0
 var _impact_roll: float = 0.0
 var _weapon_kick: float = 0.0
+var _weapon_side_kick: float = 0.0
+var _fire_compression: float = 0.0
+var _recoil_recovery_scale: float = 1.0
+var _fire_serial: int = 0
+var _upper_body_recoil_yaw: float = 0.0
+var _upper_body_recoil_roll: float = 0.0
 var _weapon_holder_base_position: Vector3 = Vector3.ZERO
+var _authored_muzzle_positions: Dictionary = {}
+var _weapon_switch_elapsed: float = WEAPON_SWITCH_DURATION
+var _weapon_switch_amount: float = 0.0
+var _locomotion_start_impulse: float = 0.0
+var _locomotion_stop_impulse: float = 0.0
+var _locomotion_impulse_direction := Vector2.ZERO
+var _last_input_speed_ratio: float = 0.0
+var _has_authored_motion: bool = false
+var _authored_motion_state: int = AuthoredMotionState.HOLD
+var _authored_motion_clip: StringName = &""
+var _authored_motion_desired_moving: bool = false
+var _last_footstep_phase: float = -1.0
+var _footstep_serial: int = 0
 
 func _ready() -> void:
 	if not _build_asset_visual():
@@ -127,6 +172,7 @@ func _build_asset_visual() -> bool:
 	add_child(_asset_root)
 	_animation_player = _find_animation_player(_asset_root)
 	_skeleton = _find_skeleton(_asset_root)
+	_configure_authored_motion_library()
 	_cache_locomotion_bones()
 
 	_create_marker("FaceVisor", Vector3(0, 1.58, -0.84))
@@ -159,6 +205,22 @@ func _find_skeleton(node: Node) -> Skeleton3D:
 			return found
 	return null
 
+func _configure_authored_motion_library() -> void:
+	_has_authored_motion = false
+	if not _uses_hero_rig or _animation_player == null:
+		return
+	var weapon_suffixes := [&"pistol", &"smg", &"ak", &"sniper", &"shotgun", &"gatling"]
+	for weapon_suffix in weapon_suffixes:
+		for phase in [&"start", &"run", &"stop", &"hit"]:
+			var clip := StringName("%s_%s" % [phase, weapon_suffix])
+			if not _animation_player.has_animation(clip):
+				return
+			var animation := _animation_player.get_animation(clip)
+			if animation != null:
+				animation.loop_mode = Animation.LOOP_LINEAR if phase == &"run" else Animation.LOOP_NONE
+	_has_authored_motion = true
+	_animation_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+
 func _cache_locomotion_bones() -> void:
 	_leg_bone_indices.clear()
 	_leg_base_rotations.clear()
@@ -182,15 +244,15 @@ func _build_contact_shadow() -> void:
 	_contact_shadow = MeshInstance3D.new()
 	_contact_shadow.name = "ContactShadow"
 	var shadow_mesh := CylinderMesh.new()
-	shadow_mesh.top_radius = 0.88
-	shadow_mesh.bottom_radius = 0.88
+	shadow_mesh.top_radius = 0.98
+	shadow_mesh.bottom_radius = 0.98
 	shadow_mesh.height = 0.016
 	shadow_mesh.radial_segments = 32
 	_contact_shadow.mesh = shadow_mesh
-	_contact_shadow.scale = Vector3(1.0, 1.0, 0.72)
+	_contact_shadow.scale = Vector3(1.0, 1.0, 0.70)
 	_contact_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_contact_shadow_material = StandardMaterial3D.new()
-	_contact_shadow_material.albedo_color = Color(0.08, 0.055, 0.12, 0.22)
+	_contact_shadow_material.albedo_color = Color(0.07, 0.045, 0.11, 0.30)
 	_contact_shadow_material.roughness = 1.0
 	_contact_shadow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_contact_shadow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -269,7 +331,7 @@ func _configure_suit_material(material: StandardMaterial3D, color: Color) -> voi
 	material.albedo_color = color
 	material.roughness = SUIT_ROUGHNESS
 	material.metallic = 0.0
-	material.metallic_specular = 0.24
+	material.metallic_specular = 0.29
 	material.emission_enabled = false
 
 func _configure_rubber_material(material: StandardMaterial3D) -> void:
@@ -537,10 +599,16 @@ func _build_weapon_holder() -> void:
 
 ## 切换枪械可视模型
 func set_weapon_visual(weapon_id: StringName) -> void:
+	var should_settle := _uses_hero_rig and weapon_id != _current_weapon_id
 	_current_weapon_id = weapon_id
+	if should_settle:
+		_clear_fire_pose()
 	_set_weapon_pose_visual(weapon_id)
 	_weapon_holder_base_position = _weapon_holder_position_for(weapon_id)
 	_weapon_holder.position = _weapon_holder_base_position
+	if should_settle:
+		_weapon_switch_elapsed = 0.0
+		_weapon_switch_amount = 0.0
 	# 清除旧模型
 	for child in _weapon_holder.get_children():
 		_weapon_holder.remove_child(child)
@@ -608,9 +676,9 @@ func _weapon_holder_position_for(weapon_id: StringName) -> Vector3:
 			&"sniper":
 				return Vector3(-0.18, 1.35, -0.96)
 			&"gatling":
-				return Vector3(-0.18, 1.34, -0.94)
+				return Vector3(-0.10, 1.27, -0.88)
 			&"shotgun":
-				return Vector3(-0.18, 1.34, -0.91)
+				return Vector3(-0.14, 1.31, -0.90)
 	match weapon_id:
 		&"pistol":
 			return Vector3(0.0, 1.18, -1.24)
@@ -630,11 +698,13 @@ func _set_weapon_pose_visual(weapon_id: StringName) -> void:
 	if _asset_root == null:
 		return
 	if _uses_hero_rig and _animation_player != null:
+		_authored_motion_state = AuthoredMotionState.HOLD
 		_active_weapon_pose = _weapon_pose_animation_for(weapon_id)
 		if _animation_player.has_animation(_active_weapon_pose):
 			_animation_player.play(_active_weapon_pose)
 			_animation_player.seek(0.0, true)
 			_animation_player.pause()
+			_authored_motion_clip = _active_weapon_pose
 			_cache_weapon_pose_recoil_base()
 			return
 	var wants_pistol := weapon_id == &"pistol"
@@ -648,10 +718,157 @@ func _weapon_pose_animation_for(weapon_id: StringName) -> StringName:
 			return &"hold_ak"
 		&"sniper":
 			return &"hold_sniper"
-		&"gatling", &"shotgun":
-			return &"hold_ak"
+		&"gatling":
+			return &"hold_gatling"
+		&"shotgun":
+			return &"hold_shotgun"
 		_:
 			return &"hold_pistol"
+
+func _weapon_motion_suffix(weapon_id: StringName) -> StringName:
+	if weapon_id == &"ak_rifle":
+		return &"ak"
+	if weapon_id in [&"pistol", &"smg", &"sniper", &"shotgun", &"gatling"]:
+		return weapon_id
+	return &"pistol"
+
+func _authored_motion_animation_for(phase: StringName) -> StringName:
+	return StringName("%s_%s" % [phase, _weapon_motion_suffix(_current_weapon_id)])
+
+func _play_authored_motion(phase: StringName, blend: float = AUTHORED_MOTION_BLEND, restart: bool = true) -> bool:
+	if not _has_authored_motion or _animation_player == null:
+		return false
+	var clip := _authored_motion_animation_for(phase)
+	if not _animation_player.has_animation(clip):
+		return false
+	if restart or _authored_motion_clip != clip or not _animation_player.is_playing():
+		_animation_player.play(clip, blend)
+		if restart:
+			_animation_player.seek(0.0, true)
+	_authored_motion_clip = clip
+	return true
+
+func _begin_authored_start() -> void:
+	if not _play_authored_motion(&"start"):
+		return
+	_authored_motion_state = AuthoredMotionState.START
+
+func _begin_authored_run(blend: float = AUTHORED_MOTION_BLEND) -> void:
+	if not _play_authored_motion(&"run", blend):
+		return
+	_authored_motion_state = AuthoredMotionState.RUN
+	_last_footstep_phase = -1.0
+
+func _begin_authored_stop() -> void:
+	if not _play_authored_motion(&"stop"):
+		return
+	_authored_motion_state = AuthoredMotionState.STOP
+
+func _begin_authored_hit() -> void:
+	if not _play_authored_motion(&"hit", AUTHORED_HIT_BLEND):
+		return
+	_authored_motion_state = AuthoredMotionState.HIT
+
+func _settle_authored_hold(blend: float = AUTHORED_MOTION_BLEND) -> void:
+	if _animation_player == null:
+		return
+	_active_weapon_pose = _weapon_pose_animation_for(_current_weapon_id)
+	if _animation_player.has_animation(_active_weapon_pose):
+		_animation_player.play(_active_weapon_pose, blend)
+		_animation_player.seek(0.0, true)
+		_animation_player.pause()
+		_authored_motion_clip = _active_weapon_pose
+		_cache_weapon_pose_recoil_base()
+	_authored_motion_state = AuthoredMotionState.HOLD
+	_last_footstep_phase = -1.0
+
+func _update_authored_motion_input(speed_ratio: float) -> void:
+	if not _has_authored_motion:
+		return
+	_authored_motion_desired_moving = speed_ratio > 0.16
+	if _authored_motion_state == AuthoredMotionState.HIT:
+		return
+	match _authored_motion_state:
+		AuthoredMotionState.HOLD:
+			if _authored_motion_desired_moving:
+				_begin_authored_start()
+		AuthoredMotionState.START, AuthoredMotionState.RUN:
+			if not _authored_motion_desired_moving:
+				_begin_authored_stop()
+		AuthoredMotionState.STOP:
+			if _authored_motion_desired_moving:
+				_begin_authored_start()
+
+func _authored_clip_finished(delta: float) -> bool:
+	if _animation_player == null or _authored_motion_clip.is_empty():
+		return true
+	if not _animation_player.is_playing():
+		return true
+	var animation := _animation_player.get_animation(_authored_motion_clip)
+	if animation == null:
+		return true
+	return _animation_player.current_animation_position >= animation.length - maxf(delta * 1.5, 0.018)
+
+func _update_authored_motion_playback(delta: float) -> void:
+	if not _has_authored_motion or _animation_player == null:
+		return
+	if _authored_motion_state == AuthoredMotionState.RUN:
+		_animation_player.speed_scale = lerpf(0.78, 1.18, _locomotion_speed_ratio)
+	else:
+		_animation_player.speed_scale = 1.0
+	if not _authored_clip_finished(delta):
+		return
+	match _authored_motion_state:
+		AuthoredMotionState.START:
+			if _authored_motion_desired_moving:
+				_begin_authored_run(0.025)
+			else:
+				_begin_authored_stop()
+		AuthoredMotionState.STOP:
+			if _authored_motion_desired_moving:
+				_begin_authored_start()
+			else:
+				_settle_authored_hold(0.04)
+		AuthoredMotionState.HIT:
+			if _authored_motion_desired_moving:
+				_begin_authored_run(0.04)
+			else:
+				_settle_authored_hold(0.04)
+
+func _update_authored_footsteps() -> void:
+	if not _has_authored_motion or _animation_player == null or _authored_motion_state != AuthoredMotionState.RUN:
+		_last_footstep_phase = -1.0
+		return
+	var animation := _animation_player.get_animation(_authored_motion_clip)
+	if animation == null or animation.length <= 0.001:
+		return
+	var phase := fposmod(_animation_player.current_animation_position, animation.length) / animation.length
+	if _last_footstep_phase < 0.0:
+		_last_footstep_phase = phase
+		return
+	var crossed_midpoint := _last_footstep_phase < 0.5 and phase >= 0.5
+	var wrapped_cycle := phase < _last_footstep_phase
+	if crossed_midpoint or wrapped_cycle:
+		_play_footstep_sfx()
+	_last_footstep_phase = phase
+
+func _play_footstep_sfx() -> void:
+	_footstep_serial += 1
+	if RuntimeGlobals.runtime_audio_disabled() or not is_inside_tree() or FOOTSTEP_STREAMS.is_empty():
+		return
+	var scene_root := RuntimeGlobals.active_scene(get_tree())
+	if scene_root == null:
+		return
+	var sfx := AudioStreamPlayer3D.new()
+	sfx.stream = FOOTSTEP_STREAMS[_footstep_serial % FOOTSTEP_STREAMS.size()]
+	sfx.volume_db = -18.5 if _current_weapon_id in [&"gatling", &"shotgun", &"sniper"] else -20.5
+	sfx.pitch_scale = (0.965 if _footstep_serial % 2 == 0 else 1.035) + randf_range(-0.012, 0.012)
+	sfx.unit_size = 16.0
+	sfx.max_distance = 140.0
+	scene_root.add_child(sfx)
+	sfx.global_position = global_position
+	sfx.play()
+	sfx.finished.connect(sfx.queue_free)
 
 func _set_weapon_pose_mesh_visibility(node: Node, wants_pistol: bool) -> void:
 	if node is MeshInstance3D:
@@ -682,7 +899,24 @@ func _build_weapon_asset_visual(weapon_id: StringName) -> bool:
 	weapon_asset.rotation_degrees.y = 180.0
 	weapon_asset.scale = Vector3.ONE * _weapon_asset_scale(weapon_id)
 	_weapon_holder.add_child(weapon_asset)
+	_cache_authored_muzzle_position(weapon_id, weapon_asset)
 	return true
+
+func _cache_authored_muzzle_position(weapon_id: StringName, weapon_asset: Node3D) -> void:
+	var points: Array[Vector3] = []
+	_collect_authored_muzzle_points(weapon_asset, points)
+	if points.is_empty():
+		return
+	var center := Vector3.ZERO
+	for point in points:
+		center += point
+	_authored_muzzle_positions[weapon_id] = center / float(points.size())
+
+func _collect_authored_muzzle_points(node: Node, points: Array[Vector3]) -> void:
+	if node is Node3D and String(node.name).to_lower().contains("muzzleglow"):
+		points.append(to_local((node as Node3D).global_position))
+	for child in node.get_children():
+		_collect_authored_muzzle_points(child, points)
 
 func _build_weapon_readability_proxy(weapon_id: StringName) -> void:
 	var profile := _weapon_readability_profile(weapon_id)
@@ -816,6 +1050,7 @@ func get_weapon_readability_debug() -> Dictionary:
 	return {
 		"weapon_id": String(_current_weapon_id),
 		"holder_position": _weapon_holder.position if _weapon_holder else Vector3.ZERO,
+		"holder_base_position": _weapon_holder_base_position,
 		"holder_scale": _weapon_holder.scale.x if _weapon_holder else 0.0,
 		"silhouette_length": float(profile["silhouette_length"]),
 		"silhouette_width": float(profile["silhouette_width"]),
@@ -823,6 +1058,7 @@ func get_weapon_readability_debug() -> Dictionary:
 		"uses_proxy": proxy != null,
 		"asset_scale": _weapon_asset_scale(_current_weapon_id),
 		"asset_rotation_y": asset.rotation_degrees.y if asset else 0.0,
+		"muzzle_anchor_source": "authored_model" if _authored_muzzle_positions.has(_current_weapon_id) else "fallback_profile",
 		"weapon_pose": String(_active_weapon_pose) if _uses_hero_rig else ("pistol" if _current_weapon_id == &"pistol" else "long"),
 		"uses_hero_rig": _uses_hero_rig,
 		"has_magazine": bool(profile.get("has_magazine", false)),
@@ -880,6 +1116,8 @@ func _weapon_asset_scale(weapon_id: StringName) -> float:
 			return 1.0
 
 func get_weapon_muzzle_local_position(weapon_id: StringName = _current_weapon_id) -> Vector3:
+	if _authored_muzzle_positions.has(weapon_id):
+		return (_authored_muzzle_positions[weapon_id] as Vector3) * _runtime_visual_scale()
 	var muzzle_position := Vector3.ZERO
 	if _uses_hero_rig:
 		match weapon_id:
@@ -890,9 +1128,9 @@ func get_weapon_muzzle_local_position(weapon_id: StringName = _current_weapon_id
 			&"sniper":
 				muzzle_position = Vector3(-0.18, 1.39, -2.31)
 			&"gatling":
-				muzzle_position = Vector3(-0.18, 1.39, -2.03)
+				muzzle_position = Vector3(-0.10, 1.32, -1.97)
 			&"shotgun":
-				muzzle_position = Vector3(-0.18, 1.39, -2.08)
+				muzzle_position = Vector3(-0.14, 1.35, -2.07)
 			_:
 				muzzle_position = Vector3(0.0, 1.43, -1.69)
 	else:
@@ -961,26 +1199,47 @@ func _play_deform(target_scale: Vector3, duration: float) -> void:
 	_deform_tween.tween_property(self, "_action_scale", Vector3.ONE, duration)
 
 func animate_fire(weapon_id: StringName = &"pistol") -> void:
-	var kick := 0.055
-	var pitch := 0.045
+	_fire_serial += 1
+	var profile := _fire_profile_for_weapon(weapon_id)
+	var alternating_sign := -1.0 if _fire_serial % 2 == 0 else 1.0
+	var lateral_sign := alternating_sign if bool(profile.get("alternate", false)) else 1.0
+	_weapon_kick = maxf(_weapon_kick, float(profile["kick"]))
+	_recoil_pitch = maxf(_recoil_pitch, float(profile["pitch"]))
+	_recoil_yaw = _dominant_signed_impulse(_recoil_yaw, float(profile["yaw"]) * lateral_sign)
+	_recoil_roll = _dominant_signed_impulse(_recoil_roll, float(profile["roll"]) * lateral_sign)
+	_weapon_side_kick = _dominant_signed_impulse(_weapon_side_kick, float(profile["side_kick"]) * lateral_sign)
+	_fire_compression = maxf(_fire_compression, float(profile["compression"]))
+	_recoil_recovery_scale = float(profile["recovery"])
+
+func _fire_profile_for_weapon(weapon_id: StringName) -> Dictionary:
 	match weapon_id:
 		&"smg":
-			kick = 0.035
-			pitch = 0.028
+			return {"kick": 0.040, "pitch": 0.036, "yaw": 0.032, "roll": 0.022, "side_kick": 0.022, "compression": 0.022, "recovery": 1.55, "alternate": true}
 		&"ak_rifle":
-			kick = 0.075
-			pitch = 0.060
+			return {"kick": 0.092, "pitch": 0.080, "yaw": 0.046, "roll": 0.032, "side_kick": 0.032, "compression": 0.045, "recovery": 1.00, "alternate": true}
 		&"sniper":
-			kick = 0.145
-			pitch = 0.115
+			return {"kick": 0.175, "pitch": 0.160, "yaw": 0.018, "roll": 0.026, "side_kick": 0.014, "compression": 0.075, "recovery": 0.65, "alternate": false}
 		&"gatling":
-			kick = 0.022
-			pitch = 0.018
+			return {"kick": 0.028, "pitch": 0.026, "yaw": 0.022, "roll": 0.018, "side_kick": 0.020, "compression": 0.030, "recovery": 1.80, "alternate": true}
 		&"shotgun":
-			kick = 0.085
-			pitch = 0.070
-	_weapon_kick = maxf(_weapon_kick, kick)
-	_recoil_pitch = maxf(_recoil_pitch, pitch)
+			return {"kick": 0.125, "pitch": 0.120, "yaw": 0.040, "roll": 0.038, "side_kick": 0.032, "compression": 0.090, "recovery": 0.72, "alternate": true}
+		_:
+			return {"kick": 0.065, "pitch": 0.060, "yaw": 0.014, "roll": 0.016, "side_kick": 0.012, "compression": 0.025, "recovery": 1.18, "alternate": true}
+
+func get_fire_profile_debug(weapon_id: StringName) -> Dictionary:
+	return _fire_profile_for_weapon(weapon_id).duplicate(true)
+
+func _dominant_signed_impulse(current: float, incoming: float) -> float:
+	return incoming if absf(incoming) >= absf(current) else current
+
+func _clear_fire_pose() -> void:
+	_recoil_pitch = 0.0
+	_recoil_yaw = 0.0
+	_recoil_roll = 0.0
+	_weapon_kick = 0.0
+	_weapon_side_kick = 0.0
+	_fire_compression = 0.0
+	_recoil_recovery_scale = 1.0
 
 func animate_respawn() -> void:
 	if _deform_tween and _deform_tween.is_running():
@@ -989,6 +1248,23 @@ func animate_respawn() -> void:
 	_deform_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_deform_tween.tween_property(self, "_action_scale", Vector3(1.10, 0.94, 1.10), 0.18)
 	_deform_tween.tween_property(self, "_action_scale", Vector3.ONE, 0.12)
+
+func animate_match_spawn() -> void:
+	if _deform_tween and _deform_tween.is_running():
+		_deform_tween.kill()
+	_action_scale = Vector3(0.58, 0.34, 0.58)
+	_deform_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_deform_tween.tween_property(self, "_action_scale", Vector3(1.12, 0.96, 1.12), 0.22)
+	_deform_tween.tween_property(self, "_action_scale", Vector3.ONE, 0.16)
+
+func animate_match_winner() -> void:
+	if _deform_tween and _deform_tween.is_running():
+		_deform_tween.kill()
+	_action_scale = Vector3.ONE
+	_deform_tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_deform_tween.tween_property(self, "_action_scale", Vector3(1.10, 1.16, 1.10), 0.18)
+	_deform_tween.tween_property(self, "_action_scale", Vector3(1.04, 0.98, 1.04), 0.14)
+	_deform_tween.tween_property(self, "_action_scale", Vector3.ONE, 0.16)
 
 func animate_movement(is_moving: bool, delta: float) -> void:
 	var move_dir := Vector3.FORWARD if is_moving else Vector3.ZERO
@@ -1001,6 +1277,7 @@ func animate_locomotion(move_dir: Vector3, facing_dir: Vector3, speed_ratio: flo
 		flat_facing = Vector3.FORWARD
 	else:
 		flat_facing = flat_facing.normalized()
+	_update_turn_anticipation(flat_facing, delta)
 
 	var flat_move := Vector3(move_dir.x, 0.0, move_dir.z)
 	var clamped_speed := clampf(speed_ratio, 0.0, 1.0)
@@ -1008,32 +1285,66 @@ func animate_locomotion(move_dir: Vector3, facing_dir: Vector3, speed_ratio: flo
 		flat_move = flat_move.normalized()
 	else:
 		clamped_speed = 0.0
+	_update_authored_motion_input(clamped_speed)
 
 	var right_dir := Vector3(-flat_facing.z, 0.0, flat_facing.x).normalized()
 	var target_forward := flat_move.dot(flat_facing) * clamped_speed
 	var target_right := flat_move.dot(right_dir) * clamped_speed
-	var blend := clampf(delta * 10.0, 0.0, 1.0)
+	if clamped_speed > 0.35 and _last_input_speed_ratio <= 0.10:
+		_locomotion_start_impulse = 1.0
+		_locomotion_impulse_direction = Vector2(target_right, target_forward).normalized()
+	elif clamped_speed <= 0.10 and _last_input_speed_ratio > 0.35:
+		_locomotion_stop_impulse = 1.0
+		_locomotion_impulse_direction = Vector2(_locomotion_right_amount, _locomotion_forward_amount).normalized()
+	_last_input_speed_ratio = clamped_speed
+	var blend_rate := 8.5 if clamped_speed > _locomotion_speed_ratio else 13.5
+	var blend := clampf(delta * blend_rate, 0.0, 1.0)
 	_locomotion_forward_amount = lerpf(_locomotion_forward_amount, target_forward, blend)
 	_locomotion_right_amount = lerpf(_locomotion_right_amount, target_right, blend)
 	_locomotion_speed_ratio = lerpf(_locomotion_speed_ratio, clamped_speed, blend)
 
 	var pose_blend := clampf(delta * 12.0, 0.0, 1.0)
 	var root_recoil_pitch := 0.0 if _uses_hero_rig else _recoil_pitch
+	var start_pitch := -_locomotion_impulse_direction.y * _locomotion_start_impulse * 0.045
+	var stop_pitch := _locomotion_impulse_direction.y * _locomotion_stop_impulse * 0.060
+	var start_roll := -_locomotion_impulse_direction.x * _locomotion_start_impulse * 0.045
+	var stop_roll := _locomotion_impulse_direction.x * _locomotion_stop_impulse * 0.060
 	if _locomotion_speed_ratio > 0.02 or absf(_locomotion_forward_amount) > 0.02 or absf(_locomotion_right_amount) > 0.02:
 		_bounce_time += delta * lerpf(8.0, 13.5, _locomotion_speed_ratio)
-		var step_bob := absf(sin(_bounce_time)) * 0.22 * _locomotion_speed_ratio
-		var stride_pulse := absf(sin(_bounce_time)) * _locomotion_speed_ratio
-		_stride_scale = Vector3(1.0 + stride_pulse * 0.035, 1.0 - stride_pulse * 0.050, 1.0 + stride_pulse * 0.025)
+		var step_wave := absf(sin(_bounce_time))
+		var step_bob := pow(step_wave, 1.55) * 0.11 * _locomotion_speed_ratio
+		var contact_weight := pow(absf(cos(_bounce_time)), 5.0) * _locomotion_speed_ratio
+		_stride_scale = Vector3(
+			1.0 + contact_weight * 0.040 + _locomotion_stop_impulse * 0.035,
+			1.0 - contact_weight * 0.052 - _locomotion_stop_impulse * 0.045,
+			1.0 + contact_weight * 0.028 + _locomotion_start_impulse * 0.025
+		)
 		position.y = lerpf(position.y, step_bob, pose_blend)
-		rotation.x = lerpf(rotation.x, -_locomotion_forward_amount * 0.08 + root_recoil_pitch + _impact_pitch, pose_blend)
-		rotation.z = lerpf(rotation.z, (-_locomotion_right_amount * 0.18) + sin(_bounce_time * 0.5) * 0.025 * _locomotion_speed_ratio + _impact_roll, pose_blend)
+		rotation.x = lerpf(rotation.x, -_locomotion_forward_amount * 0.045 + start_pitch + stop_pitch + root_recoil_pitch + _impact_pitch, pose_blend)
+		rotation.y = lerpf(rotation.y, _turn_anticipation_angle, pose_blend)
+		rotation.z = lerpf(rotation.z, (-_locomotion_right_amount * 0.085) + start_roll + stop_roll + sin(_bounce_time * 0.5) * 0.018 * _locomotion_speed_ratio + _impact_roll, pose_blend)
 	else:
 		_bounce_time = 0.0
-		_stride_scale = _stride_scale.lerp(Vector3.ONE, pose_blend)
+		var settle_scale := Vector3(
+			1.0 + _locomotion_stop_impulse * 0.055,
+			1.0 - _locomotion_stop_impulse * 0.070,
+			1.0 + _locomotion_stop_impulse * 0.040
+		)
+		_stride_scale = _stride_scale.lerp(settle_scale, pose_blend)
 		position.y = lerpf(position.y, 0.0, pose_blend)
-		rotation.x = lerpf(rotation.x, root_recoil_pitch + _impact_pitch, pose_blend)
-		rotation.z = lerpf(rotation.z, _impact_roll, pose_blend)
+		rotation.x = lerpf(rotation.x, stop_pitch + root_recoil_pitch + _impact_pitch, pose_blend)
+		rotation.y = lerpf(rotation.y, _turn_anticipation_angle, pose_blend)
+		rotation.z = lerpf(rotation.z, stop_roll + _impact_roll, pose_blend)
 	_apply_leg_step_pose(pose_blend)
+
+func _update_turn_anticipation(flat_facing: Vector3, delta: float) -> void:
+	if _last_facing_dir.length_squared() > 0.0001:
+		var facing_delta := _last_facing_dir.signed_angle_to(flat_facing, Vector3.UP)
+		if absf(facing_delta) > 0.012:
+			_turn_anticipation_angle = clampf(-facing_delta * 0.32, -0.18, 0.18)
+		else:
+			_turn_anticipation_angle = move_toward(_turn_anticipation_angle, 0.0, delta * 0.62)
+	_last_facing_dir = flat_facing
 
 func _apply_leg_step_pose(blend: float) -> void:
 	if _skeleton == null or _leg_bone_indices.size() != 2:
@@ -1044,6 +1355,8 @@ func _apply_leg_step_pose(blend: float) -> void:
 	var stride_angle := sin(_bounce_time) * 0.16 * gait_weight
 	var strafe_angle := cos(_bounce_time) * 0.055 * _locomotion_right_amount * _locomotion_speed_ratio
 	_leg_swing_amounts = Vector2(stride_angle + strafe_angle, -stride_angle - strafe_angle)
+	if _has_authored_motion:
+		return
 	for index in range(_leg_bone_indices.size()):
 		var direction := 1.0 if index == 0 else -1.0
 		var target_rotation := _leg_base_rotations[index]
@@ -1056,25 +1369,46 @@ func _apply_leg_step_pose(blend: float) -> void:
 func _apply_upper_body_recoil() -> void:
 	if not _uses_hero_rig or _skeleton == null or _spine_bone_index < 0:
 		_upper_body_recoil_angle = 0.0
+		_upper_body_recoil_yaw = 0.0
+		_upper_body_recoil_roll = 0.0
 		return
-	_upper_body_recoil_angle = _recoil_pitch * HERO_RECOIL_SCALE
-	var recoil_rotation := Quaternion(Vector3.RIGHT, -_upper_body_recoil_angle)
+	var locomotion_pitch := _locomotion_forward_amount * 0.045
+	locomotion_pitch += _locomotion_impulse_direction.y * _locomotion_start_impulse * 0.055
+	locomotion_pitch -= _locomotion_impulse_direction.y * _locomotion_stop_impulse * 0.050
+	var locomotion_roll := -_locomotion_right_amount * 0.105
+	locomotion_roll -= _locomotion_impulse_direction.x * _locomotion_start_impulse * 0.060
+	locomotion_roll += _locomotion_impulse_direction.x * _locomotion_stop_impulse * 0.050
+	_upper_body_recoil_angle = _recoil_pitch * HERO_RECOIL_SCALE + locomotion_pitch - _weapon_switch_amount * WEAPON_SWITCH_DIP_RADIANS
+	_upper_body_recoil_yaw = _recoil_yaw * HERO_RECOIL_YAW_SCALE
+	_upper_body_recoil_roll = _recoil_roll * HERO_RECOIL_ROLL_SCALE + locomotion_roll
+	var recoil_rotation := _upper_body_recoil_rotation()
 	_skeleton.set_bone_pose_rotation(
 		_spine_bone_index,
 		recoil_rotation * _spine_pose_base_rotation
 	)
 	_skeleton.force_update_all_bone_transforms()
 
+func _upper_body_recoil_rotation() -> Quaternion:
+	return (
+		Quaternion(Vector3.UP, _upper_body_recoil_yaw)
+		* Quaternion(Vector3.FORWARD, _upper_body_recoil_roll)
+		* Quaternion(Vector3.RIGHT, -_upper_body_recoil_angle)
+	)
+
 func _update_weapon_holder_pose() -> void:
 	if _weapon_holder == null:
 		return
 	if not _uses_hero_rig:
-		_weapon_holder.position = _weapon_holder_base_position + Vector3(0.0, 0.0, _weapon_kick)
+		_weapon_holder.position = _weapon_holder_base_position + Vector3(_weapon_side_kick, 0.0, _weapon_kick)
 		_weapon_holder.basis = Basis.IDENTITY
 		return
-	var recoil_basis := Basis(Quaternion(Vector3.RIGHT, _upper_body_recoil_angle))
+	var recoil_basis := Basis(_upper_body_recoil_rotation())
 	var pivot_offset := _weapon_holder_base_position - HERO_SPINE_PIVOT
-	var kick_offset := Vector3(0.0, 0.0, _weapon_kick * HERO_WEAPON_KICK_SCALE)
+	var kick_offset := Vector3(
+		_weapon_side_kick,
+		-_fire_compression * 0.12,
+		_weapon_kick * HERO_WEAPON_KICK_SCALE
+	)
 	_weapon_holder.position = HERO_SPINE_PIVOT + recoil_basis * (pivot_offset + kick_offset)
 	_weapon_holder.basis = recoil_basis
 
@@ -1086,6 +1420,7 @@ func get_locomotion_right_amount() -> float:
 
 func animate_hit(impact_dir: Vector3 = Vector3.ZERO, strength: float = 1.0) -> void:
 	_hit_flash_timer = 0.12
+	_begin_authored_hit()
 	var clamped_strength := clampf(strength, 0.35, 1.35)
 	var local_impact := global_basis.inverse() * impact_dir.normalized() if impact_dir.length_squared() > 0.0001 else Vector3.RIGHT
 	_impact_roll = clampf(-local_impact.x * 0.16 * clamped_strength, -0.22, 0.22)
@@ -1096,14 +1431,34 @@ func get_motion_debug() -> Dictionary:
 		"action_scale": _action_scale,
 		"stride_scale": _stride_scale,
 		"recoil_pitch": _recoil_pitch,
+		"recoil_yaw": _recoil_yaw,
+		"recoil_roll": _recoil_roll,
 		"impact_pitch": _impact_pitch,
 		"impact_roll": _impact_roll,
 		"weapon_kick": _weapon_kick,
+		"weapon_side_kick": _weapon_side_kick,
+		"fire_compression": _fire_compression,
+		"fire_serial": _fire_serial,
+		"recoil_recovery_scale": _recoil_recovery_scale,
 		"upper_body_recoil": _upper_body_recoil_angle,
+		"upper_body_recoil_yaw": _upper_body_recoil_yaw,
+		"upper_body_recoil_roll": _upper_body_recoil_roll,
 		"hero_recoil_rigged": _uses_hero_rig and _spine_bone_index >= 0,
 		"leg_swing": _leg_swing_amounts,
+		"turn_anticipation": _turn_anticipation_angle,
+		"locomotion_start_impulse": _locomotion_start_impulse,
+		"locomotion_stop_impulse": _locomotion_stop_impulse,
+		"locomotion_impulse_direction": _locomotion_impulse_direction,
+		"weapon_switch_settle": _weapon_switch_amount,
+		"weapon_switch_elapsed": _weapon_switch_elapsed,
 		"visual_scale": _runtime_visual_scale(),
 		"has_contact_shadow": _contact_shadow != null,
+		"authored_motion_enabled": _has_authored_motion,
+		"authored_motion_state": _authored_motion_state,
+		"authored_motion_clip": _authored_motion_clip,
+		"authored_motion_position": _animation_player.current_animation_position if _animation_player != null else 0.0,
+		"footstep_serial": _footstep_serial,
+		"footstep_phase": _last_footstep_phase,
 	}
 
 func get_material_debug() -> Dictionary:
@@ -1121,23 +1476,53 @@ func _update_contact_shadow() -> void:
 	if _contact_shadow == null or not is_inside_tree():
 		return
 	var grounded_position := global_position - Vector3.UP * position.y
-	_contact_shadow.global_position = grounded_position + Vector3.UP * CONTACT_SHADOW_Y_OFFSET
+	var local_motion := Vector3(_locomotion_right_amount, 0.0, -_locomotion_forward_amount)
+	var world_motion := global_basis * local_motion
+	_contact_shadow.global_position = grounded_position - world_motion * 0.10 + Vector3.UP * CONTACT_SHADOW_Y_OFFSET
 	_contact_shadow.global_rotation = Vector3.ZERO
+	_contact_shadow.scale = Vector3(
+		1.0 + absf(_locomotion_right_amount) * 0.10 + _locomotion_stop_impulse * 0.06,
+		1.0,
+		0.70 + absf(_locomotion_forward_amount) * 0.10 + _locomotion_start_impulse * 0.05
+	)
 	if _contact_shadow_material != null:
 		var lift_ratio := clampf(position.y / 0.22, 0.0, 1.0)
-		_contact_shadow_material.albedo_color.a = lerpf(0.22, 0.15, lift_ratio)
+		_contact_shadow_material.albedo_color.a = lerpf(0.30, 0.18, lift_ratio)
 
 func _process(delta: float) -> void:
-	_recoil_pitch = move_toward(_recoil_pitch, 0.0, delta * 0.72)
+	if _has_authored_motion and _animation_player != null:
+		_animation_player.advance(delta)
+	_locomotion_start_impulse = move_toward(_locomotion_start_impulse, 0.0, delta * LOCOMOTION_START_DECAY)
+	_locomotion_stop_impulse = move_toward(_locomotion_stop_impulse, 0.0, delta * LOCOMOTION_STOP_DECAY)
+	if _last_input_speed_ratio <= 0.10 and _locomotion_speed_ratio < 0.05:
+		var idle_settle := clampf(delta * 10.0, 0.0, 1.0)
+		rotation.x = lerpf(rotation.x, _impact_pitch, idle_settle)
+		rotation.z = lerpf(rotation.z, _impact_roll, idle_settle)
+	var recoil_decay := maxf(_recoil_recovery_scale, 0.55)
+	_recoil_pitch = move_toward(_recoil_pitch, 0.0, delta * 0.72 * recoil_decay)
+	_recoil_yaw = move_toward(_recoil_yaw, 0.0, delta * 0.86 * recoil_decay)
+	_recoil_roll = move_toward(_recoil_roll, 0.0, delta * 1.05 * recoil_decay)
 	_impact_pitch = move_toward(_impact_pitch, 0.0, delta * 1.35)
 	_impact_roll = move_toward(_impact_roll, 0.0, delta * 1.75)
-	_weapon_kick = move_toward(_weapon_kick, 0.0, delta * 0.85)
+	_weapon_kick = move_toward(_weapon_kick, 0.0, delta * 0.85 * recoil_decay)
+	_weapon_side_kick = move_toward(_weapon_side_kick, 0.0, delta * 0.92 * recoil_decay)
+	_fire_compression = move_toward(_fire_compression, 0.0, delta * 0.74 * recoil_decay)
+	if _recoil_pitch <= 0.0001 and absf(_recoil_yaw) <= 0.0001 and _weapon_kick <= 0.0001:
+		_recoil_recovery_scale = move_toward(_recoil_recovery_scale, 1.0, delta * 4.0)
+	_update_authored_motion_playback(delta)
+	_update_authored_footsteps()
+	_update_weapon_switch_settle(delta)
 	_apply_upper_body_recoil()
 	var visual_scale := _runtime_visual_scale()
+	var fire_scale := Vector3(
+		1.0 + _fire_compression * 0.32,
+		1.0 - _fire_compression,
+		1.0 + _fire_compression * 0.22
+	)
 	scale = Vector3(
-		visual_scale.x * _action_scale.x * _stride_scale.x,
-		visual_scale.y * _action_scale.y * _stride_scale.y,
-		visual_scale.z * _action_scale.z * _stride_scale.z
+		visual_scale.x * _action_scale.x * _stride_scale.x * fire_scale.x,
+		visual_scale.y * _action_scale.y * _stride_scale.y * fire_scale.y,
+		visual_scale.z * _action_scale.z * _stride_scale.z * fire_scale.z
 	)
 	_update_weapon_holder_pose()
 	_update_contact_shadow()
@@ -1148,6 +1533,14 @@ func _process(delta: float) -> void:
 		_apply_rendered_body_color(flash_color)
 	else:
 		_apply_rendered_body_color(body_color)
+
+func _update_weapon_switch_settle(delta: float) -> void:
+	if _weapon_switch_elapsed >= WEAPON_SWITCH_DURATION:
+		_weapon_switch_amount = 0.0
+		return
+	_weapon_switch_elapsed = minf(_weapon_switch_elapsed + delta, WEAPON_SWITCH_DURATION)
+	var phase := _weapon_switch_elapsed / WEAPON_SWITCH_DURATION
+	_weapon_switch_amount = sin(phase * PI)
 
 ## 更新身体颜色
 func set_color(color: Color) -> void:

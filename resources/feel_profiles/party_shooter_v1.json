@@ -1,0 +1,52 @@
+{
+  "id": "party_shooter_v1",
+  "label": "Party Shooter v1",
+  "description": "Shared approved movement, knockback, and weapon baseline for every playable arena.",
+  "game_config": {
+    "default_lives": 4,
+    "respawn_delay": 1.15,
+    "invincible_duration": 1.5,
+    "fall_threshold": -16.0,
+    "control_mode": "lock_on",
+    "character_speed": 620.0,
+    "character_horizontal_damp": 2.4,
+    "character_air_horizontal_damp": 0.25,
+    "character_gravity_scale": 24.0,
+    "bullet_speed_multiplier": 1.0,
+    "knockback_multiplier": 1.35,
+    "knockback_lift_ratio": 0.24,
+    "max_recoil_impulse": 9.5
+  },
+  "weapon_feel_overrides": {
+    "pistol": {
+      "knockback_power": 92.0,
+      "damage": 14.0,
+      "bullet_lifetime": 1.45
+    },
+    "smg": {
+      "knockback_power": 68.0,
+      "damage": 7.0,
+      "bullet_lifetime": 1.25
+    },
+    "ak_rifle": {
+      "knockback_power": 92.0,
+      "damage": 13.0,
+      "bullet_lifetime": 1.55
+    },
+    "sniper": {
+      "knockback_power": 330.0,
+      "damage": 42.0,
+      "bullet_lifetime": 1.9
+    },
+    "gatling": {
+      "knockback_power": 58.0,
+      "damage": 5.0,
+      "bullet_lifetime": 1.25
+    },
+    "shotgun": {
+      "knockback_power": 25.0,
+      "damage": 4.5,
+      "bullet_lifetime": 0.85
+    }
+  }
+}

@@ -113,6 +113,7 @@ func _verify_map_tuning() -> void:
 	var arena := packed.instantiate()
 	var spawner := arena.get_node_or_null("WeaponSpawner") as WeaponSpawner
 	arena.set("weapon_spawner", spawner)
+	arena.call("_apply_shared_runtime_config")
 	arena.call("_configure_map_runtime")
 	var game_config := root.get_node_or_null("GameConfig")
 	var overrides = game_config.get("weapon_feel_overrides") if game_config else null

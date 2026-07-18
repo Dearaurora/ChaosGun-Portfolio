@@ -50,6 +50,14 @@ func _verify_debug_profile(tracer: Node3D) -> void:
 	var length := float(debug.get("length", 0.0))
 	var width := float(debug.get("width", 0.0))
 	var lifetime := float(debug.get("lifetime", 0.0))
+	if String(debug.get("shape", "")) != "yellow_white_teardrop":
+		_fail("Tracer should use the approved yellow-white water-drop silhouette")
+	var tracer_color := debug.get("color", Color.BLACK) as Color
+	var tracer_core_color := debug.get("core_color", Color.BLACK) as Color
+	if tracer_color.r < 0.90 or tracer_color.g < 0.60 or tracer_color.b > 0.38:
+		_fail("Tracer debug contract should expose the shared warm-yellow shell")
+	if minf(tracer_core_color.r, minf(tracer_core_color.g, tracer_core_color.b)) < 0.80:
+		_fail("Tracer debug contract should expose the shared warm-white core")
 	if length < 3.0 or length > 12.0:
 		_fail("Tracer length should be readable without becoming a full-screen beam, got %.2f" % length)
 	if width < 0.12 or width > 0.42:
@@ -58,24 +66,28 @@ func _verify_debug_profile(tracer: Node3D) -> void:
 		_fail("Tracer lifetime should be brief but visible, got %.2f" % lifetime)
 
 func _verify_mesh_layers(tracer: Node3D) -> void:
-	var underlay := _find_mesh(tracer, "TracerUnderlay")
+	var glow := _find_mesh(tracer, "TracerGlow")
 	var core := _find_mesh(tracer, "TracerCore")
 	var lead := _find_mesh(tracer, "TracerLead")
-	if underlay == null:
-		_fail("Shot tracer missing TracerUnderlay")
+	if glow == null:
+		_fail("Shot tracer missing its connected yellow TracerGlow")
 	if core == null:
 		_fail("Shot tracer missing TracerCore")
 	if lead != null:
 		_fail("Shot tracer should not add a detached lead dot")
 
-	if underlay:
-		var mat := underlay.material_override as StandardMaterial3D
-		if mat == null or mat.albedo_color.a < 0.52:
-			_fail("TracerUnderlay should provide a strong dark outline")
+	if glow:
+		if not (glow.mesh is ArrayMesh):
+			_fail("TracerGlow should use authored water-drop geometry")
+		var mat := glow.material_override as StandardMaterial3D
+		if mat == null or mat.albedo_color.r < 0.90 or mat.albedo_color.g < 0.60 or mat.albedo_color.b > 0.38:
+			_fail("TracerGlow should use the shared warm-yellow projectile palette")
 	if core:
+		if not (core.mesh is ArrayMesh):
+			_fail("TracerCore should use authored water-drop geometry")
 		var mat := core.material_override as StandardMaterial3D
-		if mat == null or not mat.emission_enabled or mat.albedo_color.a > 0.74:
-			_fail("TracerCore should be bright and translucent")
+		if mat == null or not mat.emission_enabled or minf(mat.albedo_color.r, minf(mat.albedo_color.g, mat.albedo_color.b)) < 0.80:
+			_fail("TracerCore should be a luminous warm-white inset")
 
 func _find_mesh(node: Node, mesh_name: String) -> MeshInstance3D:
 	if node is MeshInstance3D and node.name == mesh_name:
