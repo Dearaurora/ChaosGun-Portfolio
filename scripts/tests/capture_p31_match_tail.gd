@@ -15,6 +15,7 @@ var _result_requested := false
 var _winner_focus_seen := false
 var _result_ui_seen := false
 var _focus_valid := true
+var _offline_movie_capture := false
 var _failed := false
 
 
@@ -23,6 +24,7 @@ func _initialize() -> void:
 		_fail("P31 match-tail capture requires a render-capable display driver")
 		return
 	seed(31032)
+	_offline_movie_capture = OS.has_feature("movie")
 	var capture_audio := _argument_value("--audio=", "false").to_lower() in ["1", "true", "yes"]
 	root.set_meta("disable_runtime_audio", not capture_audio)
 	var viewport_size := Vector2i(maxi(320, int(_argument_value("--width=", "1920"))), maxi(180, int(_argument_value("--height=", "1080"))))
@@ -55,8 +57,9 @@ func _initialize() -> void:
 		_frame += 1
 		if not DisplayServer.window_is_focused():
 			_focus_valid = false
-			_fail("P31 match-tail window lost desktop focus")
-			return
+			if not _offline_movie_capture:
+				_fail("P31 match-tail window lost desktop focus")
+				return
 		if _frame == 12:
 			_request_production_result()
 		_observe()
@@ -112,6 +115,9 @@ func _acquire_capture_focus() -> bool:
 		await process_frame
 		if DisplayServer.window_is_focused():
 			return true
+	if _offline_movie_capture:
+		_focus_valid = false
+		return true
 	_fail("P31 match-tail window could not acquire desktop focus before the sample")
 	return false
 
@@ -126,7 +132,7 @@ func _observe() -> void:
 
 
 func _finish() -> void:
-	var passed := _result_requested and _winner_focus_seen and _result_ui_seen and _focus_valid
+	var passed := _result_requested and _winner_focus_seen and _result_ui_seen and (_focus_valid or _offline_movie_capture)
 	var report := {
 		"sample": "p31_match_tail",
 		"duration_seconds": CLIP_SECONDS,
@@ -134,6 +140,7 @@ func _finish() -> void:
 		"winner_focus": _winner_focus_seen,
 		"result_ui": _result_ui_seen,
 		"focus_valid": _focus_valid,
+		"offline_movie_capture": _offline_movie_capture,
 		"pass": passed,
 	}
 	_write_report(report)

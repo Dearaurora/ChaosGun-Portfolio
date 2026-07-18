@@ -43,6 +43,7 @@ var _start_saved := false
 var _action_saved := false
 var _end_saved := false
 var _focus_valid := true
+var _offline_movie_capture := false
 var _camera_motion_valid := true
 var _failed := false
 
@@ -64,6 +65,7 @@ func _initialize() -> void:
 		return
 
 	seed(31031)
+	_offline_movie_capture = OS.has_feature("movie")
 	var capture_audio := _argument_value("--audio=", "false").to_lower() in ["1", "true", "yes"]
 	root.set_meta("disable_runtime_audio", not capture_audio)
 	var window_policy := root.get_node_or_null("TestWindowPolicy")
@@ -202,8 +204,9 @@ func _run_timeline() -> void:
 		_drive_frame(_frame)
 		if not DisplayServer.window_is_focused():
 			_focus_valid = false
-			_fail("Capture window lost desktop focus or was minimized")
-			return
+			if not _offline_movie_capture:
+				_fail("Capture window lost desktop focus or was minimized")
+				return
 		_observe_production_events()
 		var keyframe_beat := ""
 		if _frame == START_FRAME:
@@ -228,6 +231,9 @@ func _acquire_capture_focus() -> bool:
 		await process_frame
 		if DisplayServer.window_is_focused():
 			return true
+	if _offline_movie_capture:
+		_focus_valid = false
+		return true
 	_fail("Capture window could not acquire desktop focus before the sample")
 	return false
 
@@ -347,7 +353,8 @@ func _finish() -> void:
 	for character in _characters:
 		all_four_visible = all_four_visible and is_instance_valid(character)
 	var no_respawn := _target != null and _target.is_game_over and _target.is_dead
-	var passed := all_four_visible and _pickup_seen and _pickup_equipped and _return_shot_fired and _shot_fired and _projectile_seen and _hit_seen and _fall_seen and no_respawn and _focus_valid and _camera_motion_valid and _start_saved and _action_saved and _end_saved
+	var focus_contract_passed := _focus_valid or _offline_movie_capture
+	var passed := all_four_visible and _pickup_seen and _pickup_equipped and _return_shot_fired and _shot_fired and _projectile_seen and _hit_seen and _fall_seen and no_respawn and focus_contract_passed and _camera_motion_valid and _start_saved and _action_saved and _end_saved
 	var report := {
 		"sample": "p31_commercial",
 		"attempt": int(_argument_value("--attempt=", "0")),
@@ -374,6 +381,7 @@ func _finish() -> void:
 		"camera_stable": _camera_motion_valid and _camera != null and _camera.global_transform.is_equal_approx(_camera_expected_transform),
 		"camera_authored_push": true,
 		"focus_valid": _focus_valid,
+		"offline_movie_capture": _offline_movie_capture,
 		"keyframes": {"start": _start_saved, "action_apex": _action_saved, "end": _end_saved},
 		"pass": passed,
 	}
