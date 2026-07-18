@@ -246,6 +246,8 @@ func _configure_map_runtime() -> void:
 func _apply_map_visual_overrides() -> void:
 	_ensure_sunset_sky_backplate()
 	_apply_authored_material_color_overrides()
+	_disable_distant_environment_shadow_casting()
+	_disable_non_blocking_decor_shadow_casting()
 	var camera = get_node_or_null("GlobalCamera") as Camera3D
 	if camera:
 		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -307,6 +309,39 @@ func _apply_map_visual_overrides() -> void:
 	env.glow_strength = 0.58
 	env.glow_bloom = 0.0
 	env_node.environment = env
+
+func _disable_distant_environment_shadow_casting() -> void:
+	var distant_root = get_node_or_null("OpenRingoutBlenderVisuals/%s" % P14_ENVIRONMENT_ROOT_NAME)
+	if distant_root:
+		_set_shadow_casting_recursive(distant_root, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+
+func _disable_non_blocking_decor_shadow_casting() -> void:
+	var visual_root = get_node_or_null("OpenRingoutBlenderVisuals/%s" % SUNSET_V2_VISUAL_ROOT_NAME)
+	if visual_root:
+		_set_decor_shadow_casting_recursive(visual_root)
+	var glow_root = get_node_or_null(EDGE_GLOW_ROOT_NAME)
+	if glow_root:
+		_set_shadow_casting_recursive(glow_root, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+
+func _set_decor_shadow_casting_recursive(node: Node) -> void:
+	if node is GeometryInstance3D:
+		var lower_name := String(node.name).to_lower()
+		if (
+			"edgegem" in lower_name
+			or "bridgegem" in lower_name
+			or "cyan_marker" in lower_name
+			or "edgerim" in lower_name
+			or "warmband" in lower_name
+		):
+			(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for child in node.get_children():
+		_set_decor_shadow_casting_recursive(child)
+
+func _set_shadow_casting_recursive(node: Node, mode: GeometryInstance3D.ShadowCastingSetting) -> void:
+	if node is GeometryInstance3D:
+		(node as GeometryInstance3D).cast_shadow = mode
+	for child in node.get_children():
+		_set_shadow_casting_recursive(child, mode)
 
 func _apply_authored_material_color_overrides() -> void:
 	var visual_root = get_node_or_null("OpenRingoutBlenderVisuals/%s" % SUNSET_V2_VISUAL_ROOT_NAME)
