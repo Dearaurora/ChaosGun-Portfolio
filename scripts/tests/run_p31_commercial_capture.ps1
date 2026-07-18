@@ -14,6 +14,8 @@ $mainScript = "res://scripts/tests/capture_p31_commercial_sample.gd"
 $tailScript = "res://scripts/tests/capture_p31_match_tail.gd"
 $mutex = $null
 $mutexHeld = $false
+$movieOverridePath = Join-Path $projectPath "override.cfg"
+$movieOverrideOwned = $false
 
 function Resolve-Executable([string]$Requested, [string]$Fallback) {
     if (-not [string]::IsNullOrWhiteSpace($Requested)) {
@@ -88,6 +90,30 @@ function Get-EvidenceBinding {
     return $binding
 }
 
+function Enable-MovieCaptureOverride {
+    if (Test-Path -LiteralPath $script:movieOverridePath) {
+        throw "P31 refuses to replace an existing override.cfg"
+    }
+    $content = @"
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=960
+window/size/window_height_override=540
+window/stretch/mode="viewport"
+"@
+    [System.IO.File]::WriteAllText($script:movieOverridePath, $content, [System.Text.UTF8Encoding]::new($false))
+    $script:movieOverrideOwned = $true
+}
+
+function Disable-MovieCaptureOverride {
+    if ($script:movieOverrideOwned -and (Test-Path -LiteralPath $script:movieOverridePath)) {
+        Remove-Item -LiteralPath $script:movieOverridePath -Force
+    }
+    $script:movieOverrideOwned = $false
+}
+
 try {
     $script:godot = Resolve-Executable $GodotPath "godot"
     $script:ffmpeg = Resolve-Executable $FfmpegPath "ffmpeg"
@@ -128,6 +154,7 @@ try {
         $tailAvi = Join-Path $reportDir "p31_match_tail.avi"
         $tailMp4 = Join-Path $reportDir "p31_match_tail.mp4"
         Remove-Item -LiteralPath $mainAvi, $mainMp4, $tailAvi, $tailMp4 -Force -ErrorAction SilentlyContinue
+        Enable-MovieCaptureOverride
         $mainReport = Join-Path $reportDir "p31_final_capture.json"
         $mainArgs = @("--path", $projectPath, "--windowed", "--resolution", "1920x1080", "--fixed-fps", "60", "--write-movie", $mainAvi, "--script", $mainScript, "--", "--attempt=0", "--audio=true", "--report=$mainReport", "--frames-dir=$framesDir")
         $mainOutput = & $script:godot @mainArgs 2>&1
@@ -147,6 +174,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "ffmpeg conversion failed for the tail sample; preserving AVI" }
         $artifacts.match_tail = Assert-Media $tailMp4 "Tail MP4" 2.5
         Remove-Item -LiteralPath $tailAvi -Force
+        Disable-MovieCaptureOverride
 
         foreach ($size in @(@{ width = 1280; height = 720 }, @{ width = 2560; height = 1440 })) {
             $still = Join-Path $framesDir ("p31_action_apex_{0}x{1}.png" -f $size.width, $size.height)
@@ -178,6 +206,7 @@ try {
     $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encoding utf8
     Write-Output "P31_CAPTURE_RUN_PASS|success_count=$successCount|report=$reportPath"
 } finally {
+    Disable-MovieCaptureOverride
     if ($mutexHeld -and $mutex) { $mutex.ReleaseMutex() }
     if ($mutex) { $mutex.Dispose() }
 }
