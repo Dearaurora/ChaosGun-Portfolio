@@ -9,11 +9,14 @@ const PICKUP_SCENE: PackedScene = preload("res://scenes/weapons/weapon_pickup.ts
 const FPS := 60
 const CLIP_SECONDS := 5.0
 const TOTAL_FRAMES := int(CLIP_SECONDS * FPS)
-const START_FRAME := 30
-const PICKUP_FRAME := 96
-const FIRE_FRAME := 132
-const ACTION_FRAME := 150
-const FORCE_RINGOUT_FRAME := 206
+const START_FRAME := 24
+const CAMERA_PUSH_START_FRAME := 48
+const CAMERA_PUSH_END_FRAME := 120
+const PICKUP_FRAME := 116
+const RETURN_FIRE_FRAME := 138
+const FIRE_FRAME := 150
+const RINGOUT_STAGE_FRAME := 188
+const FORCE_RINGOUT_FRAME := 236
 const END_FRAME := 288
 
 var _arena: Node3D
@@ -22,20 +25,25 @@ var _winner: BaseCharacter
 var _target: BaseCharacter
 var _pickup: WeaponPickup
 var _camera: Camera3D
-var _camera_transform: Transform3D
+var _camera_start_transform: Transform3D
+var _camera_close_transform: Transform3D
+var _camera_expected_transform: Transform3D
 var _frame := 0
 var _pickup_seen := false
-var _shot_seen := false
+var _pickup_equipped := false
 var _projectile_seen := false
 var _hit_seen := false
+var _hit_frame := -1
 var _fall_seen := false
 var _shot_fired := false
+var _return_shot_fired := false
 var _ringout_staged := false
 var _threshold_forced := false
 var _start_saved := false
 var _action_saved := false
 var _end_saved := false
 var _focus_valid := true
+var _camera_motion_valid := true
 var _failed := false
 
 
@@ -131,7 +139,7 @@ func _prepare_production_stage() -> bool:
 	for node in get_nodes_in_group(&"weapon_pickup"):
 		node.queue_free()
 
-	# This fixed overview is intentionally held for the full five seconds.
+	# Begin on the full arena, then make a single authored push toward the east lane.
 	_camera = _arena.get_node_or_null("GlobalCamera") as Camera3D
 	if _camera == null:
 		_fail("Production scene has no GlobalCamera")
@@ -143,14 +151,16 @@ func _prepare_production_stage() -> bool:
 	_camera.global_position = Vector3(0.0, 61.0, 59.0)
 	_camera.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
 	_camera.current = true
-	_camera_transform = _camera.global_transform
+	_camera_start_transform = _camera.global_transform
+	_camera_close_transform = Transform3D(_camera_start_transform.basis, Vector3(-2.0, 61.0, 52.0))
+	_camera_expected_transform = _camera_start_transform
 
 	# The four color silhouettes are shown on the real arena from the first frame.
 	var positions := [
-		Vector3(-17.0, 1.25, -8.0),
-		Vector3(2.0, 1.25, -8.0),
-		Vector3(-16.0, 1.25, 11.0),
-		Vector3(17.0, 1.25, 10.0),
+		Vector3(-2.0, 1.25, 2.0),
+		Vector3(-2.0, 1.25, -15.0),
+		Vector3(-14.0, 1.25, 8.0),
+		Vector3(12.0, 1.25, 8.0),
 	]
 	for index in range(_characters.size()):
 		var character := _characters[index]
@@ -180,8 +190,8 @@ func _spawn_pickup() -> void:
 		return
 	_pickup.name = "P31ProductionPickup"
 	_arena.add_child(_pickup)
-	_pickup.global_position = Vector3(-7.2, 1.55, -8.0)
-	_pickup.setup(WeaponData.create_pistol())
+	_pickup.global_position = Vector3(-2.0, 1.55, -5.0)
+	_pickup.setup(WeaponData.create_smg())
 	_pickup.monitoring = false
 
 
@@ -195,10 +205,17 @@ func _run_timeline() -> void:
 			_fail("Capture window lost desktop focus or was minimized")
 			return
 		_observe_production_events()
-		if _frame in [START_FRAME, ACTION_FRAME, END_FRAME]:
+		var keyframe_beat := ""
+		if _frame == START_FRAME:
+			keyframe_beat = "start"
+		elif _hit_seen and not _action_saved:
+			keyframe_beat = "action"
+		elif _frame == END_FRAME:
+			keyframe_beat = "end"
+		if not keyframe_beat.is_empty():
 			await process_frame
 			await RenderingServer.frame_post_draw
-			_save_requested_keyframe(_frame)
+			_save_requested_keyframe(keyframe_beat)
 		if _failed:
 			return
 
@@ -216,12 +233,13 @@ func _acquire_capture_focus() -> bool:
 
 
 func _drive_frame(frame: int) -> void:
-	if frame >= 58 and frame <= 90:
-		var move_t := clampf(float(frame - 58) / 32.0, 0.0, 1.0)
-		_winner.global_position = Vector3(-17.0, 1.25, -8.0).lerp(Vector3(-7.2, 1.25, -8.0), move_t)
+	_drive_camera(frame)
+	if frame >= 82 and frame <= 110:
+		var move_t := smoothstep(0.0, 1.0, clampf(float(frame - 82) / 28.0, 0.0, 1.0))
+		_winner.global_position = Vector3(-2.0, 1.25, 2.0).lerp(Vector3(-2.0, 1.25, -5.0), move_t)
 		var visual := _winner.get_visual()
 		if visual:
-			visual.call("animate_locomotion", Vector3.RIGHT, Vector3.RIGHT, 0.86, 1.0 / FPS)
+			visual.call("animate_locomotion", Vector3.FORWARD, Vector3.FORWARD, 0.86, 1.0 / FPS)
 	if frame == PICKUP_FRAME:
 		if _pickup == null or not is_instance_valid(_pickup):
 			_fail("Production pickup vanished before the pickup beat")
@@ -229,19 +247,28 @@ func _drive_frame(frame: int) -> void:
 		_pickup.monitoring = true
 		_pickup.call("_on_body_entered", _winner)
 		_pickup_seen = true
-	if frame == 116:
+		_pickup_equipped = (
+			_winner.weapon_manager != null
+			and _winner.weapon_manager.current_weapon != null
+			and _winner.weapon_manager.current_weapon.weapon_data != null
+			and _winner.weapon_manager.current_weapon.weapon_data.weapon_id == &"smg"
+		)
+	if frame == 130:
 		# Releasing only the target lets the real hit impulse determine its fall.
 		_target.freeze = false
 		_target.linear_velocity = Vector3.ZERO
 		_target.angular_velocity = Vector3.ZERO
-	if frame == FIRE_FRAME:
-		_fire_production_weapon()
-	if frame == 154 and _hit_seen and not _ringout_staged:
+	if frame == RETURN_FIRE_FRAME:
+		_return_shot_fired = _fire_production_weapon(_target, _winner, true)
+	if frame in [FIRE_FRAME, FIRE_FRAME + 8, FIRE_FRAME + 16]:
+		var fired := _fire_production_weapon(_winner, _target, frame == FIRE_FRAME)
+		_shot_fired = _shot_fired or fired
+	if frame == RINGOUT_STAGE_FRAME and _hit_seen and not _ringout_staged and not _target.is_dead:
 		# The production hit supplied the impulse; staging moves the struck actor
-		# over Open Ring-Out's edge so the normal fall/ring-out presentation finishes.
-		_target.global_position = Vector3(52.0, 1.25, -8.0)
+		# only to the nearest open edge so its fall remains legible in the close shot.
+		_target.global_position.z = minf(_target.global_position.z, -19.0)
 		_ringout_staged = true
-	if frame == FORCE_RINGOUT_FRAME and _ringout_staged and not _target.is_dead:
+	if frame == FORCE_RINGOUT_FRAME and _hit_seen and not _target.is_dead:
 		# Keep the visible fall in the clip, then cross the production threshold so
 		# the shipping _check_fall -> _die -> eliminated path finishes in time.
 		_target.global_position.y = -17.0
@@ -249,24 +276,38 @@ func _drive_frame(frame: int) -> void:
 		_target.call("_check_fall")
 
 
-func _fire_production_weapon() -> void:
-	if _winner == null or _target == null or _winner.weapon_manager == null or _winner.weapon_point == null:
-		_fail("Decisive exchange is missing a production character or weapon manager")
-		return
-	var direction := (_target.global_position + Vector3.UP * 1.35 - _winner.weapon_point.global_position).normalized()
-	_face(_winner, direction)
-	var fired := _winner.weapon_manager.try_fire(_winner.weapon_point, direction, _winner)
-	if not fired:
-		_fail("Production WeaponManager refused the staged decisive shot")
-		return
-	_shot_fired = true
+func _drive_camera(frame: int) -> void:
+	var push_t := smoothstep(
+		0.0,
+		1.0,
+		clampf(float(frame - CAMERA_PUSH_START_FRAME) / float(CAMERA_PUSH_END_FRAME - CAMERA_PUSH_START_FRAME), 0.0, 1.0)
+	)
+	_camera_expected_transform = _camera_start_transform.interpolate_with(_camera_close_transform, push_t)
+	_camera.global_transform = _camera_expected_transform
+	_camera.size = lerpf(82.0, 38.0, push_t)
+
+
+func _fire_production_weapon(shooter: BaseCharacter, target: BaseCharacter, required: bool) -> bool:
+	if shooter == null or target == null or shooter.weapon_manager == null or shooter.weapon_point == null:
+		if required:
+			_fail("Commercial exchange is missing a production character or weapon manager")
+		return false
+	var direction := (target.global_position + Vector3.UP * 1.35 - shooter.weapon_point.global_position).normalized()
+	_face(shooter, direction)
+	var fired := shooter.weapon_manager.try_fire(shooter.weapon_point, direction, shooter)
+	if required and not fired:
+		_fail("Production WeaponManager refused a required commercial shot")
+	return fired
 
 
 func _observe_production_events() -> void:
-	if _camera and not _camera.global_transform.is_equal_approx(_camera_transform):
-		_fail("Capture camera moved during the supposedly stable commercial shot")
+	if _camera and not _camera.global_transform.is_equal_approx(_camera_expected_transform):
+		_camera_motion_valid = false
+		_fail("Capture camera deviated from the authored commercial move")
 		return
 	if _target and _target.get_hit_feedback_debug().get("serial", 0) > 0:
+		if not _hit_seen:
+			_hit_frame = _frame
 		_hit_seen = true
 	for node in _walk(_arena):
 		if node is Projectile:
@@ -276,26 +317,26 @@ func _observe_production_events() -> void:
 		_fall_seen = true
 
 
-func _save_requested_keyframe(frame: int) -> void:
+func _save_requested_keyframe(beat: String) -> void:
 	var requested := _argument_value("--still=", "")
 	var frames_dir := _argument_value("--frames-dir=", "")
 	var name := ""
-	if frame == START_FRAME:
+	if beat == "start":
 		_start_saved = true
 		name = "p31_start.png"
-	elif frame == ACTION_FRAME:
+	elif beat == "action":
 		_action_saved = true
 		name = "p31_action_apex.png"
 		if requested == "action":
 			name = ""
-	elif frame == END_FRAME:
+	elif beat == "end":
 		_end_saved = true
 		name = "p31_end.png"
 	if not frames_dir.is_empty() and not name.is_empty():
 		if not _save_viewport_png(frames_dir.path_join(name)):
 			_fail("Could not save keyframe %s" % name)
 			return
-	if not requested.is_empty() and ((requested == "start" and frame == START_FRAME) or (requested == "action" and frame == ACTION_FRAME) or (requested == "end" and frame == END_FRAME)):
+	if not requested.is_empty() and requested == beat:
 		var output := _argument_value("--output=", "")
 		if output.is_empty() or not _save_viewport_png(output):
 			_fail("Could not save requested P31 %s still" % requested)
@@ -306,7 +347,7 @@ func _finish() -> void:
 	for character in _characters:
 		all_four_visible = all_four_visible and is_instance_valid(character)
 	var no_respawn := _target != null and _target.is_game_over and _target.is_dead
-	var passed := all_four_visible and _pickup_seen and _shot_fired and _projectile_seen and _hit_seen and _fall_seen and no_respawn and _focus_valid and _start_saved and _action_saved and _end_saved
+	var passed := all_four_visible and _pickup_seen and _pickup_equipped and _return_shot_fired and _shot_fired and _projectile_seen and _hit_seen and _fall_seen and no_respawn and _focus_valid and _camera_motion_valid and _start_saved and _action_saved and _end_saved
 	var report := {
 		"sample": "p31_commercial",
 		"attempt": int(_argument_value("--attempt=", "0")),
@@ -316,9 +357,12 @@ func _finish() -> void:
 		"scene": SCENE_PATH,
 		"four_character_reveal": all_four_visible,
 		"pickup": _pickup_seen,
+		"pickup_equipped_smg": _pickup_equipped,
+		"return_shot": _return_shot_fired,
 		"shot": _shot_fired,
 		"projectile": _projectile_seen,
 		"hit": _hit_seen,
+		"hit_frame": _hit_frame,
 		"fall": _fall_seen,
 		"ringout_staged_after_hit": _ringout_staged,
 		"production_threshold_crossed": _threshold_forced,
@@ -327,7 +371,8 @@ func _finish() -> void:
 		"target_dead": _target.is_dead if _target else false,
 		"target_game_over": _target.is_game_over if _target else false,
 		"no_respawn": no_respawn,
-		"camera_stable": _camera != null and _camera.global_transform.is_equal_approx(_camera_transform),
+		"camera_stable": _camera_motion_valid and _camera != null and _camera.global_transform.is_equal_approx(_camera_expected_transform),
+		"camera_authored_push": true,
 		"focus_valid": _focus_valid,
 		"keyframes": {"start": _start_saved, "action_apex": _action_saved, "end": _end_saved},
 		"pass": passed,
