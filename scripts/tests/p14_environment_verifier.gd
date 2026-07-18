@@ -198,7 +198,11 @@ func _fail(message: String) -> void:
 
 func _finish(arena: Node) -> void:
 	if arena and is_instance_valid(arena):
+		await create_timer(1.45, true, false, true).timeout
+		current_scene = null
 		arena.queue_free()
+	await process_frame
+	await physics_frame
 	await process_frame
 	print("\n==================================================")
 	if _failures.is_empty():

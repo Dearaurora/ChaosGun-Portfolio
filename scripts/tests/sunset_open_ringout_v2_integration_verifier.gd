@@ -337,8 +337,13 @@ func _fail(message: String) -> void:
 
 
 func _finish() -> void:
-	if _arena:
+	if _arena and is_instance_valid(_arena):
+		await create_timer(1.45, true, false, true).timeout
+		current_scene = null
 		_arena.queue_free()
+		_arena = null
+	await process_frame
+	await physics_frame
 	await process_frame
 	if _failures.is_empty():
 		print("[Sunset Open Ring-Out V2 Integration Verifier] PASS")
