@@ -184,6 +184,7 @@ try {
         @{ Name = "character_locomotion_visual"; Script = "res://scripts/tests/character_locomotion_visual_verifier.gd" },
         @{ Name = "character_weapon_readability"; Script = "res://scripts/tests/character_weapon_readability_verifier.gd" },
         @{ Name = "character_combat_feedback"; Script = "res://scripts/tests/character_combat_feedback_verifier.gd" },
+        @{ Name = "combat_audio_feedback"; Script = "res://scripts/tests/combat_audio_feedback_verifier.gd" },
         @{ Name = "ai_point_blank_fire"; Script = "res://scripts/tests/ai_point_blank_fire_verifier.gd" },
         @{ Name = "ai_point_blank_hit"; Script = "res://scripts/tests/ai_point_blank_hit_verifier.gd" },
         @{ Name = "open_ringout_slice"; Script = "res://scripts/tests/open_ringout_slice_verifier.gd" },
