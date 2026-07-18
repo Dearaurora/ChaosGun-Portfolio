@@ -183,7 +183,7 @@ try {
             $stillOutput = & $script:godot @args 2>&1
             if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $still)) { throw "Action apex still failed at $($size.width)x$($size.height)" }
         }
-        foreach ($name in @("p31_start.png", "p31_action_apex.png", "p31_end.png", "p31_action_apex_1280x720.png", "p31_action_apex_2560x1440.png")) {
+        foreach ($name in @("p31_start.png", "p31_pickup_approach.png", "p31_armed_pose.png", "p31_crossfire.png", "p31_action_apex.png", "p31_end.png", "p31_action_apex_1280x720.png", "p31_action_apex_2560x1440.png")) {
             $path = Join-Path $framesDir $name
             if (-not (Test-Path -LiteralPath $path)) { throw "Required P31 keyframe is missing: $path" }
             $artifacts[$name] = [ordered]@{ path = $path; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash }

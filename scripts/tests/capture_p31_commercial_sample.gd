@@ -12,9 +12,12 @@ const TOTAL_FRAMES := int(CLIP_SECONDS * FPS)
 const START_FRAME := 24
 const CAMERA_PUSH_START_FRAME := 48
 const CAMERA_PUSH_END_FRAME := 120
-const PICKUP_FRAME := 116
+const PICKUP_APPROACH_FRAME := 120
+const PICKUP_FRAME := 132
+const ARMED_POSE_FRAME := 150
 const RETURN_FIRE_FRAME := 166
 const FIRE_FRAME := 180
+const CROSSFIRE_FRAME := FIRE_FRAME + 4
 const RINGOUT_STAGE_FRAME := 216
 const FORCE_RINGOUT_FRAME := 260
 const END_FRAME := 294
@@ -40,6 +43,9 @@ var _return_shot_fired := false
 var _ringout_staged := false
 var _threshold_forced := false
 var _start_saved := false
+var _pickup_approach_saved := false
+var _armed_pose_saved := false
+var _crossfire_saved := false
 var _action_saved := false
 var _end_saved := false
 var _focus_valid := true
@@ -154,15 +160,15 @@ func _prepare_production_stage() -> bool:
 	_camera.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
 	_camera.current = true
 	_camera_start_transform = _camera.global_transform
-	_camera_close_transform = Transform3D(_camera_start_transform.basis, Vector3(-2.0, 61.0, 52.0))
+	_camera_close_transform = Transform3D(_camera_start_transform.basis, Vector3(-18.0, 61.0, 64.0))
 	_camera_expected_transform = _camera_start_transform
 
 	# The four color silhouettes are shown on the real arena from the first frame.
 	var positions := [
-		Vector3(-2.0, 1.25, 2.0),
-		Vector3(-2.0, 1.25, -15.0),
-		Vector3(-14.0, 1.25, 8.0),
-		Vector3(12.0, 1.25, 8.0),
+		Vector3(-8.0, 1.25, -7.0),
+		Vector3(-28.0, 1.25, 10.0),
+		Vector3(-4.0, 1.25, -10.0),
+		Vector3(9.0, 1.25, 8.0),
 	]
 	for index in range(_characters.size()):
 		var character := _characters[index]
@@ -192,8 +198,8 @@ func _spawn_pickup() -> void:
 		return
 	_pickup.name = "P31ProductionPickup"
 	_arena.add_child(_pickup)
-	_pickup.global_position = Vector3(-2.0, 1.55, -5.0)
-	_pickup.setup(WeaponData.create_smg())
+	_pickup.global_position = Vector3(-18.0, 1.55, 0.0)
+	_pickup.setup(WeaponData.create_ak_rifle())
 	_pickup.monitoring = false
 
 
@@ -211,6 +217,12 @@ func _run_timeline() -> void:
 		var keyframe_beat := ""
 		if _frame == START_FRAME:
 			keyframe_beat = "start"
+		elif _frame == PICKUP_APPROACH_FRAME:
+			keyframe_beat = "pickup"
+		elif _frame == ARMED_POSE_FRAME:
+			keyframe_beat = "armed"
+		elif _frame == CROSSFIRE_FRAME:
+			keyframe_beat = "crossfire"
 		elif _hit_seen and not _action_saved:
 			keyframe_beat = "action"
 		elif _frame == END_FRAME:
@@ -240,12 +252,20 @@ func _acquire_capture_focus() -> bool:
 
 func _drive_frame(frame: int) -> void:
 	_drive_camera(frame)
-	if frame >= 82 and frame <= 110:
-		var move_t := smoothstep(0.0, 1.0, clampf(float(frame - 82) / 28.0, 0.0, 1.0))
-		_winner.global_position = Vector3(-2.0, 1.25, 2.0).lerp(Vector3(-2.0, 1.25, -5.0), move_t)
+	var moving := false
+	if frame >= 82 and frame <= 116:
+		var approach_t := smoothstep(0.0, 1.0, clampf(float(frame - 82) / 34.0, 0.0, 1.0))
+		_winner.global_position = Vector3(-8.0, 1.25, -7.0).lerp(Vector3(-15.2, 1.25, -2.0), approach_t)
+		moving = true
+	elif frame >= 117 and frame <= 128:
+		var collect_t := smoothstep(0.0, 1.0, clampf(float(frame - 117) / 11.0, 0.0, 1.0))
+		_winner.global_position = Vector3(-15.2, 1.25, -2.0).lerp(Vector3(-18.0, 1.25, 0.0), collect_t)
+		moving = true
+	if moving:
 		var visual := _winner.get_visual()
 		if visual:
-			visual.call("animate_locomotion", Vector3.FORWARD, Vector3.FORWARD, 0.86, 1.0 / FPS)
+			var move_direction := Vector3(-10.0, 0.0, 7.0).normalized()
+			visual.call("animate_locomotion", move_direction, move_direction, 0.86, 1.0 / FPS)
 	if frame == PICKUP_FRAME:
 		if _pickup == null or not is_instance_valid(_pickup):
 			_fail("Production pickup vanished before the pickup beat")
@@ -257,22 +277,24 @@ func _drive_frame(frame: int) -> void:
 			_winner.weapon_manager != null
 			and _winner.weapon_manager.current_weapon != null
 			and _winner.weapon_manager.current_weapon.weapon_data != null
-			and _winner.weapon_manager.current_weapon.weapon_data.weapon_id == &"smg"
+			and _winner.weapon_manager.current_weapon.weapon_data.weapon_id == &"ak_rifle"
 		)
+		_face(_winner, _target.global_position)
 	if frame == 130:
 		# Releasing only the target lets the real hit impulse determine its fall.
 		_target.freeze = false
 		_target.linear_velocity = Vector3.ZERO
 		_target.angular_velocity = Vector3.ZERO
-	if frame == RETURN_FIRE_FRAME:
-		_return_shot_fired = _fire_production_weapon(_target, _winner, true)
-	if frame in [FIRE_FRAME, FIRE_FRAME + 8, FIRE_FRAME + 16]:
+	if frame in [RETURN_FIRE_FRAME, FIRE_FRAME - 2]:
+		var returned_fire := _fire_production_weapon(_target, _winner, frame == RETURN_FIRE_FRAME)
+		_return_shot_fired = _return_shot_fired or returned_fire
+	if frame in [FIRE_FRAME, FIRE_FRAME + 12, FIRE_FRAME + 24]:
 		var fired := _fire_production_weapon(_winner, _target, frame == FIRE_FRAME)
 		_shot_fired = _shot_fired or fired
 	if frame == RINGOUT_STAGE_FRAME and _hit_seen and not _ringout_staged and not _target.is_dead:
 		# The production hit supplied the impulse; staging moves the struck actor
 		# only to the nearest open edge so its fall remains legible in the close shot.
-		_target.global_position.z = minf(_target.global_position.z, -19.0)
+		_target.global_position.x = minf(_target.global_position.x, -30.5)
 		_ringout_staged = true
 	if frame == FORCE_RINGOUT_FRAME and _hit_seen and not _target.is_dead:
 		# Keep the visible fall in the clip, then cross the production threshold so
@@ -290,7 +312,7 @@ func _drive_camera(frame: int) -> void:
 	)
 	_camera_expected_transform = _camera_start_transform.interpolate_with(_camera_close_transform, push_t)
 	_camera.global_transform = _camera_expected_transform
-	_camera.size = lerpf(82.0, 38.0, push_t)
+	_camera.size = lerpf(82.0, 34.0, push_t)
 
 
 func _fire_production_weapon(shooter: BaseCharacter, target: BaseCharacter, required: bool) -> bool:
@@ -330,6 +352,15 @@ func _save_requested_keyframe(beat: String) -> void:
 	if beat == "start":
 		_start_saved = true
 		name = "p31_start.png"
+	elif beat == "pickup":
+		_pickup_approach_saved = true
+		name = "p31_pickup_approach.png"
+	elif beat == "armed":
+		_armed_pose_saved = true
+		name = "p31_armed_pose.png"
+	elif beat == "crossfire":
+		_crossfire_saved = true
+		name = "p31_crossfire.png"
 	elif beat == "action":
 		_action_saved = true
 		name = "p31_action_apex.png"
@@ -354,7 +385,7 @@ func _finish() -> void:
 		all_four_visible = all_four_visible and is_instance_valid(character)
 	var no_respawn := _target != null and _target.is_game_over and _target.is_dead
 	var focus_contract_passed := _focus_valid or _offline_movie_capture
-	var passed := all_four_visible and _pickup_seen and _pickup_equipped and _return_shot_fired and _shot_fired and _projectile_seen and _hit_seen and _fall_seen and no_respawn and focus_contract_passed and _camera_motion_valid and _start_saved and _action_saved and _end_saved
+	var passed := all_four_visible and _pickup_seen and _pickup_equipped and _return_shot_fired and _shot_fired and _projectile_seen and _hit_seen and _fall_seen and no_respawn and focus_contract_passed and _camera_motion_valid and _start_saved and _pickup_approach_saved and _armed_pose_saved and _crossfire_saved and _action_saved and _end_saved
 	var report := {
 		"sample": "p31_commercial",
 		"attempt": int(_argument_value("--attempt=", "0")),
@@ -364,7 +395,7 @@ func _finish() -> void:
 		"scene": SCENE_PATH,
 		"four_character_reveal": all_four_visible,
 		"pickup": _pickup_seen,
-		"pickup_equipped_smg": _pickup_equipped,
+		"pickup_equipped_weapon": "ak_rifle" if _pickup_equipped else "",
 		"return_shot": _return_shot_fired,
 		"shot": _shot_fired,
 		"projectile": _projectile_seen,
@@ -382,7 +413,7 @@ func _finish() -> void:
 		"camera_authored_push": true,
 		"focus_valid": _focus_valid,
 		"offline_movie_capture": _offline_movie_capture,
-		"keyframes": {"start": _start_saved, "action_apex": _action_saved, "end": _end_saved},
+		"keyframes": {"start": _start_saved, "pickup_approach": _pickup_approach_saved, "armed_pose": _armed_pose_saved, "crossfire": _crossfire_saved, "action_apex": _action_saved, "end": _end_saved},
 		"pass": passed,
 	}
 	_write_report(report)
@@ -438,7 +469,10 @@ func _face(character: BaseCharacter, direction_or_target: Vector3) -> void:
 		direction = direction_or_target - character.global_position
 	direction.y = 0.0
 	if direction.length_squared() > 0.001:
-		character.global_transform = Transform3D(Basis.looking_at(direction.normalized(), Vector3.UP), character.global_position)
+		var normalized := direction.normalized()
+		if character is PlayerCharacter:
+			character.set("_face_dir", normalized)
+		character.global_transform = Transform3D(Basis.looking_at(normalized, Vector3.UP), character.global_position)
 
 
 func _walk(node: Node) -> Array[Node]:
