@@ -117,6 +117,10 @@ func _fail(message: String) -> void:
 
 func _finish() -> void:
 	if _arena and is_instance_valid(_arena):
+		# The arena starts the 1.35 s READY/GO reveal on its first frame. Let its
+		# bound camera/cue tweens finish before freeing the scene so this structural
+		# gate cannot leave an active SceneTreeTween behind at shutdown.
+		await create_timer(1.45, true, false, true).timeout
 		current_scene = null
 		_arena.queue_free()
 		_arena = null
