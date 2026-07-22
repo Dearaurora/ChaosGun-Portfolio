@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "slice": "open_ringout",
-  "target_commit": "456d432ebe267efe001dc57c9025348292de093d",
+  "target_commit": "3aa8f9efa0f01a9f0bb1b7711aff190c36f306f8",
   "status": "rc_blocked_performance_reproduction",
   "release_complete": false,
   "frozen_scope": {
@@ -101,8 +101,8 @@
   "static_validation": {
     "status": "passed",
     "report": "reports/commercial_slice_release_validation_clean_p31.json",
-    "report_sha256": "006af539234cf175e9152865df5a93d6d33e0b6c029279631fcaf6cf0cd5d1c0",
-    "run_id": "20260722T013231920Z-pid56288",
+    "report_sha256": "de26a8b7e24e222ea4c365f50a3fdf5101996d6875fa1839128b5429aaa7cf45",
+    "run_id": "20260722T021010294Z-pid68200",
     "passed_gates": 17,
     "total_gates": 17
   },
