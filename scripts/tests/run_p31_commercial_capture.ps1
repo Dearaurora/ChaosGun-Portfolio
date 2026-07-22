@@ -90,15 +90,15 @@ function Get-EvidenceBinding {
     return $binding
 }
 
-function Enable-MovieCaptureOverride {
+function Enable-MovieCaptureOverride([int]$ViewportWidth = 1920, [int]$ViewportHeight = 1080) {
     if (Test-Path -LiteralPath $script:movieOverridePath) {
         throw "P31 refuses to replace an existing override.cfg"
     }
     $content = @"
 [display]
 
-window/size/viewport_width=1920
-window/size/viewport_height=1080
+window/size/viewport_width=$ViewportWidth
+window/size/viewport_height=$ViewportHeight
 window/size/window_width_override=960
 window/size/window_height_override=540
 window/stretch/mode="viewport"
@@ -179,9 +179,14 @@ try {
         foreach ($size in @(@{ width = 1280; height = 720 }, @{ width = 2560; height = 1440 })) {
             $still = Join-Path $framesDir ("p31_action_apex_{0}x{1}.png" -f $size.width, $size.height)
             Remove-Item -LiteralPath $still -Force -ErrorAction SilentlyContinue
-            $args = @("--path", $projectPath, "--windowed", "--resolution", ("{0}x{1}" -f $size.width, $size.height), "--fixed-fps", "60", "--script", $mainScript, "--", "--audio=false", "--width=$($size.width)", "--height=$($size.height)", "--still=action", "--output=$still")
-            $stillOutput = & $script:godot @args 2>&1
-            if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $still)) { throw "Action apex still failed at $($size.width)x$($size.height)" }
+            Enable-MovieCaptureOverride -ViewportWidth $size.width -ViewportHeight $size.height
+            try {
+                $args = @("--path", $projectPath, "--windowed", "--resolution", "960x540", "--fixed-fps", "60", "--script", $mainScript, "--", "--audio=false", "--width=$($size.width)", "--height=$($size.height)", "--still=action", "--output=$still")
+                $stillOutput = & $script:godot @args 2>&1
+                if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $still)) { throw "Action apex still failed at $($size.width)x$($size.height)" }
+            } finally {
+                Disable-MovieCaptureOverride
+            }
         }
         foreach ($name in @("p31_start.png", "p31_pickup_approach.png", "p31_pickup_confirm.png", "p31_armed_pose.png", "p31_crossfire.png", "p31_action_apex.png", "p31_fall.png", "p31_end.png", "p31_action_apex_1280x720.png", "p31_action_apex_2560x1440.png")) {
             $path = Join-Path $framesDir $name

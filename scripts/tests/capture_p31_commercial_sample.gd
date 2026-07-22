@@ -14,6 +14,8 @@ const CAMERA_PUSH_START_FRAME := 48
 const CAMERA_PUSH_END_FRAME := 120
 const CAMERA_ACTION_PUSH_START_FRAME := 134
 const CAMERA_ACTION_PUSH_END_FRAME := 160
+const CAMERA_WINNER_FOCUS_START_FRAME := 258
+const CAMERA_WINNER_FOCUS_END_FRAME := 294
 const PICKUP_APPROACH_FRAME := 120
 const PICKUP_FRAME := 132
 const PICKUP_CONFIRM_FRAME := 136
@@ -34,6 +36,7 @@ var _camera: Camera3D
 var _camera_start_transform: Transform3D
 var _camera_close_transform: Transform3D
 var _camera_action_transform: Transform3D
+var _camera_winner_transform: Transform3D
 var _camera_expected_transform: Transform3D
 var _frame := 0
 var _pickup_seen := false
@@ -153,7 +156,7 @@ func _prepare_production_stage() -> bool:
 	for node in get_nodes_in_group(&"weapon_pickup"):
 		node.queue_free()
 
-	# Begin on the full arena, then use two continuous pushes into the west exchange.
+	# Reveal the full arena, close on the decisive exchange, then settle on the winner.
 	_camera = _arena.get_node_or_null("GlobalCamera") as Camera3D
 	if _camera == null:
 		_fail("Production scene has no GlobalCamera")
@@ -168,6 +171,7 @@ func _prepare_production_stage() -> bool:
 	_camera_start_transform = _camera.global_transform
 	_camera_close_transform = Transform3D(_camera_start_transform.basis, Vector3(-18.0, 61.0, 64.0))
 	_camera_action_transform = Transform3D(_camera_start_transform.basis, Vector3(-23.0, 61.0, 64.0))
+	_camera_winner_transform = Transform3D(_camera_start_transform.basis, Vector3(-18.0, 61.0, 59.0))
 	_camera_expected_transform = _camera_start_transform
 
 	# The four color silhouettes are shown on the real arena from the first frame.
@@ -232,7 +236,7 @@ func _run_timeline() -> void:
 			keyframe_beat = "armed"
 		elif _frame == CROSSFIRE_FRAME:
 			keyframe_beat = "crossfire"
-		elif _hit_seen and not _action_saved:
+		elif _hit_seen and not _action_saved and _frame >= _hit_frame + 3:
 			keyframe_beat = "action"
 		elif _fall_seen and not _fall_saved:
 			keyframe_beat = "fall"
@@ -326,10 +330,17 @@ func _drive_camera(frame: int) -> void:
 		1.0,
 		clampf(float(frame - CAMERA_ACTION_PUSH_START_FRAME) / float(CAMERA_ACTION_PUSH_END_FRAME - CAMERA_ACTION_PUSH_START_FRAME), 0.0, 1.0)
 	)
+	var winner_focus_t := smoothstep(
+		0.0,
+		1.0,
+		clampf(float(frame - CAMERA_WINNER_FOCUS_START_FRAME) / float(CAMERA_WINNER_FOCUS_END_FRAME - CAMERA_WINNER_FOCUS_START_FRAME), 0.0, 1.0)
+	)
 	var reveal_transform := _camera_start_transform.interpolate_with(_camera_close_transform, reveal_push_t)
-	_camera_expected_transform = reveal_transform.interpolate_with(_camera_action_transform, action_push_t)
+	var action_transform := reveal_transform.interpolate_with(_camera_action_transform, action_push_t)
+	_camera_expected_transform = action_transform.interpolate_with(_camera_winner_transform, winner_focus_t)
 	_camera.global_transform = _camera_expected_transform
-	_camera.size = lerpf(lerpf(82.0, 34.0, reveal_push_t), 24.0, action_push_t)
+	_camera.size = lerpf(lerpf(82.0, 34.0, reveal_push_t), 18.0, action_push_t)
+	_camera.size = lerpf(_camera.size, 14.0, winner_focus_t)
 
 
 func _fire_production_weapon(shooter: BaseCharacter, target: BaseCharacter, required: bool) -> bool:
@@ -434,7 +445,7 @@ func _finish() -> void:
 		"no_respawn": no_respawn,
 		"camera_stable": _camera_motion_valid and _camera != null and _camera.global_transform.is_equal_approx(_camera_expected_transform),
 		"camera_authored_push": true,
-		"camera_sequence": {"reveal_size": 82.0, "gameplay_size": 34.0, "action_size": 24.0, "easing": "smoothstep", "first_push_frames": [CAMERA_PUSH_START_FRAME, CAMERA_PUSH_END_FRAME], "second_push_frames": [CAMERA_ACTION_PUSH_START_FRAME, CAMERA_ACTION_PUSH_END_FRAME]},
+		"camera_sequence": {"reveal_size": 82.0, "gameplay_size": 34.0, "action_size": 18.0, "winner_size": 14.0, "easing": "smoothstep", "first_push_frames": [CAMERA_PUSH_START_FRAME, CAMERA_PUSH_END_FRAME], "second_push_frames": [CAMERA_ACTION_PUSH_START_FRAME, CAMERA_ACTION_PUSH_END_FRAME], "winner_focus_frames": [CAMERA_WINNER_FOCUS_START_FRAME, CAMERA_WINNER_FOCUS_END_FRAME]},
 		"focus_valid": _focus_valid,
 		"offline_movie_capture": _offline_movie_capture,
 		"keyframes": {"start": _start_saved, "pickup_approach": _pickup_approach_saved, "pickup_confirm": _pickup_confirm_saved, "armed_pose": _armed_pose_saved, "crossfire": _crossfire_saved, "action_apex": _action_saved, "fall": _fall_saved, "end": _end_saved},
