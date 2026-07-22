@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/maps/open_ringout_slice.tscn" id="1_open_ringout"]
+
+[node name="P32OpenRingoutArtV3Preview" instance=ExtResource("1_open_ringout")]
+p32_open_ringout_art_preview = true

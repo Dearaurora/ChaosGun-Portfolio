@@ -18,6 +18,8 @@ const P14_ENVIRONMENT_ROOT_NAME := "P14SunsetEnvironment"
 const P14_ENVIRONMENT_SCENE_PATH := "res://assets/models/generated/sunset_toy_sky_islands/p14_sunset_environment.glb"
 const SUNSET_SKY_BACKPLATE_ROOT_NAME := "SunsetSkyBackplate"
 const SUNSET_SKY_BACKPLATE_TEXTURE_PATH := "res://assets/textures/generated/sunset_toy_sky_islands/sunset_sky_backplate_v1.png"
+const P32_OPEN_RINGOUT_ART_V3_ROOT_NAME := "OpenRingoutArtV3Preview"
+const P32_OPEN_RINGOUT_ART_V3_SCENE_PATH := "res://assets/models/generated/open_ringout_art_v3/open_ringout_art_v3.glb"
 const P14_CLOSE_PARALLAX_PREFIXES := [
 	"P14CloudBankNorth",
 	"P14CloudBankGapNorthWest",
@@ -114,6 +116,8 @@ var _p25_edge_gems: Array[Node3D] = []
 var _p25_edge_gem_scales: Dictionary = {}
 var _p25_motion_ready := false
 
+@export var p32_open_ringout_art_preview := false
+
 func _ready() -> void:
 	super._ready()
 	_setup_match_presentation()
@@ -182,6 +186,8 @@ func _build_map_layout() -> void:
 	_build_center_pickup_pad(cover_root, glow_mat, metal_mat)
 	_build_art_dressing(art_root, cover_orange_mat, cover_yellow_mat, cover_red_mat, cover_tan_mat, metal_mat, glow_mat)
 	_build_blender_visual_layer()
+	if p32_open_ringout_art_preview:
+		_build_p32_open_ringout_art_preview_layer()
 
 func _build_map_dressing() -> void:
 	var root = get_node_or_null("OpenRingoutDressing")
@@ -309,6 +315,8 @@ func _apply_map_visual_overrides() -> void:
 	env.glow_strength = 0.58
 	env.glow_bloom = 0.0
 	env_node.environment = env
+	if p32_open_ringout_art_preview:
+		_hide_p32_legacy_map_art()
 
 func _disable_distant_environment_shadow_casting() -> void:
 	var distant_root = get_node_or_null("OpenRingoutBlenderVisuals/%s" % P14_ENVIRONMENT_ROOT_NAME)
@@ -720,6 +728,45 @@ func _build_blender_visual_layer() -> void:
 	var art_root = get_node_or_null(ART_ROOT_NAME)
 	if art_root:
 		art_root.visible = false
+
+func _build_p32_open_ringout_art_preview_layer() -> void:
+	_hide_p32_legacy_map_art()
+
+	var existing := get_node_or_null(P32_OPEN_RINGOUT_ART_V3_ROOT_NAME)
+	if existing:
+		existing.queue_free()
+
+	var preview_root := Node3D.new()
+	preview_root.name = P32_OPEN_RINGOUT_ART_V3_ROOT_NAME
+	add_child(preview_root)
+
+	var packed_scene := load(P32_OPEN_RINGOUT_ART_V3_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_warning("P32 Open Ring-Out art preview is not available: %s" % P32_OPEN_RINGOUT_ART_V3_SCENE_PATH)
+		return
+
+	var visual_scene := packed_scene.instantiate() as Node3D
+	if visual_scene == null:
+		push_warning("P32 Open Ring-Out art preview could not be instantiated.")
+		return
+
+	visual_scene.name = "OpenRingoutArtV3AuthoredVisuals"
+	preview_root.add_child(visual_scene)
+
+func _hide_p32_legacy_map_art() -> void:
+	for root_name in [
+		"OpenRingoutDressing",
+		PLAYABLE_ROOT_NAME,
+		COVER_ROOT_NAME,
+		EDGE_GLOW_ROOT_NAME,
+		ABYSS_ROOT_NAME,
+		BACKDROP_ROOT_NAME,
+		ART_ROOT_NAME,
+		BLENDER_VISUAL_ROOT_NAME,
+	]:
+		var visual_root := get_node_or_null(String(root_name))
+		if visual_root is CanvasLayer or visual_root is Node3D:
+			visual_root.visible = false
 
 func _build_sunset_v2_visual_layer(parent: Node3D, legacy_visual: Node3D) -> void:
 	var packed_scene = load(SUNSET_V2_VISUAL_SCENE_PATH) as PackedScene
