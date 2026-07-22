@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "slice": "open_ringout",
+  "target_commit": "456d432ebe267efe001dc57c9025348292de093d",
+  "status": "rc_blocked_performance_reproduction",
+  "release_complete": false,
+  "frozen_scope": {
+    "weapons": ["pistol", "smg", "ak_rifle", "sniper", "gatling", "shotgun"],
+    "projectile_style": "yellow_white_teardrop_trail",
+    "cloud_style": "single_layer",
+    "map": "open_ringout",
+    "protected_interfaces": [
+      "VictoryScreen.show_victory(...)",
+      "RingoutHUD.camera_occlusion_rects()",
+      "HUD inputs",
+      "pause and restart flow",
+      "character GLB runtime path",
+      "15 character bone names",
+      "31 character action names",
+      "weapon and muzzle anchors"
+    ]
+  },
+  "p29_character": {
+    "status": "passed",
+    "asset": {
+      "glb": "assets/models/generated/characters/hero_character_rig_v2.glb",
+      "glb_sha256": "13c560a8e5e191dc389e8fe24bcc29d3c48648692d42b71e1394976de7e818d7",
+      "blend": "assets/source/characters/hero_character_rig_v2.blend",
+      "blend_sha256": "7b041c0bc179481e7ffcea7843db82499a4d0bca482b462e9693b6ebb73ad439",
+      "bones": 15,
+      "actions": 31
+    },
+    "evidence": {
+      "four_views": [
+        "reports/hero_character_p29_front.png",
+        "reports/hero_character_p29_side.png",
+        "reports/hero_character_p29_back.png",
+        "reports/hero_character_p29_three_quarter.png"
+      ],
+      "six_weapon_poses": [
+        "reports/hero_character_rig_v2_pistol.png",
+        "reports/hero_character_rig_v2_smg.png",
+        "reports/hero_character_rig_v2_ak.png",
+        "reports/hero_character_rig_v2_sniper.png",
+        "reports/hero_character_rig_v2_shotgun.png",
+        "reports/hero_character_rig_v2_gatling.png"
+      ]
+    }
+  },
+  "p30_frame": {
+    "status": "passed",
+    "evidence": [
+      "reports/open_ringout_p30_panorama.png",
+      "reports/open_ringout_p30_combat_closeup.png"
+    ]
+  },
+  "p31_commercial_sample": {
+    "status": "passed",
+    "independent_visual_review": {
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "high",
+      "scores": {
+        "environment_frame_hierarchy": 4,
+        "character_silhouette_material": 4,
+        "weapon_dual_hand_pose_readability": 4,
+        "action_projectile_hit_fall_readability": 4,
+        "hud_pause_result_hierarchy": 4,
+        "commercial_pacing_camera": 4
+      },
+      "result": "pass"
+    },
+    "capture_report": {
+      "path": "reports/p31/p31_capture_report.json",
+      "sha256": "f7589478d6b4904261a8ee1c61261830400bef68bb38aaa92e42e72b1ddbfaa0",
+      "success_count": 5,
+      "required_success_count": 3
+    },
+    "video": {
+      "commercial": {
+        "path": "reports/p31/p31_commercial_sample.mp4",
+        "sha256": "0f02276697e576f9e7ffec475b73453c455a120a72eeb61282e0b50799af59b9",
+        "width": 1920,
+        "height": 1080,
+        "fps": 60,
+        "duration_seconds": 5.0
+      },
+      "match_tail": {
+        "path": "reports/p31/p31_match_tail.mp4",
+        "sha256": "8e0bbfeccdad9ca6157f759cdbcac7dc53574e0db955ce2acdf3c6525cb04ced",
+        "width": 1920,
+        "height": 1080,
+        "fps": 60,
+        "duration_seconds": 2.5
+      }
+    },
+    "resolution_evidence": [
+      {"path": "reports/p31/frames/p31_action_apex_1280x720.png", "width": 1280, "height": 720},
+      {"path": "reports/p31/frames/p31_action_apex_2560x1440.png", "width": 2560, "height": 1440}
+    ]
+  },
+  "static_validation": {
+    "status": "passed",
+    "report": "reports/commercial_slice_release_validation_clean_p31.json",
+    "report_sha256": "006af539234cf175e9152865df5a93d6d33e0b6c029279631fcaf6cf0cd5d1c0",
+    "run_id": "20260722T013231920Z-pid56288",
+    "passed_gates": 17,
+    "total_gates": 17
+  },
+  "performance": {
+    "status": "blocked",
+    "requirement": "1080p, four players, 60 accepted seconds, 1% low >= 60 FPS, p99 <= 16.7 ms, average draw calls <= 1000",
+    "prior_same_runtime_fingerprint_pass": {
+      "report": "reports/open_ringout_performance.json",
+      "report_sha256": "970842d658608b4493e36089abc3c20210eac1f75bcedf8827fbfd49a6c170fe",
+      "commit": "767f46da737d4314616ae962e73ca72d08fc8f19",
+      "one_percent_low_fps": 71.2207930392401,
+      "p99_ms": 12.113,
+      "average_draw_calls": 829.116810502006
+    },
+    "final_commit_reproduction": "Not yet stable enough to declare RC complete; final-commit attempts showed focus loss and intermittent long-frame failures despite matching runtime asset hashes."
+  }
+}
