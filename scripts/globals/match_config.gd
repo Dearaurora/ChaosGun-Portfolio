@@ -22,6 +22,8 @@ var INPUT_PREFIXES: Array = ["p1_", "p2_", "p3_", "p4_"]
 ## 可选地图列表 [显示名, 场景路径]
 var MAPS: Array = [
 	["Open Ring-Out Slice", "res://scenes/maps/open_ringout_slice.tscn"],
+	["Twin Bays Splash Arena", "res://scenes/maps/twin_bays_splash_arena.tscn"],
+	["Momentum Circuit", "res://scenes/maps/momentum_circuit_arena.tscn"],
 ]
 
 ## 当前选择的地图索引
