@@ -316,6 +316,12 @@ func _record_spike_frame(
 		"orphan_node_count": float(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
 		"projectiles": get_nodes_in_group(&"projectile").size(),
 		"active_characters": _active_character_count(arena),
+		"runtime_players": get_nodes_in_group(&"player").size(),
+		"runtime_ai": get_nodes_in_group(&"ai").size(),
+		"temporary_clones": get_nodes_in_group(&"temporary_clone").size(),
+		"clone_dissolve_effects": get_nodes_in_group(&"clone_dissolve_effect").size(),
+		"weapon_pickups": get_nodes_in_group(&"weapon_pickup").size(),
+		"powerup_pickups": get_nodes_in_group(&"powerup_pickup").size(),
 	}
 	spike_frames.append(sample)
 	spike_frames.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
