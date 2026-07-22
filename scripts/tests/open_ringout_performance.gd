@@ -19,6 +19,8 @@ const MIN_ONE_PERCENT_LOW_FPS := 60.0
 const MAX_P99_FRAME_TIME_MS := 16.7
 const MAX_AVERAGE_DRAW_CALLS := 1000.0
 const MATERIAL_FOCUS_LOSS_SECONDS := 0.25
+const SPIKE_FRAME_THRESHOLD_MS := 16.7
+const MAX_RECORDED_SPIKE_FRAMES := 24
 
 var _failures: Array[String] = []
 var _report_path := DEFAULT_REPORT_PATH
@@ -171,6 +173,7 @@ func _measure_open_ringout(warmup_seconds: float, sample_seconds: float) -> Dict
 	var rendered_fps_samples: Array[float] = []
 	var draw_call_samples: Array[float] = []
 	var active_character_samples: Array[float] = []
+	var spike_frames: Array[Dictionary] = []
 	var rejected_samples := 0
 	var rejected_unfocused_samples := 0
 	var rejected_wrong_size_samples := 0
@@ -227,6 +230,8 @@ func _measure_open_ringout(warmup_seconds: float, sample_seconds: float) -> Dict
 		rendered_fps_samples.append(float(Performance.get_monitor(Performance.TIME_FPS)))
 		draw_call_samples.append(draw_calls)
 		active_character_samples.append(float(_active_character_count(arena)))
+		if frame_seconds * 1000.0 >= SPIKE_FRAME_THRESHOLD_MS:
+			_record_spike_frame(spike_frames, arena, frame_seconds, draw_calls, accepted_seconds)
 		accepted_seconds += frame_seconds
 	_sampling_active = false
 
@@ -265,6 +270,7 @@ func _measure_open_ringout(warmup_seconds: float, sample_seconds: float) -> Dict
 		"average_active_characters": _average(active_character_samples),
 		"maximum_active_characters": _maximum(active_character_samples),
 		"minimum_active_characters": _minimum(active_character_samples),
+		"worst_frame_samples": spike_frames,
 		"accepted_sample_seconds": accepted_seconds,
 		"wall_sample_seconds": float(Time.get_ticks_usec() - started_usec) / 1000000.0,
 		"rejected_samples": rejected_samples,
@@ -292,6 +298,31 @@ func _measure_open_ringout(warmup_seconds: float, sample_seconds: float) -> Dict
 	await process_frame
 	print("METRIC open_ringout rendered_fps=%.2f one_percent_low_fps=%.2f p99_ms=%.3f avg_draw_calls=%.1f max_draw_calls=%.1f active=%.1f" % [metrics["rendered_fps_average"], metrics["one_percent_low_fps"], metrics["frame_time_p99_ms"], metrics["average_draw_calls"], metrics["maximum_draw_calls"], metrics["average_active_characters"]])
 	return metrics
+
+
+func _record_spike_frame(
+	spike_frames: Array[Dictionary],
+	arena: Node,
+	frame_seconds: float,
+	draw_calls: float,
+	accepted_seconds: float
+) -> void:
+	var sample := {
+		"sample_time_seconds": accepted_seconds,
+		"frame_time_ms": frame_seconds * 1000.0,
+		"draw_calls": draw_calls,
+		"render_objects": float(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+		"node_count": float(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+		"orphan_node_count": float(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
+		"projectiles": get_nodes_in_group(&"projectile").size(),
+		"active_characters": _active_character_count(arena),
+	}
+	spike_frames.append(sample)
+	spike_frames.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a["frame_time_ms"]) > float(b["frame_time_ms"])
+	)
+	if spike_frames.size() > MAX_RECORDED_SPIKE_FRAMES:
+		spike_frames.resize(MAX_RECORDED_SPIKE_FRAMES)
 
 
 func _verify_gate(sample: Dictionary, quick: bool, required_seconds: float) -> void:
