@@ -64,13 +64,13 @@ def material(name: str, color: str, roughness: float, metallic: float = 0.0) -> 
 
 def materials() -> dict[str, bpy.types.Material]:
     return {
-        "deck": material("M_P32_HoneyOrangeDeck", "#D76B25", 0.62),
-        "deck_gold": material("M_P32_GoldenDeckHighlight", "#F2A342", 0.54),
+        "deck": material("M_P32_HoneyOrangeDeck", "#E77A28", 0.62),
+        "deck_gold": material("M_P32_GoldenDeckHighlight", "#FFB447", 0.54),
         "deck_seam": material("M_P32_DeckSeam", "#9F4729", 0.77),
         "warm_band": material("M_P32_WarmCoralBand", "#A94538", 0.74),
-        "cliff_deep": material("M_P32_CoolPlumDeep", "#2E2548", 0.91),
-        "cliff_mid": material("M_P32_CoolPlumMid", "#4E3B70", 0.88),
-        "cliff_light": material("M_P32_CoolPlumLight", "#69518D", 0.85),
+        "cliff_deep": material("M_P32_CoolPlumDeep", "#1F1A3A", 0.91),
+        "cliff_mid": material("M_P32_CoolPlumMid", "#3B2D61", 0.88),
+        "cliff_light": material("M_P32_CoolPlumLight", "#5A477E", 0.85),
         "bridge": material("M_P32_BridgeWood", "#A85732", 0.71),
         "bridge_trim": material("M_P32_BridgeTrim", "#F0B764", 0.49),
         "post": material("M_P32_BridgePost", "#874B5D", 0.63),
@@ -151,8 +151,9 @@ def create_deck_shell(name: str, outline: list[tuple[float, float]], top_z: floa
 
 def create_continuous_underside(name: str, outline: list[tuple[float, float]], top_z: float, depth: float, center: tuple[float, float], parent: bpy.types.Object, collection: bpy.types.Collection, mats: dict[str, bpy.types.Material], tip_offset: tuple[float, float]) -> bpy.types.Object:
     count = len(outline)
-    scales = (0.994, 0.95, 0.79, 0.57, 0.32)
-    heights = (top_z, top_z - depth * 0.18, top_z - depth * 0.46, top_z - depth * 0.77, top_z - depth * 0.95)
+    # Keep broad, readable silhouette rings before tapering into the lower point.
+    scales = (0.994, 0.968, 0.875, 0.735, 0.52)
+    heights = (top_z, top_z - depth * 0.16, top_z - depth * 0.43, top_z - depth * 0.74, top_z - depth * 0.94)
     vertices: list[tuple[float, float, float]] = []
     for ring, (scale, height) in enumerate(zip(scales, heights)):
         ring_points = scale_outline(outline, center, scale)
@@ -197,7 +198,7 @@ def add_box(name: str, location: tuple[float, float, float], size: tuple[float, 
     return obj
 
 
-def add_cylinder(name: str, location: tuple[float, float, float], radius: float, depth: float, mat: bpy.types.Material, collection: bpy.types.Collection, parent: bpy.types.Object, vertices: int = 32) -> bpy.types.Object:
+def add_cylinder(name: str, location: tuple[float, float, float], radius: float, depth: float, mat: bpy.types.Material, collection: bpy.types.Collection, parent: bpy.types.Object, vertices: int = 24) -> bpy.types.Object:
     bpy.ops.mesh.primitive_cylinder_add(vertices=vertices, radius=radius, depth=depth, location=location)
     obj = bpy.context.object
     obj.name = name
@@ -213,7 +214,7 @@ def add_cylinder(name: str, location: tuple[float, float, float], radius: float,
 
 
 def add_sphere(name: str, location: tuple[float, float, float], scale: tuple[float, float, float], mat: bpy.types.Material, collection: bpy.types.Collection, parent: bpy.types.Object) -> bpy.types.Object:
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, location=location)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, location=location)
     obj = bpy.context.object
     obj.name = name
     obj.scale = scale
@@ -257,17 +258,30 @@ def add_socket(name: str, location: tuple[float, float], axis: str, parent: bpy.
     root = make_root(name, collection, parent)
     x, y = location
     if axis == "x":
-        bed_size, beam_size, rail_size = (3.2, 7.3, 0.34), (3.8, 0.46, 0.74), (0.22, 7.3, 0.18)
+        bed_size, beam_size, rail_size = (5.4, 7.3, 0.34), (3.8, 0.46, 0.74), (0.22, 7.3, 0.18)
         offsets = ((0.0, -3.65), (0.0, 3.65))
     else:
-        bed_size, beam_size, rail_size = (7.3, 3.2, 0.34), (0.46, 3.8, 0.74), (7.3, 0.22, 0.18)
+        bed_size, beam_size, rail_size = (7.3, 5.4, 0.34), (0.46, 3.8, 0.74), (7.3, 0.22, 0.18)
         offsets = ((-3.65, 0.0), (3.65, 0.0))
-    add_box(f"{name}_SocketBed", (x, y, 0.46), bed_size, mats["bridge"], collection, root, 0.14)
+    add_box(f"{name}_SocketBed", (x, y, 0.30), bed_size, mats["bridge"], collection, root, 0.14)
+    inset_size = (4.7, 6.1, 0.18) if axis == "x" else (6.1, 4.7, 0.18)
+    add_box(f"{name}_SocketInsetDeck", (x, y, 0.70), inset_size, mats["bridge_trim"], collection, root, 0.10)
+    if axis == "x":
+        transition_size = (4.5, 0.28, 0.22)
+        transition_offsets = ((0.0, -3.54), (0.0, 3.54))
+        support_size = (1.05, 1.05, 0.34)
+    else:
+        transition_size = (0.28, 4.5, 0.22)
+        transition_offsets = ((-3.54, 0.0), (3.54, 0.0))
+        support_size = (1.05, 1.05, 0.34)
+    for index, (dx, dy) in enumerate(transition_offsets):
+        add_box(f"{name}_InsetEdge_{index}", (x + dx, y + dy, 0.54), transition_size, mats["deck_seam"], collection, root, 0.06)
     for index, (dx, dy) in enumerate(offsets):
+        add_box(f"{name}_LandingSupport_{index}", (x + dx, y + dy, 0.53), support_size, mats["cliff_deep"], collection, root, 0.10)
         add_box(f"{name}_LandingPost_{index}", (x + dx, y + dy, 1.04), beam_size, mats["post"], collection, root, 0.16)
     for index, offset in enumerate((-0.90, 0.90)):
-        position = (x + offset, y, 0.77) if axis == "x" else (x, y + offset, 0.77)
-        add_box(f"{name}_LandingPlank_{index}", position, (1.30, 6.45, 0.22) if axis == "x" else (6.45, 1.30, 0.22), mats["bridge_trim"], collection, root, 0.08)
+        position = (x + (-1.35, 1.35)[index], y, 0.84) if axis == "x" else (x, y + (-1.35, 1.35)[index], 0.84)
+        add_box(f"{name}_LandingPlank_{index}", position, (1.80, 6.85, 0.22) if axis == "x" else (6.85, 1.80, 0.22), mats["bridge_trim"], collection, root, 0.08)
     add_box(f"{name}_Backstop", (x, y, 0.91), rail_size, mats["bridge_trim"], collection, root, 0.07)
 
 
@@ -414,7 +428,11 @@ def write_manifest(collection: bpy.types.Collection) -> None:
         "source_blend": str(BLEND_PATH.relative_to(ROOT)).replace("\\", "/"),
         "export_glb": str(GLB_PATH.relative_to(ROOT)).replace("\\", "/"),
         "preview": str(PREVIEW_PATH.relative_to(ROOT)).replace("\\", "/"),
-        "hashes": {"source_blend_sha256": sha256(BLEND_PATH), "export_glb_sha256": sha256(GLB_PATH)},
+        "hashes": {
+            "source_blend_sha256": sha256(BLEND_PATH),
+            "export_glb_sha256": sha256(GLB_PATH),
+            "preview_sha256": sha256(PREVIEW_PATH),
+        },
     }
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
