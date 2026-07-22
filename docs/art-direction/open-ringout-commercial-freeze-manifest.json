@@ -117,6 +117,17 @@
       "p99_ms": 12.113,
       "average_draw_calls": 829.116810502006
     },
+    "final_commit_diagnostic_attempt": {
+      "commit": "42e4bf31677d90492cd46a3e7c97010bb1f84f48",
+      "report_sha256": "fcab8284a54eef7c53fae62fb6e6ecd5acf2ab0fac5d35ffb1ee60e4a9e905a4",
+      "accepted_seconds": 60.0012280000001,
+      "focus_lost": false,
+      "one_percent_low_fps": 24.5707016960757,
+      "p99_ms": 20.668,
+      "average_draw_calls": 877.184903611187,
+      "result": "failed",
+      "trace_status": "Windows Performance Recorder did not stop cleanly and did not emit a valid ETL; this report is retained as a failed gate, not as root-cause evidence."
+    },
     "final_commit_reproduction": "Not yet stable enough to declare RC complete; final-commit attempts showed focus loss and intermittent long-frame failures despite matching runtime asset hashes."
   }
 }
