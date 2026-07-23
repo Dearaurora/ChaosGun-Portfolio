@@ -4,6 +4,8 @@ This project uses a lightweight production workflow designed for a small team bu
 
 The goal is not to add heavy process. The goal is to stop mixing design, whitebox, art dressing, and polish into one messy pass.
 
+For the complete concept-to-Demo workflow, including cost controls, release gates, and a reusable Definition of Done, see [`game-demo-production-workflow.md`](game-demo-production-workflow.md).
+
 ## Core Principle
 
 Each iteration should solve one class of problems at a time.
