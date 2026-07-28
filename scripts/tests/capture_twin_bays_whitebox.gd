@@ -2,7 +2,7 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/maps/twin_bays_whitebox.tscn"
 const DEFAULT_OUT_PATH := "res://reports/twin_bays_whitebox.png"
-const VIEWPORT_SIZE := Vector2i(1536, 1024)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 
 func _initialize() -> void:
 	if DisplayServer.get_name().to_lower() == "headless":

@@ -1,0 +1,80 @@
+{
+  "schema": "chaos_gun.twin_bays_art",
+  "version": 8,
+  "status": "isolated_water_mass_and_light_candidate",
+  "base_profile": "resources/maps/twin_bays_art_v7.json",
+  "base_profile_sha256": "eb7e31530403211353f00da1308c02acab8cc7ce483e27d2023617961d56bf73",
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+  "camera_target": "docs/art-direction/concepts/twin_bays_art_v5_camera_target.png",
+  "backdrop": {
+    "shallow_color": "#08A9BC",
+    "light_color": "#E4FFF7",
+    "deep_color": "#087C96",
+    "perimeter_depth": 0.28,
+    "bay_depth": 0.76,
+    "caustic_strength": 0.25,
+    "caustic_world_scale": 0.32,
+    "caustic_softness": 0.125,
+    "caustic_detail_mix": 0.16,
+    "caustic_tile_world_size": 38.0,
+    "macro_swell_strength": 0.072,
+    "caustic_light_mix": 0.21,
+    "outer_darkening": 0.026,
+    "glint_strength": 0.022
+  },
+  "lighting": {
+    "key_color": "#FFE0BC",
+    "key_energy": 1.10,
+    "shadow_blur": 1.55,
+    "shadow_opacity": 0.74,
+    "fill_color": "#72DDF2",
+    "fill_energy": 0.08,
+    "ambient_color": "#9DDCE2",
+    "ambient_energy": 0.14,
+    "exposure": 0.61,
+    "brightness": 0.99,
+    "contrast": 1.075,
+    "saturation": 1.045,
+    "ssao_radius": 1.18,
+    "ssao_intensity": 1.08,
+    "ssao_power": 1.34
+  },
+  "budgets": {
+    "primary_material_target": 11,
+    "primary_material_absolute_max": 12,
+    "transparent_batch_max": 3,
+    "texture_max_dimension": 2048,
+    "basis_universal_required": true,
+    "runtime_node_growth_allowed": false
+  },
+  "review": {
+    "candidate_id": "art_v8_water_mass_light_01",
+    "base_candidate_id": "art_v7_benchmark_corner_01",
+    "production_assets_must_remain_byte_identical": true,
+    "art_v5_must_remain_byte_identical": true,
+    "art_v6_must_remain_byte_identical": true,
+    "art_v7_must_remain_byte_identical": true,
+    "golden_update_allowed": false,
+    "fast_gate_modes": [
+      "high",
+      "drain_9_battle",
+      "portal_close"
+    ],
+    "minimum_normal_camera_gain_percent": 3.0
+  },
+  "forbidden": [
+    "production_overwrite",
+    "art_v5_overwrite",
+    "art_v6_overwrite",
+    "art_v7_overwrite",
+    "golden_update",
+    "gameplay_collision",
+    "layout_coordinates",
+    "camera_changes",
+    "tide_gameplay_changes",
+    "static_floor_puddles",
+    "new_runtime_material_batch",
+    "runtime_node_growth"
+  ]
+}

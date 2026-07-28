@@ -8,6 +8,7 @@ const ACTION_SUFFIXES := [
 	"move_right",
 	"fire",
 	"jump",
+	"target_cycle",
 	"drop_weapon",
 ]
 
@@ -53,10 +54,16 @@ func _initialize() -> void:
 		var prefix := "p%d_" % player_index
 		var drop_button := screen.find_child("Bind_%sdrop_weapon" % prefix, true, false) as Button
 		var drop_label := screen.find_child("Label_%sdrop_weapon" % prefix, true, false) as Label
+		var target_button := screen.find_child("Bind_%starget_cycle" % prefix, true, false) as Button
+		var target_label := screen.find_child("Label_%starget_cycle" % prefix, true, false) as Label
 		if drop_button == null or drop_button.text in ["???", "未绑定", "未配置"]:
 			_fail("Player %d drop-weapon binding is unavailable" % player_index)
 		if drop_label == null or drop_label.text != "丢弃武器":
 			_fail("Player %d still exposes the old switch-weapon label" % player_index)
+		if target_button == null or target_button.text in ["???", "未绑定", "未配置"]:
+			_fail("Player %d target-cycle binding is unavailable" % player_index)
+		if target_label == null or target_label.text != "切换目标":
+			_fail("Player %d target-cycle label is unavailable" % player_index)
 
 	var collapsed_height := content.custom_minimum_size.y
 	toggle.button_pressed = true

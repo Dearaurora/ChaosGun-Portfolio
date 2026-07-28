@@ -1,0 +1,43 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Theme" path="res://resources/ui/chaosgun_theme.tres" id="1_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleColumn"]
+content_margin_left = 16.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+bg_color = Color(0.105, 0.055, 0.165, 0.68)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.945, 0.812, 0.2)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="KeybindColumn" type="PanelContainer"]
+custom_minimum_size = Vector2(440, 390)
+theme = ExtResource("1_theme")
+theme_override_styles/panel = SubResource("StyleColumn")
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "PLAYER 1"
+horizontal_alignment = 1
+
+[node name="AccentLine" type="ColorRect" parent="Content"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Rows" type="VBoxContainer" parent="Content"]
+layout_mode = 2
+theme_override_constants/separation = 4

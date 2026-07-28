@@ -12,7 +12,7 @@
   },
   "layout": {
     "path": "resources/maps/twin_bays_layout_v1.json",
-    "sha256": "ea69b591ae88df766967596a18dacbcaff047c07e65b41fc008330f5e94a0227",
+    "sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
     "schema": "chaos_gun.twin_bays_layout",
     "version": 1,
     "counts": {
@@ -37,7 +37,7 @@
   },
   "output": {
     "path": "docs/art-direction/references/twin_bays/twin_bays_as_built_reference_v1.png",
-    "sha256": "6865d5376ae833fe917b5a758d2ef7465b74c11b8f663536349217af67fcdba3",
+    "sha256": "2db58ab4d246bb8d25f53c9cdac85d2b2fc12932fd579060256b6f95fc992e0d",
     "size": [
       1920,
       1080

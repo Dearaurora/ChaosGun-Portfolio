@@ -4,28 +4,32 @@ class_name MomentumCircuitArena
 const MomentumCircuitProductionConfigScript = preload(
 	"res://scripts/maps/momentum_circuit_production_config.gd"
 )
-const GravityControllerScript = preload(
-	"res://scripts/maps/momentum_circuit_gravity_controller.gd"
+const RandomTeleporterScript = preload("res://scripts/maps/momentum_circuit_random_teleporter.gd")
+const LightBridgeControllerScript = preload(
+	"res://scripts/maps/momentum_circuit_light_bridge_controller.gd"
 )
-const GravityActivatorScript = preload(
-	"res://scripts/maps/momentum_circuit_gravity_activator.gd"
-)
-const StabilizerAnchorScript = preload(
-	"res://scripts/maps/momentum_circuit_stabilizer_anchor.gd"
-)
-const MechanismVFXScript = preload(
-	"res://scripts/maps/momentum_circuit_mechanism_vfx.gd"
+const MechanismVFXV7Script = preload(
+	"res://scripts/maps/momentum_circuit_mechanism_vfx_v7.gd"
 )
 const CloudVortexScript = preload(
 	"res://scripts/maps/momentum_circuit_cloud_vortex.gd"
+)
+const HoleDepthVFXScript = preload(
+	"res://scripts/maps/momentum_circuit_hole_depth_vfx.gd"
+)
+const EnvironmentDressingV9Script = preload(
+	"res://scripts/maps/momentum_circuit_environment_dressing_v9.gd"
+)
+const DemoTelemetryScript = preload(
+	"res://scripts/maps/momentum_circuit_demo_telemetry.gd"
 )
 const PartyShooterCameraDirectorScript = preload(
 	"res://scripts/maps/party_shooter_camera_director.gd"
 )
 
-const PRODUCTION_CONFIG_PATH := "res://resources/maps/momentum_circuit_production_v2.json"
+const PRODUCTION_CONFIG_PATH := "res://resources/maps/momentum_circuit_production_v9.json"
 const FOREGROUND_SCENE_PATH := (
-	"res://assets/models/generated/momentum_circuit/momentum_circuit_foreground.glb"
+	"res://assets/models/generated/momentum_circuit_v9/momentum_circuit_foreground_v9.glb"
 )
 
 const ROLE_GAMEPLAY := &"gameplay"
@@ -34,16 +38,16 @@ const ROLE_MECHANISM_VFX := &"mechanism_vfx"
 const ROLE_BACKDROP := &"backdrop"
 
 const CYAN_COLOR := Color("#52E5F5")
-const ORANGE_COLOR := Color("#FF9A3D")
 const SKY_TOP_COLOR := Color("#5B8ED8")
 const SKY_HORIZON_COLOR := Color("#756CC5")
 
 var _production_config: Dictionary = {}
 var _production_layers: Dictionary = {}
-var _gravity_controller: Node3D = null
-var _stabilizer_anchors: Array[Node3D] = []
-var _gravity_activators: Array[StaticBody3D] = []
+var _random_teleporters: Array[Node3D] = []
+var _light_bridge_controller: Node3D = null
 var _camera_director: Node = null
+var _demo_telemetry: Node = null
+var _environment_dressing: Node3D = null
 
 
 func _build_map_layout() -> void:
@@ -61,6 +65,7 @@ func _build_map_layout() -> void:
 	_build_production_mechanism_vfx(mechanism_vfx)
 	_build_production_backdrop(backdrop)
 	_build_spawn_markers()
+	_build_demo_telemetry()
 
 
 func _build_map_dressing() -> void:
@@ -87,8 +92,20 @@ func get_production_config() -> Dictionary:
 	return _production_config.duplicate(true)
 
 
+func get_random_teleporters() -> Array[Node3D]:
+	return _random_teleporters.duplicate()
+
+
+func get_light_bridge_controller() -> Node3D:
+	return _light_bridge_controller
+
+
+func get_environment_dressing() -> Node3D:
+	return _environment_dressing
+
+
 func get_gravity_controller() -> Node3D:
-	return _gravity_controller
+	return null
 
 
 func get_production_layer(role: StringName) -> Node3D:
@@ -134,93 +151,40 @@ func _build_production_foreground(parent: Node3D) -> void:
 
 
 func _build_production_mechanisms(parent: Node3D) -> void:
-	_stabilizer_anchors.clear()
-	_gravity_activators.clear()
-
+	_random_teleporters.clear()
 	var mechanisms := Node3D.new()
-	mechanisms.name = "GravityMechanisms"
+	mechanisms.name = "MomentumCircuitMechanisms"
 	parent.add_child(mechanisms)
-
-	_gravity_controller = GravityControllerScript.new() as Node3D
-	_gravity_controller.name = "GravityFieldController"
-	_gravity_controller.add_to_group(&"momentum_circuit_gravity_controller")
-	mechanisms.add_child(_gravity_controller)
-
-	var anchors_root := Node3D.new()
-	anchors_root.name = "StabilizerAnchors"
-	mechanisms.add_child(anchors_root)
-	var anchor_config := _production_config["anchors"] as Dictionary
-	for index in range((_layout["portals"] as Array).size()):
+	_light_bridge_controller = LightBridgeControllerScript.new() as Node3D
+	_light_bridge_controller.name = "RotatingLightBridgeController"
+	mechanisms.add_child(_light_bridge_controller)
+	_light_bridge_controller.call("configure", _production_config.get("light_bridges", {}))
+	var teleporter_root := Node3D.new()
+	teleporter_root.name = "RandomTeleporters"
+	mechanisms.add_child(teleporter_root)
+	var tele_config := _production_config.get("teleporters", {}) as Dictionary
+	for index in range((_layout.get("portals", []) as Array).size()):
 		var portal_data := (_layout["portals"] as Array)[index] as Dictionary
-		var anchor := StabilizerAnchorScript.new() as Node3D
-		anchor.name = "StabilizerAnchor%02d" % (index + 1)
-		anchor.position = MomentumCircuitLayoutScript.vector3(
-			portal_data["position_world"],
-			"portals[%d].position_world" % index
-		)
-		anchor.add_to_group(&"momentum_circuit_stabilizer_anchor")
-		anchor.set_meta("layout_id", String(portal_data["id"]))
-		anchor.set_meta("layout_position_world", anchor.position)
-		anchor.set_meta("outer_radius", float(anchor_config["outer_radius"]))
-		anchor.set_meta("core_radius", float(anchor_config["core_radius"]))
-		anchor.set_meta("teleport_enabled", false)
-		anchor.set_meta("color_token", "#52E5F5")
-		anchors_root.add_child(anchor)
-		_stabilizer_anchors.append(anchor)
-
-	var activators_root := Node3D.new()
-	activators_root.name = "GravityActivators"
-	mechanisms.add_child(activators_root)
-	var gravity_config := _production_config["gravity"] as Dictionary
-	for index in range((_layout["shockwave_nodes"] as Array).size()):
-		var node_data := (_layout["shockwave_nodes"] as Array)[index] as Dictionary
-		var activator := GravityActivatorScript.new() as StaticBody3D
-		activator.name = "GravityActivator%02d" % (index + 1)
-		activator.position = MomentumCircuitLayoutScript.vector3(
-			node_data["position_world"],
-			"shockwave_nodes[%d].position_world" % index
-		)
-		activator.add_to_group(&"gravity_activator")
-		activator.add_to_group(&"momentum_circuit_gravity_activator")
-		activator.call(
-			"configure",
-			_gravity_controller,
-			float(gravity_config["node_cooldown_seconds"])
-		)
-		var radius := _component_radius(node_data)
-		activator.set_meta("layout_id", String(node_data["id"]))
-		activator.set_meta("layout_position_world", activator.position)
-		activator.set_meta("outer_radius_world", radius)
-		activator.set_meta("shoot_only", true)
-		activator.set_meta("color_token", "#FF9A3D")
-		activators_root.add_child(activator)
-
-		var hit_shape := CollisionShape3D.new()
-		hit_shape.name = "HitShape"
-		var cylinder_shape := CylinderShape3D.new()
-		cylinder_shape.radius = radius * 0.82
-		cylinder_shape.height = 1.2
-		hit_shape.shape = cylinder_shape
-		hit_shape.position = Vector3(0.0, 0.6, 0.0)
-		activator.add_child(hit_shape)
-		_gravity_activators.append(activator)
-
-	var controller_config := _production_config.duplicate(true)
-	var platform := _layout["platform"] as Dictionary
-	controller_config["outer_outline_world_xz"] = platform.get(
-		"visual_top_outline_world_xz",
-		platform["outline_world_xz"]
-	)
-	_gravity_controller.call("configure", controller_config, _stabilizer_anchors)
+		var teleporter := RandomTeleporterScript.new() as Node3D
+		teleporter.name = "RandomTeleporter%02d" % (index + 1)
+		teleporter.position = MomentumCircuitLayoutScript.vector3(portal_data["position_world"], "portals[%d].position_world" % index)
+		teleporter.add_to_group(&"momentum_circuit_random_teleporter")
+		teleporter.call("configure", String(portal_data["id"]), float(tele_config.get("trigger_radius", 2.75)), float(tele_config.get("trigger_height", 2.4)), float(tele_config.get("cooldown_seconds", 0.65)), float(tele_config.get("landing_cooldown_seconds", 3.0)), float(tele_config.get("arrival_height", 1.25)), int(tele_config.get("seed", 71337)), float(tele_config.get("occupied_radius", 2.6)), float(tele_config.get("occupied_retry_seconds", 0.25)))
+		teleporter.set_meta("layout_id", String(portal_data["id"]))
+		teleporter.set_meta("layout_position_world", teleporter.position)
+		teleporter_root.add_child(teleporter)
+		_random_teleporters.append(teleporter)
+	for teleporter in _random_teleporters:
+		teleporter.call("set_destinations", _random_teleporters)
 
 
 func _build_production_mechanism_vfx(parent: Node3D) -> void:
-	var vfx := MechanismVFXScript.new() as Node3D
-	vfx.name = "GravityMechanismVFX"
+	var vfx := MechanismVFXV7Script.new() as Node3D
+	vfx.name = "RotatingLightBridgeAndTeleportVFX"
+	vfx.add_to_group(&"momentum_circuit_mechanism_vfx")
 	vfx.set_meta("visual_only", true)
 	parent.add_child(vfx)
-	if vfx.has_method("bind_controller"):
-		vfx.call("bind_controller", _gravity_controller)
+	vfx.call("configure", _light_bridge_controller, _random_teleporters, _production_config)
 	_verify_visual_only_tree(parent, "MechanismVFX")
 
 
@@ -229,7 +193,30 @@ func _build_production_backdrop(parent: Node3D) -> void:
 	vortex.name = "CloudVortex"
 	vortex.set_meta("visual_only", true)
 	parent.add_child(vortex)
+	vortex.call("configure", _production_config.get("cloud_vortex", {}))
+	_environment_dressing = EnvironmentDressingV9Script.new() as Node3D
+	_environment_dressing.name = "EnvironmentDressingV9"
+	_environment_dressing.set_meta("visual_only", true)
+	parent.add_child(_environment_dressing)
+	_environment_dressing.call(
+		"configure",
+		_production_config.get("environment_dressing", {}),
+		get_node_or_null("GlobalCamera") as Camera3D
+	)
+	var hole_depth := HoleDepthVFXScript.new() as Node3D
+	hole_depth.name = "HoleDepthParallax"
+	hole_depth.set_meta("visual_only", true)
+	parent.add_child(hole_depth)
+	hole_depth.call("configure", _layout.get("holes", []), _production_config.get("hole_depth", {}))
 	_verify_visual_only_tree(parent, "Backdrop")
+
+
+func _build_demo_telemetry() -> void:
+	_demo_telemetry = DemoTelemetryScript.new() as Node
+	_demo_telemetry.name = "MomentumCircuitDemoTelemetry"
+	add_child(_demo_telemetry)
+	_demo_telemetry.call("configure", self, null, weapon_spawner)
+	_demo_telemetry.call("bind_demo_mechanisms", _light_bridge_controller, _random_teleporters)
 
 
 func _verify_visual_only_tree(root: Node, label: String) -> void:
@@ -333,12 +320,12 @@ func get_runtime_camera_debug() -> Dictionary:
 func _configure_production_lighting() -> void:
 	var key := get_node_or_null("DirectionalLight3D") as DirectionalLight3D
 	if key:
-		key.rotation_degrees = Vector3(-52.0, -28.0, 0.0)
+		key.rotation_degrees = Vector3(-48.0, -34.0, 0.0)
 		key.light_color = Color("#FFE7D9")
-		key.light_energy = 0.82
+		key.light_energy = 1.16
 		key.shadow_enabled = true
-		key.shadow_blur = 2.3
-		key.shadow_opacity = 0.55
+		key.shadow_blur = 2.0
+		key.shadow_opacity = 0.70
 	var fill := get_node_or_null("MomentumCircuitCoolFill") as OmniLight3D
 	if fill == null:
 		fill = OmniLight3D.new()
@@ -346,7 +333,7 @@ func _configure_production_lighting() -> void:
 		add_child(fill)
 	fill.position = Vector3(-24.0, 34.0, 20.0)
 	fill.light_color = CYAN_COLOR
-	fill.light_energy = 0.10
+	fill.light_energy = 0.065
 	fill.omni_range = 125.0
 	fill.shadow_enabled = false
 
@@ -372,17 +359,17 @@ func _configure_production_environment() -> void:
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("#C8C2EE")
-	environment.ambient_light_energy = 0.32
+	environment.ambient_light_energy = 0.18
 	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
-	environment.tonemap_exposure = 0.72
+	environment.tonemap_exposure = 0.78
 	environment.adjustment_enabled = true
-	environment.adjustment_brightness = 1.02
-	environment.adjustment_contrast = 1.05
-	environment.adjustment_saturation = 1.03
+	environment.adjustment_brightness = 1.01
+	environment.adjustment_contrast = 1.10
+	environment.adjustment_saturation = 0.98
 	environment.ssao_enabled = true
 	environment.ssao_radius = 1.1
-	environment.ssao_intensity = 0.82
-	environment.ssao_power = 1.25
+	environment.ssao_intensity = 1.22
+	environment.ssao_power = 1.55
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.14
 	environment.glow_strength = 0.52

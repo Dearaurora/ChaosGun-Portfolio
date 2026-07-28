@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 const TOY_UI = preload("res://scripts/ui/toy_sunset_ui.gd")
-const SKY_TEXTURE = preload("res://assets/textures/generated/sunset_toy_sky_islands/sunset_sky_backplate_v1.png")
+const KEYBIND_ROW_SCENE = preload("res://scenes/ui/components/keybind_row.tscn")
 
 const P1_BINDS := [
 	["向上移动", "p1_move_forward"],
@@ -10,6 +10,7 @@ const P1_BINDS := [
 	["向右移动", "p1_move_right"],
 	["射击", "p1_fire"],
 	["跳跃", "p1_jump"],
+	["切换目标", "p1_target_cycle"],
 	["丢弃武器", "p1_drop_weapon"],
 ]
 const P2_BINDS := [
@@ -19,6 +20,7 @@ const P2_BINDS := [
 	["向右移动", "p2_move_right"],
 	["射击", "p2_fire"],
 	["跳跃", "p2_jump"],
+	["切换目标", "p2_target_cycle"],
 	["丢弃武器", "p2_drop_weapon"],
 ]
 const P3_BINDS := [
@@ -28,6 +30,7 @@ const P3_BINDS := [
 	["向右移动", "p3_move_right"],
 	["射击", "p3_fire"],
 	["跳跃", "p3_jump"],
+	["切换目标", "p3_target_cycle"],
 	["丢弃武器", "p3_drop_weapon"],
 ]
 const P4_BINDS := [
@@ -37,150 +40,70 @@ const P4_BINDS := [
 	["向右移动", "p4_move_right"],
 	["射击", "p4_fire"],
 	["跳跃", "p4_jump"],
+	["切换目标", "p4_target_cycle"],
 	["丢弃武器", "p4_drop_weapon"],
 ]
+
+@onready var _page: Control = $KeybindsRoot/SafeArea/Page
+@onready var _scroll: ScrollContainer = $KeybindsRoot/SafeArea/Page/KeybindScroll
+@onready var _content: VBoxContainer = $KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent
+@onready var _extra_players_root: HBoxContainer = $KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/ExtraPlayersSection
+@onready var _extra_players_toggle: Button = $KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/ExtraPlayersToggle
+@onready var _back_button: Button = $KeybindsRoot/SafeArea/Page/Footer/BackButton
+@onready var _capture_hint: Label = $KeybindsRoot/SafeArea/Page/Footer/CaptureHint
 
 var _rebinding_action := ""
 var _rebinding_button: Button = null
 var _key_buttons: Dictionary = {}
-var _scroll: ScrollContainer = null
-var _content: Control = null
-var _extra_players_root: Control = null
-var _extra_players_toggle: Button = null
 var _ui_scale := 1.0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_build_ui()
-
-
-func _build_ui() -> void:
-	var viewport_size := get_viewport().get_visible_rect().size
-	_ui_scale = TOY_UI.ui_scale(viewport_size)
-
-	var backdrop := TextureRect.new()
-	backdrop.name = "SunsetBackground"
-	backdrop.texture = SKY_TEXTURE
-	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(backdrop)
-
-	var wash := ColorRect.new()
-	wash.color = Color(TOY_UI.INK.r, TOY_UI.INK.g, TOY_UI.INK.b, 0.52)
-	wash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(wash)
-
-	var title := Label.new()
-	title.text = "按键设置"
-	title.position = Vector2(28.0, 14.0) * _ui_scale
-	title.size = Vector2(280.0, 42.0) * _ui_scale
-	TOY_UI.apply_label(title, roundi(27.0 * _ui_scale), TOY_UI.CREAM, roundi(4.0 * _ui_scale))
-	add_child(title)
-
-	var scope_label := Label.new()
-	scope_label.text = "本地输入 / 4 名玩家"
-	scope_label.position = Vector2(viewport_size.x - 290.0 * _ui_scale, 20.0 * _ui_scale)
-	scope_label.size = Vector2(260.0, 28.0) * _ui_scale
-	scope_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	TOY_UI.apply_label(scope_label, roundi(11.0 * _ui_scale), TOY_UI.CREAM_DIM, 2)
-	add_child(scope_label)
-
-	_scroll = ScrollContainer.new()
-	_scroll.name = "KeybindScroll"
-	_scroll.position = Vector2(0.0, 66.0 * _ui_scale)
-	_scroll.size = Vector2(viewport_size.x, maxf(300.0, viewport_size.y - 132.0 * _ui_scale))
-	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	add_child(_scroll)
-
-	_content = Control.new()
-	_content.name = "KeybindContent"
-	_content.custom_minimum_size = Vector2(viewport_size.x, 480.0 * _ui_scale)
-	_scroll.add_child(_content)
-
-	var margin := 42.0 * _ui_scale
-	var column_gap := 30.0 * _ui_scale
-	var content_width := viewport_size.x - margin * 2.0
-	var column_width := (content_width - column_gap) * 0.5
-	_build_column(_content, "PLAYER 1", P1_BINDS, MatchConfig.PLAYER_COLORS[0], margin, 10.0 * _ui_scale, column_width)
-	_build_column(_content, "PLAYER 2", P2_BINDS, MatchConfig.PLAYER_COLORS[1], margin + column_width + column_gap, 10.0 * _ui_scale, column_width)
-
-	var toggle_y := 378.0 * _ui_scale
-	_extra_players_toggle = _create_navigation_button("展开 P3 / P4", TOY_UI.CREAM_DIM, margin, toggle_y, content_width, 42.0 * _ui_scale)
-	_extra_players_toggle.name = "ExtraPlayersToggle"
-	_extra_players_toggle.toggle_mode = true
+	_ui_scale = TOY_UI.ui_scale(get_viewport().get_visible_rect().size)
+	_build_column($KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/PrimaryPlayers/Player1Column, "PLAYER 1", P1_BINDS, TOY_UI.player_color(0))
+	_build_column($KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/PrimaryPlayers/Player2Column, "PLAYER 2", P2_BINDS, TOY_UI.player_color(1))
+	_build_column($KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/ExtraPlayersSection/Player3Column, "PLAYER 3", P3_BINDS, TOY_UI.player_color(2))
+	_build_column($KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/ExtraPlayersSection/Player4Column, "PLAYER 4", P4_BINDS, TOY_UI.player_color(3))
 	_extra_players_toggle.toggled.connect(_on_extra_players_toggled)
-	_content.add_child(_extra_players_toggle)
-
-	_extra_players_root = Control.new()
-	_extra_players_root.name = "ExtraPlayersSection"
-	_extra_players_root.position = Vector2(0.0, toggle_y + 54.0 * _ui_scale)
-	_extra_players_root.size = Vector2(viewport_size.x, 360.0 * _ui_scale)
+	_back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn"))
+	TOY_UI.apply_button(_extra_players_toggle, TOY_UI.CREAM_DIM, false, 16)
+	TOY_UI.apply_button(_back_button, TOY_UI.CORAL, false, 16)
 	_extra_players_root.visible = false
-	_content.add_child(_extra_players_root)
-	_build_column(_extra_players_root, "PLAYER 3", P3_BINDS, MatchConfig.PLAYER_COLORS[2], margin, 0.0, column_width)
-	_build_column(_extra_players_root, "PLAYER 4", P4_BINDS, MatchConfig.PLAYER_COLORS[3], margin + column_width + column_gap, 0.0, column_width)
-
-	var back_button := _create_navigation_button("返回", TOY_UI.CORAL, 28.0 * _ui_scale, viewport_size.y - 54.0 * _ui_scale, 124.0 * _ui_scale, 40.0 * _ui_scale)
-	back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn"))
-	add_child(back_button)
+	_content.custom_minimum_size.y = 480.0 * _ui_scale
+	_back_button.grab_focus()
+	_play_enter_transition()
 
 
-func _build_column(parent: Control, header_text: String, binds: Array, accent: Color, x: float, y: float, width: float) -> void:
-	var surface := Panel.new()
-	surface.position = Vector2(x, y)
-	surface.size = Vector2(width, 354.0 * _ui_scale)
-	surface.add_theme_stylebox_override("panel", TOY_UI.panel_style(accent, 0.56, TOY_UI.PANEL_RADIUS, 1, 0))
-	parent.add_child(surface)
-
-	var header := Label.new()
+func _build_column(parent: PanelContainer, header_text: String, binds: Array, accent: Color) -> void:
+	var header := parent.get_node("Content/Header") as Label
+	var accent_line := parent.get_node("Content/AccentLine") as ColorRect
+	var rows := parent.get_node("Content/Rows") as VBoxContainer
 	header.text = header_text
-	header.position = Vector2(14.0, 8.0) * _ui_scale
-	header.size = Vector2(width - 28.0 * _ui_scale, 26.0 * _ui_scale)
-	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	TOY_UI.apply_label(header, roundi(16.0 * _ui_scale), accent.lightened(0.12))
-	surface.add_child(header)
-
-	var line := ColorRect.new()
-	line.color = Color(accent.r, accent.g, accent.b, 0.52)
-	line.position = Vector2(14.0, 36.0) * _ui_scale
-	line.size = Vector2(width - 28.0 * _ui_scale, 2.0 * _ui_scale)
-	surface.add_child(line)
-
-	var row_y := 42.0 * _ui_scale
+	header.add_theme_color_override("font_color", accent)
+	accent_line.color = accent
+	parent.add_theme_stylebox_override("panel", TOY_UI.panel_style(accent, 0.62, 12, 1, 2))
 	for bind in binds:
-		_build_row(surface, String(bind[0]), String(bind[1]), accent, 10.0 * _ui_scale, row_y, width - 20.0 * _ui_scale)
-		row_y += 43.0 * _ui_scale
-
-
-func _build_row(parent: Control, display_name: String, action: String, accent: Color, x: float, y: float, width: float) -> void:
-	var action_label := Label.new()
-	action_label.name = "Label_%s" % action
-	action_label.text = display_name
-	action_label.position = Vector2(x + 4.0 * _ui_scale, y)
-	action_label.size = Vector2(width * 0.42, 36.0 * _ui_scale)
-	action_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	TOY_UI.apply_label(action_label, roundi(12.0 * _ui_scale), TOY_UI.CREAM)
-	parent.add_child(action_label)
-
-	var key_button := Button.new()
-	key_button.name = "Bind_%s" % action
-	key_button.text = _get_action_key_name(action)
-	key_button.position = Vector2(x + width * 0.44, y)
-	key_button.size = Vector2(width * 0.56 - 4.0 * _ui_scale, 36.0 * _ui_scale)
-	TOY_UI.apply_button(key_button, accent, false, roundi(12.0 * _ui_scale))
-	key_button.pressed.connect(_on_start_rebind.bind(action, key_button))
-	parent.add_child(key_button)
-	_key_buttons[action] = key_button
+		var row := KEYBIND_ROW_SCENE.instantiate() as HBoxContainer
+		var display_name := String(bind[0])
+		var action := String(bind[1])
+		var action_label := row.get_node("ActionLabel") as Label
+		var key_button := row.get_node("KeyButton") as Button
+		action_label.name = "Label_%s" % action
+		action_label.text = display_name
+		key_button.name = "Bind_%s" % action
+		key_button.text = _get_action_key_name(action)
+		TOY_UI.apply_button(key_button, accent, false, 14)
+		key_button.pressed.connect(_on_start_rebind.bind(action, key_button))
+		rows.add_child(row)
+		_key_buttons[action] = key_button
 
 
 func _on_extra_players_toggled(expanded: bool) -> void:
 	_cancel_rebind()
 	_extra_players_root.visible = expanded
 	_extra_players_toggle.text = "收起 P3 / P4" if expanded else "展开 P3 / P4"
-	_content.custom_minimum_size.y = (820.0 if expanded else 480.0) * _ui_scale
+	_content.custom_minimum_size.y = (900.0 if expanded else 480.0) * _ui_scale
 
 
 func _on_start_rebind(action: String, button: Button) -> void:
@@ -188,7 +111,9 @@ func _on_start_rebind(action: String, button: Button) -> void:
 		_rebinding_button.text = _get_action_key_name(_rebinding_action)
 	_rebinding_action = action
 	_rebinding_button = button
-	button.text = "按下新按键..."
+	button.text = "按下新按键…"
+	_capture_hint.text = "正在捕获：%s · ESC 取消" % action
+	_capture_hint.add_theme_color_override("font_color", TOY_UI.GOLD)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -213,6 +138,7 @@ func _rebind_action(action: String, event: InputEventKey) -> void:
 	_rebinding_button.text = _get_action_key_name(action)
 	_rebinding_action = ""
 	_rebinding_button = null
+	_reset_capture_hint()
 
 
 func _cancel_rebind() -> void:
@@ -220,6 +146,12 @@ func _cancel_rebind() -> void:
 		_rebinding_button.text = _get_action_key_name(_rebinding_action)
 	_rebinding_action = ""
 	_rebinding_button = null
+	_reset_capture_hint()
+
+
+func _reset_capture_hint() -> void:
+	_capture_hint.text = "选择一项后按下新按键 · ESC 取消捕获"
+	_capture_hint.add_theme_color_override("font_color", TOY_UI.CREAM_DIM)
 
 
 func _get_action_key_name(action: String) -> String:
@@ -246,10 +178,7 @@ func _get_action_key_name(action: String) -> String:
 	return "未绑定"
 
 
-func _create_navigation_button(text: String, color: Color, x: float, y: float, width: float, height: float) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.position = Vector2(x, y)
-	button.size = Vector2(width, height)
-	TOY_UI.apply_button(button, color, false, roundi(13.0 * _ui_scale))
-	return button
+func _play_enter_transition() -> void:
+	_page.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(_page, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

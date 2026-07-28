@@ -1,0 +1,112 @@
+{
+  "schema": "chaos_gun.twin_bays_art",
+  "version": 6,
+  "status": "isolated_professional_finish_candidate",
+  "base_profile": "resources/maps/twin_bays_art_v5.json",
+  "base_profile_sha256": "0675bbccbf1bbecf28a856c71e4ebd557499912465829ca538454f93d8c943f5",
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+  "camera_target": "docs/art-direction/concepts/twin_bays_art_v5_camera_target.png",
+  "palette": {
+    "cream": "#FCEBDD",
+    "cyan": "#65D7E0",
+    "cyan_shadow": "#0A8CA4",
+    "coral": "#FF9685"
+  },
+  "surface_families": {
+    "cream": {
+      "roughness": 0.44,
+      "normal_strength": 1.72
+    },
+    "cyan": {
+      "roughness": 0.26,
+      "normal_strength": 0.54
+    },
+    "coral": {
+      "roughness": 0.25,
+      "normal_strength": 0.36
+    }
+  },
+  "visual_geometry": {
+    "wall_cap_depth_multiplier": 8.6,
+    "wall_cap_outset": 0.28,
+    "wall_cap_superellipse_power": 3.2,
+    "cover_bevel_multiplier": 1.82,
+    "platform_contact_foam_scallops": true,
+    "platform_contact_bay_foam_scallops": false,
+    "platform_contact_foam_scallop_radius": 0.52,
+    "platform_contact_foam_scallop_stride": 3,
+    "platform_contact_foam_front_max_y": -12.0,
+    "pipe_outer_radius_multiplier": 1.14,
+    "pipe_collar_radius_multiplier": 1.20,
+    "pipe_collar_depth_multiplier": 1.55,
+    "pipe_band_radius_bonus": 0.28,
+    "pipe_band_half_span": 0.34
+  },
+  "backdrop": {
+    "prop_treatment": "hero_scale_authored_toy_waterpark",
+    "scenic_scale": 1.10,
+    "scenic_pull_in": 1.4,
+    "hero_float_scale": 1.12,
+    "hero_parasols": false,
+    "hero_foreground_floaters": false,
+    "caustic_strength": 0.27,
+    "caustic_softness": 0.125,
+    "caustic_detail_mix": 0.16,
+    "caustic_tile_world_size": 38.0
+  },
+  "portal_art": {
+    "foam_rim_style": "scalloped_sculpted",
+    "foam_rim_scallop_strength": 0.040,
+    "inner_foam_scallop_strength": 0.024,
+    "cascade_length": 3.8,
+    "cascade_width_wave": 0.11,
+    "cascade_lip_curl": 0.16,
+    "cascade_alpha": 0.76,
+    "cascade_highlight_strength": 0.46,
+    "water_entry_foam_radius_multiplier": 0.94,
+    "water_entry_foam_alpha": 0.72,
+    "water_entry_ripple_alpha": 0.38,
+    "water_entry_outer_alpha": 0.40
+  },
+  "lighting": {
+    "key_color": "#FFE2C4",
+    "key_energy": 0.98,
+    "exposure": 0.61,
+    "saturation": 1.08
+  },
+  "budgets": {
+    "primary_material_target": 11,
+    "primary_material_absolute_max": 12,
+    "transparent_batch_max": 3,
+    "texture_max_dimension": 2048,
+    "basis_universal_required": true,
+    "runtime_node_growth_allowed": false
+  },
+  "review": {
+    "candidate_id": "art_v6_professional_finish_01",
+    "base_candidate_id": "art_v5_camera_convergence_01",
+    "production_assets_must_remain_byte_identical": true,
+    "art_v5_must_remain_byte_identical": true,
+    "golden_update_allowed": false,
+    "required_modes": [
+      "dry",
+      "high",
+      "drain_9_battle",
+      "portal",
+      "mobile"
+    ],
+    "comparison_target": "docs/art-direction/concepts/twin_bays_art_v5_camera_target.png"
+  },
+  "forbidden": [
+    "production_overwrite",
+    "art_v5_overwrite",
+    "golden_update",
+    "gameplay_collision",
+    "layout_coordinates",
+    "camera_changes",
+    "tide_gameplay_changes",
+    "static_floor_puddles",
+    "new_runtime_material_batch"
+  ]
+}

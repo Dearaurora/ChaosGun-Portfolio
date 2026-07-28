@@ -9,6 +9,7 @@ const CombatProfileLoader = preload("res://scripts/globals/combat_profile_loader
 const PLAYER_SCENE = preload("res://scenes/characters/player.tscn")
 const AI_SCENE = preload("res://scenes/characters/ai_character.tscn")
 const CONTROL_MODE_PANEL_SCRIPT = preload("res://scripts/ui/control_mode_panel.gd")
+const MATCH_HUD_SCENE = preload("res://scenes/ui/match_hud.tscn")
 
 var DEFAULT_SPAWN_POINTS := [
 	Vector3(-12, 1, -12),
@@ -18,6 +19,7 @@ var DEFAULT_SPAWN_POINTS := [
 ]
 
 var _characters: Array = []
+var _match_hud: CanvasLayer = null
 var _victory_screen: CanvasLayer = null
 var _match_ended := false
 var _ta_runtime: Node = null
@@ -130,15 +132,23 @@ func _apply_color(character: BaseCharacter, slot_index: int) -> void:
 		visual.set_body_color(color)
 
 func _setup_hud() -> void:
-	for c in _characters:
-		if c is PlayerCharacter:
+	_match_hud = MATCH_HUD_SCENE.instantiate()
+	_match_hud.name = "GameHUD"
+	var hud_parent: Node = self
+	for character in _characters:
+		if character is PlayerCharacter:
+			hud_parent = character
 			break
+	hud_parent.add_child(_match_hud)
+	_match_hud.call("set_characters", _characters)
 
 func _setup_victory_screen() -> void:
 	_victory_screen = VictoryScreen.new()
 	add_child(_victory_screen)
 
 func _setup_control_mode_panel() -> void:
+	if not bool(get_meta("enable_control_mode_review_panel", false)):
+		return
 	var panel = CONTROL_MODE_PANEL_SCRIPT.new()
 	add_child(panel)
 

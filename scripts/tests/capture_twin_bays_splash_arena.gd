@@ -2,6 +2,22 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/maps/twin_bays_splash_arena.tscn"
 const MatchPresentationScript = preload("res://scripts/maps/party_shooter_match_presentation.gd")
+const ArtV3ReviewScript = preload("res://scripts/maps/twin_bays_art_v3_review.gd")
+const ArtV4ReviewScript = preload("res://scripts/maps/twin_bays_art_v4_review.gd")
+const ArtV5ReviewScript = preload("res://scripts/maps/twin_bays_art_v5_review.gd")
+const ArtV6ReviewScript = preload("res://scripts/maps/twin_bays_art_v6_review.gd")
+const ArtV7ReviewScript = preload("res://scripts/maps/twin_bays_art_v7_review.gd")
+const ArtV8ReviewScript = preload("res://scripts/maps/twin_bays_art_v8_review.gd")
+const ArtV9ReviewScript = preload("res://scripts/maps/twin_bays_art_v9_review.gd")
+const ArtV10ReviewScript = preload("res://scripts/maps/twin_bays_art_v10_review.gd")
+const ART_V3_PROFILE_PATH := "res://resources/maps/twin_bays_art_v3.json"
+const ART_V4_PROFILE_PATH := "res://resources/maps/twin_bays_art_v4.json"
+const ART_V5_PROFILE_PATH := "res://resources/maps/twin_bays_art_v5.json"
+const ART_V6_PROFILE_PATH := "res://resources/maps/twin_bays_art_v6.json"
+const ART_V7_PROFILE_PATH := "res://resources/maps/twin_bays_art_v7.json"
+const ART_V8_PROFILE_PATH := "res://resources/maps/twin_bays_art_v8.json"
+const ART_V9_PROFILE_PATH := "res://resources/maps/twin_bays_art_v9.json"
+const ART_V10_PROFILE_PATH := "res://resources/maps/twin_bays_art_v10.json"
 const CAPTURE_PRESENTATION_PROFILE := {
 	"profile_id": "twin_bays_splash_arena_capture",
 	"intro_reveal_duration": 1.35,
@@ -18,15 +34,35 @@ const CAPTURE_MODES := [
 	"left_portal", "right_portal",
 	"north_west", "north_east", "south_west", "south_east", "center",
 	"ambient_start", "ambient_end", "intro_ready", "intro_go", "winner",
+	"tide_dry", "tide_warning", "tide_rising", "tide_high", "tide_falling",
+	"tide_drain_0", "tide_drain_9", "tide_drain_18", "tide_high_battle", "tide_mobile",
+	"art_v3_hero_dry", "art_v3_hero_high", "art_v3_hero_drain_0",
+	"art_v3_hero_drain_9", "art_v3_hero_battle",
+	"art_v3_full_dry", "art_v3_full_high", "art_v3_full_drain_0",
+	"art_v3_full_drain_9", "art_v3_full_battle", "art_v3_full_mobile",
+	"art_v4_dry", "art_v4_high", "art_v4_drain_0", "art_v4_drain_9",
+	"art_v4_battle", "art_v4_portal", "art_v4_mobile",
+	"art_v5_dry", "art_v5_high", "art_v5_drain_0", "art_v5_drain_9",
+	"art_v5_battle", "art_v5_dry_battle", "art_v5_drain_9_battle",
+	"art_v5_portal", "art_v5_portal_close",
+	"art_v5_mobile",
+	"art_v6_dry", "art_v6_high", "art_v6_drain_9_battle",
+	"art_v6_portal", "art_v6_portal_close", "art_v6_mobile",
+	"art_v7_high", "art_v7_drain_9_battle",
+	"art_v7_portal", "art_v7_portal_close", "art_v7_bay_close",
+	"art_v8_high", "art_v8_drain_9_battle",
+	"art_v8_portal_close",
+	"art_v9_high", "art_v9_drain_9_battle", "art_v9_cap_close",
+	"art_v10_high", "art_v10_drain_9_battle",
 ]
 
 var _arena: Node3D = null
+var _capture_viewport: SubViewport = null
 
 
 func _initialize() -> void:
-	if DisplayServer.get_name().to_lower() == "headless":
-		_fail("Twin Bays production capture requires a render-capable display driver")
-		return
+	var is_headless := DisplayServer.get_name().to_lower() == "headless"
+	var hide_physical_window := "--hide-window" in OS.get_cmdline_user_args()
 	if not ResourceLoader.exists(SCENE_PATH):
 		_fail("Production scene is missing: %s" % SCENE_PATH)
 		return
@@ -48,14 +84,27 @@ func _initialize() -> void:
 	seed(20260716)
 	root.set_meta("disable_runtime_audio", true)
 	var test_window_policy := root.get_node_or_null("TestWindowPolicy")
-	# A decorated 1920x1080 window is clamped to the Windows work area and yields
-	# a 1920x1061 viewport. Borderless capture preserves the requested pixel gate.
-	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
-	DisplayServer.window_set_position(Vector2i.ZERO)
-	DisplayServer.window_set_size(viewport_size)
-	root.size = viewport_size
+	# Never let a visual capture take over the user's desktop. High-resolution
+	# evidence must use an off-screen viewport instead of enlarging this window.
+	var safe_window_size := Vector2i(mini(viewport_size.x, 960), mini(viewport_size.y, 540))
+	root.size = safe_window_size
+	if not is_headless:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, false)
+		DisplayServer.window_set_size(safe_window_size)
+		if hide_physical_window:
+			root.visible = false
 	if test_window_policy != null and test_window_policy.has_method("enforce_now"):
 		test_window_policy.call("enforce_now")
+	_capture_viewport = SubViewport.new()
+	_capture_viewport.name = "TwinBaysCaptureViewport"
+	_capture_viewport.size = viewport_size
+	_capture_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_capture_viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	_capture_viewport.transparent_bg = false
+	root.add_child(_capture_viewport)
+	current_scene = _capture_viewport
 	_configure_slots(mode)
 
 	var packed := load(SCENE_PATH) as PackedScene
@@ -63,14 +112,29 @@ func _initialize() -> void:
 	if _arena == null:
 		_fail("Could not instantiate production scene")
 		return
-	root.add_child(_arena)
-	current_scene = _arena
+	_capture_viewport.add_child(_arena)
 	await process_frame
 	await process_frame
 	await physics_frame
 	_configure_capture_runtime(mode)
+	if mode.begins_with("art_v3_"):
+		_enable_art_v3_review(&"full_map" if mode.begins_with("art_v3_full_") else &"hero")
+	elif mode.begins_with("art_v4_"):
+		_enable_art_v4_review()
+	elif mode.begins_with("art_v5_"):
+		_enable_art_v5_review()
+	elif mode.begins_with("art_v6_"):
+		_enable_art_v6_review()
+	elif mode.begins_with("art_v7_"):
+		_enable_art_v7_review()
+	elif mode.begins_with("art_v8_"):
+		_enable_art_v8_review()
+	elif mode.begins_with("art_v9_"):
+		_enable_art_v9_review()
+	elif mode.begins_with("art_v10_"):
+		_enable_art_v10_review()
 	_configure_geometry_view(mode)
-	if mode in ["battle", "mobile", "intro_ready", "intro_go", "winner"]:
+	if _is_battle_capture(mode):
 		_prepare_review_characters()
 	_hide_review_overlays(_arena)
 
@@ -83,10 +147,28 @@ func _initialize() -> void:
 	if mode in ["intro_ready", "intro_go", "winner"]:
 		await _prepare_presentation_frame(mode)
 		_hide_review_overlays(_arena)
-	if mode == "portal":
+	if mode.begins_with("tide_") or mode.begins_with("art_v3_") \
+			or mode.begins_with("art_v4_") or mode.begins_with("art_v5_") \
+			or mode.begins_with("art_v6_") or mode.begins_with("art_v7_") \
+			or mode.begins_with("art_v8_") or mode.begins_with("art_v9_") \
+			or mode.begins_with("art_v10_"):
+		await _prepare_tide_frame(mode)
+		if mode.begins_with("art_v7_"):
+			var v7_tide := _arena.get_node_or_null("TwinBaysTideController")
+			if v7_tide and v7_tide.has_method("get_debug_state"):
+				print("V7 tide visual state: ", v7_tide.call("get_debug_state"))
+		_hide_review_overlays(_arena)
+	if mode in [
+		"portal", "art_v4_portal", "art_v5_portal", "art_v5_portal_close",
+		"art_v6_portal", "art_v6_portal_close",
+		"art_v7_portal", "art_v7_portal_close",
+		"art_v8_portal_close",
+	]:
 		_trigger_portal_review_bursts()
 		await create_timer(0.10).timeout
-	await process_frame
+	if _is_battle_capture(mode) and mode != "winner":
+		await _freeze_battle_capture_frame()
+	await _await_render_frame()
 	if _is_geometry_view(mode):
 		if not _verify_geometry_view(mode, viewport_size):
 			return
@@ -96,7 +178,7 @@ func _initialize() -> void:
 	elif not _verify_framing(viewport_size):
 		return
 
-	var image := root.get_texture().get_image()
+	var image := _capture_viewport.get_texture().get_image()
 	if image == null or image.is_empty():
 		_fail("Viewport screenshot is empty")
 		return
@@ -109,14 +191,35 @@ func _initialize() -> void:
 	if error != OK:
 		_fail("Could not save screenshot %s (error %d)" % [output_path, error])
 		return
-	await _cleanup_capture_scene()
 	print("TWIN_BAYS_CAPTURE_PASS mode=%s size=%dx%d output=%s" % [
 		mode,
 		viewport_size.x,
 		viewport_size.y,
 		ProjectSettings.globalize_path(output_path),
 	])
+	if mode == "winner":
+		# The static winner capture follows the proven terminal-frame lifecycle:
+		# once the synchronized PNG is written, let SceneTree own teardown.
+		quit(0)
+		return
+	await _cleanup_capture_scene()
+	# The PNG and framing evidence are complete. Drain deferred viewport/resource
+	# frees without awaiting frame_post_draw on an empty current_scene; on Windows
+	# that notification may never arrive and can leave a successful capture alive.
+	RenderingServer.force_sync()
+	await create_timer(0.35, true, false, true).timeout
+	RenderingServer.force_sync()
+	await process_frame
 	quit(0)
+
+
+func _await_render_frame() -> void:
+	if DisplayServer.get_name().to_lower() == "headless":
+		RenderingServer.force_draw(false)
+		RenderingServer.force_sync()
+		await process_frame
+		return
+	await RenderingServer.frame_post_draw
 
 
 func _configure_slots(mode: String) -> void:
@@ -124,7 +227,7 @@ func _configure_slots(mode: String) -> void:
 	if match_config == null:
 		_fail("MatchConfig autoload is missing")
 		return
-	if mode in ["battle", "mobile", "intro_ready", "intro_go", "winner"]:
+	if _is_battle_capture(mode):
 		match_config.slots = [
 			match_config.SlotType.HUMAN,
 			match_config.SlotType.AI,
@@ -140,8 +243,54 @@ func _configure_slots(mode: String) -> void:
 		]
 
 
+func _prepare_tide_frame(mode: String) -> void:
+	var tide := _arena.get_node_or_null("TwinBaysTideController") as TwinBaysTideController
+	if tide == null:
+		_fail("Tide evidence requires TwinBaysTideController")
+		return
+	match mode:
+		"tide_dry", "art_v3_hero_dry", "art_v3_full_dry", "art_v4_dry", "art_v4_portal", \
+		"art_v5_dry", "art_v5_dry_battle", "art_v5_portal", "art_v5_portal_close", \
+		"art_v6_dry", "art_v6_portal", "art_v6_portal_close", \
+		"art_v7_portal", "art_v7_portal_close", "art_v8_portal_close", \
+		"art_v9_cap_close":
+			tide.set_debug_phase(&"dry_hold", 0.5)
+		"tide_warning":
+			tide.set_debug_phase(&"warning", 0.42)
+		"tide_rising":
+			tide.set_debug_phase(&"rising", 0.72)
+		"tide_high", "tide_high_battle", "tide_mobile", "art_v3_hero_high", "art_v3_hero_battle", \
+		"art_v3_full_high", "art_v3_full_battle", "art_v3_full_mobile", "art_v4_high", \
+		"art_v4_battle", "art_v4_mobile", "art_v5_high", "art_v5_battle", "art_v5_mobile", \
+		"art_v6_high", "art_v6_mobile", "art_v7_high", "art_v8_high", \
+		"art_v9_high", "art_v10_high":
+			tide.set_debug_phase(&"high", 0.5)
+		"art_v7_bay_close":
+			tide.set_debug_phase(&"high", 0.5)
+		"tide_falling":
+			tide.set_debug_phase(&"falling", 0.62)
+		"tide_drain_0", "art_v3_hero_drain_0", "art_v3_full_drain_0", "art_v4_drain_0", \
+		"art_v5_drain_0":
+			tide.set_debug_phase(&"draining", 0.0)
+		"tide_drain_9", "art_v3_hero_drain_9", "art_v3_full_drain_9", "art_v4_drain_9", \
+		"art_v5_drain_9", "art_v5_drain_9_battle", "art_v6_drain_9_battle":
+			tide.set_debug_phase(&"draining", 0.5)
+		"art_v7_drain_9_battle":
+			tide.set_debug_phase(&"draining", 0.5)
+		"art_v8_drain_9_battle":
+			tide.set_debug_phase(&"draining", 0.5)
+		"art_v9_drain_9_battle":
+			tide.set_debug_phase(&"draining", 0.5)
+		"art_v10_drain_9_battle":
+			tide.set_debug_phase(&"draining", 0.5)
+		"tide_drain_18":
+			tide.set_debug_phase(&"draining", 1.0)
+	await process_frame
+	await _await_render_frame()
+
+
 func _verify_framing(viewport_size: Vector2i) -> bool:
-	var camera := root.get_camera_3d()
+	var camera := _active_camera()
 	if camera == null:
 		_fail("Production scene has no active Camera3D")
 		return false
@@ -250,14 +399,14 @@ func _find_occluding_hud_panel(screen_point: Vector2, viewport_size: Vector2i) -
 
 
 func _hide_review_overlays(search_root: Node) -> void:
-	for name in ["ControlModeReviewPanel", "VictoryScreen", "DebugOverlay"]:
+	for name in ["ControlModeReviewPanel", "VictoryScreen", "DebugOverlay", "MatchIntroCue"]:
 		var item := search_root.find_child(name, true, false) as CanvasItem
 		if item:
 			item.visible = false
 
 
 func _configure_capture_runtime(mode: String) -> void:
-	if mode in ["battle", "mobile", "intro_ready", "intro_go", "winner"]:
+	if _is_battle_capture(mode):
 		return
 	if _arena.has_method("set_runtime_camera_enabled"):
 		# Structural and portal-review captures use the authored overview. Battle
@@ -274,8 +423,11 @@ func _configure_capture_runtime(mode: String) -> void:
 
 func _is_geometry_view(mode: String) -> bool:
 	return mode in [
-		"left_portal", "right_portal",
+		"left_portal", "right_portal", "art_v5_portal_close", "art_v6_portal_close",
+		"art_v7_portal_close", "art_v8_portal_close",
+		"art_v7_bay_close", "art_v9_cap_close",
 		"north_west", "north_east", "south_west", "south_east", "center",
+		"art_v3_hero_dry", "art_v3_hero_high", "art_v3_hero_drain_0", "art_v3_hero_drain_9",
 	]
 
 
@@ -283,6 +435,26 @@ func _geometry_view_contract(mode: String) -> Dictionary:
 	match mode:
 		"left_portal":
 			return {"target": _portal_review_target("left_portal"), "size": 18.0}
+		"art_v5_portal_close", "art_v6_portal_close", "art_v7_portal_close", \
+		"art_v8_portal_close":
+			return {
+				# Review the authored portal mouth and continuous cascade. The
+				# previous target sat on the submerged pipe tail, so the mandatory
+				# close-up mostly judged an occluded underside instead of the
+				# player-facing portal assembly.
+				"target": _portal_review_target("left_portal") + Vector3(-1.6, -0.8, -0.8),
+				"size": 22.0,
+			}
+		"art_v7_bay_close":
+			return {
+				"target": Vector3(0.0, 1.0, -19.0),
+				"size": 30.0,
+			}
+		"art_v9_cap_close":
+			return {
+				"target": Vector3(-31.0, 4.0, -22.0),
+				"size": 28.0,
+			}
 		"right_portal":
 			return {"target": _portal_review_target("right_portal"), "size": 18.0}
 		"north_west":
@@ -295,6 +467,8 @@ func _geometry_view_contract(mode: String) -> Dictionary:
 			return {"target": Vector3(42.0, 3.0, 24.0), "size": 25.0}
 		"center":
 			return {"target": Vector3(0.0, 1.1, -4.0), "size": 40.0}
+		"art_v3_hero_dry", "art_v3_hero_high", "art_v3_hero_drain_0", "art_v3_hero_drain_9":
+			return {"target": Vector3(38.0, 2.2, -19.0), "size": 34.0}
 	return {}
 
 
@@ -315,7 +489,7 @@ func _portal_review_target(portal_id: String) -> Vector3:
 func _configure_geometry_view(mode: String) -> void:
 	if not _is_geometry_view(mode):
 		return
-	var camera := root.get_camera_3d()
+	var camera := _active_camera()
 	var contract := _geometry_view_contract(mode)
 	if camera == null or contract.is_empty():
 		_fail("Geometry review camera contract is unavailable: %s" % mode)
@@ -332,7 +506,7 @@ func _configure_geometry_view(mode: String) -> void:
 
 
 func _verify_geometry_view(mode: String, viewport_size: Vector2i) -> bool:
-	var camera := root.get_camera_3d()
+	var camera := _active_camera()
 	var contract := _geometry_view_contract(mode)
 	if camera == null or contract.is_empty():
 		_fail("Geometry review camera is missing: %s" % mode)
@@ -388,6 +562,35 @@ func _prepare_review_characters() -> void:
 			character.weapon_manager.equip_weapon(factory.call() as WeaponData)
 
 
+func _freeze_battle_capture_frame() -> void:
+	# Retire live simulation before copying the final frame. Keeping the arena
+	# active until after save_png lets AI/animation/particle work overlap Windows
+	# Vulkan teardown and can crash after an otherwise valid capture.
+	var director := _arena.get_node_or_null("TwinBaysCameraDirector") if _arena else null
+	if director and director.has_method("set_enabled"):
+		director.call("set_enabled", false)
+	for node in _walk(_arena):
+		if node is GPUParticles3D:
+			(node as GPUParticles3D).speed_scale = 0.0
+		elif node is CPUParticles3D:
+			(node as CPUParticles3D).speed_scale = 0.0
+		elif node is AudioStreamPlayer:
+			(node as AudioStreamPlayer).stop()
+		elif node is AudioStreamPlayer2D:
+			(node as AudioStreamPlayer2D).stop()
+		elif node is AudioStreamPlayer3D:
+			(node as AudioStreamPlayer3D).stop()
+		elif node is AnimationPlayer:
+			(node as AnimationPlayer).pause()
+		node.set_process(false)
+		node.set_physics_process(false)
+	paused = true
+	await process_frame
+	RenderingServer.force_sync()
+	await create_timer(0.50, true, false, true).timeout
+	RenderingServer.force_sync()
+
+
 func _set_deterministic_ambient_frame(target_time: float) -> void:
 	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
 	if backdrop == null or not backdrop.has_method("rebuild") or not backdrop.has_method("advance_ambient_motion"):
@@ -398,10 +601,13 @@ func _set_deterministic_ambient_frame(target_time: float) -> void:
 	if target_time > 0.0:
 		backdrop.call("advance_ambient_motion", target_time)
 	await process_frame
-	await RenderingServer.frame_post_draw
+	await _await_render_frame()
 
 
 func _prepare_presentation_frame(mode: String) -> void:
+	if mode == "winner":
+		await _prepare_static_winner_frame()
+		return
 	var old_presentation := _arena.find_child("PartyShooterMatchPresentation", true, false)
 	if old_presentation:
 		old_presentation.queue_free()
@@ -424,18 +630,71 @@ func _prepare_presentation_frame(mode: String) -> void:
 		winner.is_game_over = false
 		for index in range(1, characters.size()):
 			var opponent := characters[index] as BaseCharacter
-			opponent.visible = false
-		var match_config := root.get_node_or_null("MatchConfig")
-		presentation.present_result(winner, match_config.PLAYER_COLORS[0])
+			# Keep the imported render hierarchy alive until engine shutdown.
+			# Hiding three complete hero/weapon trees immediately before Vulkan
+			# teardown is unstable on Godot 4.6; move eliminated opponents well
+			# outside the frame while marking them ineligible for camera probes.
+			opponent.is_dead = true
+			opponent.is_game_over = true
+			opponent.visible = true
+			opponent.global_position = Vector3(0.0, -80.0 - float(index) * 4.0, 0.0)
+		# Runtime result behavior is covered by the presentation verifiers. For
+		# a still capture, author the same settled framing/HUD/pose directly so
+		# no un-awaited result coroutine or transient WinnerBurst survives into
+		# engine shutdown.
+		director.call("begin_winner_focus", winner, 0.01)
+		var winner_visual := winner.get_visual()
+		if winner_visual and winner_visual.has_method("animate_match_winner"):
+			winner_visual.call("animate_match_winner")
+		_set_capture_hud_alpha(0.22)
 		await create_timer(0.68, true, false, true).timeout
 	else:
 		presentation.start_intro()
 		await create_timer(0.20 if mode == "intro_ready" else 0.72, true, false, true).timeout
-	await RenderingServer.frame_post_draw
+	await _await_render_frame()
+
+
+func _prepare_static_winner_frame() -> void:
+	var director := _arena.get_node_or_null("TwinBaysCameraDirector")
+	var characters := _arena.get("_characters") as Array
+	var camera := _active_camera()
+	if director == null or characters.size() != 4 or camera == null:
+		_fail("Static winner capture requires the shared director, camera, and four characters")
+		return
+	var winner := characters[0] as BaseCharacter
+	winner.global_position = Vector3(-4.0, 1.15, 1.0)
+	winner.visible = true
+	winner.is_dead = false
+	winner.is_game_over = false
+	for index in range(1, characters.size()):
+		var opponent := characters[index] as BaseCharacter
+		opponent.is_dead = true
+		opponent.is_game_over = true
+		opponent.visible = true
+		opponent.global_position = Vector3(0.0, -80.0 - float(index) * 4.0, 0.0)
+	director.call("release_presentation_override")
+	director.set_process(false)
+	# Preserve the approved Twin Bays angle and translate the orthographic rig
+	# to the authored winner focus. This is the settled endpoint verified by
+	# the runtime presentation tests, without retaining a live winner target.
+	camera.global_position += Vector3(winner.global_position.x, 0.0, winner.global_position.z)
+	camera.size = 38.5
+	_set_capture_hud_alpha(0.22)
+	await process_frame
+	await _await_render_frame()
+
+
+func _set_capture_hud_alpha(alpha: float) -> void:
+	var hud := _arena.find_child("GameHUD", true, false) if _arena else null
+	if hud == null:
+		return
+	for node in _walk(hud):
+		if node is Control:
+			(node as Control).modulate.a = alpha
 
 
 func _verify_winner_framing(viewport_size: Vector2i) -> bool:
-	var camera := root.get_camera_3d()
+	var camera := _active_camera()
 	var winner: BaseCharacter = null
 	for child in _arena.get_children():
 		if child is BaseCharacter and not child is CloneCharacter and child.visible and not child.is_game_over:
@@ -465,13 +724,46 @@ func _cleanup_capture_scene() -> void:
 			if String(state.get("cue_state", "idle")) in ["idle", "complete", "result_ready"]:
 				break
 			await create_timer(0.05, true, false, true).timeout
+	# WinnerBurst queues itself for deletion at the end of its authored tween.
+	# Let that callback and the character deformation tween retire before the
+	# scene is frozen for shutdown; pausing on the exact completion frame can
+	# leave a queued material tween referencing a freed render resource.
+	var transition_deadline_msec := Time.get_ticks_msec() + 1200
+	while _arena and is_instance_valid(_arena) and Time.get_ticks_msec() < transition_deadline_msec:
+		var active_transition := _arena.find_child("WinnerBurst", true, false)
+		if active_transition == null:
+			break
+		await create_timer(0.05, true, false, true).timeout
+	for _frame_index in range(4):
+		await process_frame
+	RenderingServer.force_sync()
+	var director := _arena.get_node_or_null("TwinBaysCameraDirector") if _arena else null
+	if director and director.has_method("release_presentation_override"):
+		director.call("release_presentation_override")
+		await process_frame
+	paused = true
+	# Battle captures can finish with AI, particles, audio players, and short
+	# presentation tweens still active. Quiesce the scene, but leave ownership
+	# with SceneTree: manually killing bound tweens and queue-freeing the arena
+	# before engine shutdown can trigger a native use-after-free in Vulkan.
 	if _arena and is_instance_valid(_arena):
-		if current_scene == _arena:
-			current_scene = null
-		_arena.queue_free()
+		for node in _walk(_arena):
+			if node is GPUParticles3D:
+				(node as GPUParticles3D).emitting = false
+			elif node is CPUParticles3D:
+				(node as CPUParticles3D).emitting = false
+			elif node is AudioStreamPlayer:
+				(node as AudioStreamPlayer).stop()
+			elif node is AudioStreamPlayer2D:
+				(node as AudioStreamPlayer2D).stop()
+			elif node is AudioStreamPlayer3D:
+				(node as AudioStreamPlayer3D).stop()
+			elif node is AnimationPlayer:
+				(node as AnimationPlayer).stop()
+			node.set_process(false)
+			node.set_physics_process(false)
 	await process_frame
-	await process_frame
-	await physics_frame
+	RenderingServer.force_sync()
 
 
 func _trigger_portal_review_bursts() -> void:
@@ -492,6 +784,10 @@ func _walk(search_root: Node) -> Array[Node]:
 	return nodes
 
 
+func _active_camera() -> Camera3D:
+	return _capture_viewport.get_camera_3d() if _capture_viewport else null
+
+
 func _argument_value(prefix: String, fallback: String) -> String:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with(prefix):
@@ -500,10 +796,30 @@ func _argument_value(prefix: String, fallback: String) -> String:
 
 
 func _default_size_for_mode(mode: String) -> Vector2i:
-	if mode == "empty":
+	if mode.begins_with("art_v3_hero_") and mode != "art_v3_hero_battle":
 		return Vector2i(1536, 1024)
-	if mode == "mobile":
+	if mode in ["art_v3_full_dry", "art_v3_full_high", "art_v3_full_drain_0", "art_v3_full_drain_9"]:
+		return Vector2i(1536, 1024)
+	if mode in ["art_v4_dry", "art_v4_high", "art_v4_drain_0", "art_v4_drain_9"]:
+		return Vector2i(1536, 1024)
+	if mode in ["art_v5_dry", "art_v5_high", "art_v5_drain_0", "art_v5_drain_9"]:
+		return Vector2i(1536, 1024)
+	if mode in ["art_v6_dry", "art_v6_high"]:
+		return Vector2i(1536, 1024)
+	if mode in ["art_v7_high", "art_v8_high", "art_v9_high", "art_v10_high"]:
+		return Vector2i(1536, 1024)
+	if mode == "empty" or (mode.begins_with("tide_") and mode not in ["tide_high_battle", "tide_mobile"]):
+		return Vector2i(1536, 1024)
+	if mode in [
+		"mobile", "tide_mobile", "art_v3_full_mobile", "art_v4_mobile",
+		"art_v5_mobile", "art_v6_mobile",
+	]:
 		return Vector2i(1280, 720)
+	if mode in [
+		"art_v5_portal_close", "art_v6_portal_close", "art_v7_portal_close",
+		"art_v8_portal_close",
+	]:
+		return Vector2i(1920, 1080)
 	if _is_geometry_view(mode):
 		return Vector2i(1024, 1024)
 	return Vector2i(1920, 1080)
@@ -511,6 +827,100 @@ func _default_size_for_mode(mode: String) -> Vector2i:
 
 func _default_output_for_mode(mode: String) -> String:
 	match mode:
+		"art_v3_hero_dry":
+			return "res://reports/twin_bays_art_v3_hero_dry_1536x1024.png"
+		"art_v3_hero_high":
+			return "res://reports/twin_bays_art_v3_hero_high_1536x1024.png"
+		"art_v3_hero_drain_0":
+			return "res://reports/twin_bays_art_v3_hero_drain_0_1536x1024.png"
+		"art_v3_hero_drain_9":
+			return "res://reports/twin_bays_art_v3_hero_drain_9_1536x1024.png"
+		"art_v3_hero_battle":
+			return "res://reports/twin_bays_art_v3_hero_battle_1920x1080.png"
+		"art_v3_full_dry":
+			return "res://reports/twin_bays_art_v3_full_dry_1536x1024.png"
+		"art_v3_full_high":
+			return "res://reports/twin_bays_art_v3_full_high_1536x1024.png"
+		"art_v3_full_drain_0":
+			return "res://reports/twin_bays_art_v3_full_drain_0_1536x1024.png"
+		"art_v3_full_drain_9":
+			return "res://reports/twin_bays_art_v3_full_drain_9_1536x1024.png"
+		"art_v3_full_battle":
+			return "res://reports/twin_bays_art_v3_full_battle_1920x1080.png"
+		"art_v3_full_mobile":
+			return "res://reports/twin_bays_art_v3_full_mobile_1280x720.png"
+		"art_v4_dry":
+			return "res://reports/twin_bays_art_v4/candidate/v4_dry_1536x1024.png"
+		"art_v4_high":
+			return "res://reports/twin_bays_art_v4/candidate/v4_high_1536x1024.png"
+		"art_v4_drain_0":
+			return "res://reports/twin_bays_art_v4/candidate/v4_drain_0_1536x1024.png"
+		"art_v4_drain_9":
+			return "res://reports/twin_bays_art_v4/candidate/v4_drain_9_1536x1024.png"
+		"art_v4_battle":
+			return "res://reports/twin_bays_art_v4/candidate/v4_battle_1920x1080.png"
+		"art_v4_portal":
+			return "res://reports/twin_bays_art_v4/candidate/v4_portal_1920x1080.png"
+		"art_v4_mobile":
+			return "res://reports/twin_bays_art_v4/candidate/v4_mobile_1280x720.png"
+		"art_v5_dry":
+			return "res://reports/twin_bays_art_v5/candidate/v5_dry_1536x1024.png"
+		"art_v5_high":
+			return "res://reports/twin_bays_art_v5/candidate/v5_high_1536x1024.png"
+		"art_v5_drain_0":
+			return "res://reports/twin_bays_art_v5/candidate/v5_drain_0_1536x1024.png"
+		"art_v5_drain_9":
+			return "res://reports/twin_bays_art_v5/candidate/v5_drain_9_1536x1024.png"
+		"art_v5_battle":
+			return "res://reports/twin_bays_art_v5/candidate/v5_battle_1920x1080.png"
+		"art_v5_dry_battle":
+			return "res://reports/twin_bays_art_v5/candidate/v5_dry_battle_1920x1080.png"
+		"art_v5_drain_9_battle":
+			return "res://reports/twin_bays_art_v5/candidate/v5_drain_9_battle_1920x1080.png"
+		"art_v5_portal":
+			return "res://reports/twin_bays_art_v5/candidate/v5_portal_1920x1080.png"
+		"art_v5_portal_close":
+			return "res://reports/twin_bays_art_v5/candidate/v5_portal_close_1920x1080.png"
+		"art_v5_mobile":
+			return "res://reports/twin_bays_art_v5/candidate/v5_mobile_1280x720.png"
+		"art_v6_dry":
+			return "res://reports/twin_bays_art_v6/candidate/v6_dry_1536x1024.png"
+		"art_v6_high":
+			return "res://reports/twin_bays_art_v6/candidate/v6_high_1536x1024.png"
+		"art_v6_drain_9_battle":
+			return "res://reports/twin_bays_art_v6/candidate/v6_drain_9_battle_1920x1080.png"
+		"art_v6_portal":
+			return "res://reports/twin_bays_art_v6/candidate/v6_portal_1920x1080.png"
+		"art_v6_portal_close":
+			return "res://reports/twin_bays_art_v6/candidate/v6_portal_close_1920x1080.png"
+		"art_v6_mobile":
+			return "res://reports/twin_bays_art_v6/candidate/v6_mobile_1280x720.png"
+		"art_v7_high":
+			return "res://reports/twin_bays_art_v7/candidate/v7_high_1536x1024.png"
+		"art_v7_drain_9_battle":
+			return "res://reports/twin_bays_art_v7/candidate/v7_drain_9_battle_1920x1080.png"
+		"art_v7_portal":
+			return "res://reports/twin_bays_art_v7/candidate/v7_portal_1920x1080.png"
+		"art_v7_portal_close":
+			return "res://reports/twin_bays_art_v7/candidate/v7_portal_close_1920x1080.png"
+		"art_v7_bay_close":
+			return "res://reports/twin_bays_art_v7/candidate/v7_bay_close_1024.png"
+		"art_v8_high":
+			return "res://reports/twin_bays_art_v8/candidate/v8_high_1536x1024.png"
+		"art_v8_drain_9_battle":
+			return "res://reports/twin_bays_art_v8/candidate/v8_drain_9_battle_1920x1080.png"
+		"art_v8_portal_close":
+			return "res://reports/twin_bays_art_v8/candidate/v8_portal_close_1920x1080.png"
+		"art_v9_high":
+			return "res://reports/twin_bays_art_v9/candidate/v9_high_1536x1024.png"
+		"art_v9_drain_9_battle":
+			return "res://reports/twin_bays_art_v9/candidate/v9_drain_9_battle_1920x1080.png"
+		"art_v9_cap_close":
+			return "res://reports/twin_bays_art_v9/candidate/v9_cap_close_1024.png"
+		"art_v10_high":
+			return "res://reports/twin_bays_art_v10/candidate/v10_high_1536x1024.png"
+		"art_v10_drain_9_battle":
+			return "res://reports/twin_bays_art_v10/candidate/v10_drain_9_battle_1920x1080.png"
 		"empty":
 			return "res://reports/twin_bays_splash_arena_empty_1536x1024.png"
 		"battle":
@@ -533,9 +943,397 @@ func _default_output_for_mode(mode: String) -> String:
 			return "res://reports/twin_bays_splash_arena_intro_go_1920x1080.png"
 		"winner":
 			return "res://reports/twin_bays_splash_arena_winner_1920x1080.png"
+		"tide_mobile":
+			return "res://reports/twin_bays_tide_mobile_1280x720.png"
+		"tide_high_battle":
+			return "res://reports/twin_bays_tide_high_battle_1920x1080.png"
+		"tide_dry", "tide_warning", "tide_rising", "tide_high", "tide_falling", "tide_drain_0", "tide_drain_9", "tide_drain_18":
+			return "res://reports/twin_bays_%s_1536x1024.png" % mode
 		"north_west", "north_east", "south_west", "south_east", "center":
 			return "res://reports/twin_bays_splash_arena_%s_1024.png" % mode
 	return "res://reports/twin_bays_splash_arena_capture.png"
+
+
+func _is_battle_capture(mode: String) -> bool:
+	return mode in [
+		"battle", "mobile", "intro_ready", "intro_go", "winner",
+		"tide_high_battle", "tide_mobile", "art_v3_hero_battle",
+		"art_v3_full_battle", "art_v3_full_mobile",
+		"art_v4_battle", "art_v4_mobile", "art_v5_battle", "art_v5_dry_battle",
+		"art_v5_drain_9_battle", "art_v5_mobile",
+		"art_v6_drain_9_battle", "art_v6_mobile",
+		"art_v7_drain_9_battle", "art_v8_drain_9_battle",
+		"art_v9_drain_9_battle",
+		"art_v10_drain_9_battle",
+	]
+
+
+func _enable_art_v3_review(scope: StringName = &"hero") -> void:
+	var file := FileAccess.open(ART_V3_PROFILE_PATH, FileAccess.READ)
+	if file == null:
+		_fail("Art V3 review profile is missing")
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		_fail("Art V3 review profile is invalid JSON")
+		return
+	var profile := parsed as Dictionary
+	var review := ArtV3ReviewScript.new() as TwinBaysArtV3Review
+	_arena.add_child(review)
+	review.configure(_arena, profile, scope)
+	var review_state: Dictionary = review.get_debug_state()
+	var visual_ready := bool(review_state.get("full_map_foreground_loaded", false)) \
+		if scope == &"full_map" else int(review_state.get("overridden_surfaces", 0)) > 0
+	if not visual_ready or int(review_state.get("collision_nodes", -1)) != 0:
+		_fail("Art V3 review material contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V3 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", profile)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V3 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", profile)
+	print("OK  Art V3 review enabled: ", review_state)
+
+
+func _enable_art_v4_review() -> void:
+	var file := FileAccess.open(ART_V4_PROFILE_PATH, FileAccess.READ)
+	if file == null:
+		_fail("Art V4 review profile is missing")
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		_fail("Art V4 review profile is invalid JSON")
+		return
+	var profile := parsed as Dictionary
+	var review := ArtV4ReviewScript.new() as TwinBaysArtV4Review
+	_arena.add_child(review)
+	review.configure(_arena, profile)
+	var review_state: Dictionary = review.get_debug_state()
+	if not bool(review_state.get("full_map_foreground_loaded", false)) \
+		or int(review_state.get("collision_nodes", -1)) != 0:
+		_fail("Art V4 review foreground contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V4 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", profile)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V4 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", profile)
+	print("OK  Art V4 review enabled: ", review_state)
+
+
+func _enable_art_v5_review() -> void:
+	var file := FileAccess.open(ART_V5_PROFILE_PATH, FileAccess.READ)
+	if file == null:
+		_fail("Art V5 review profile is missing")
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		_fail("Art V5 review profile is invalid JSON")
+		return
+	var profile := parsed as Dictionary
+	var review: Node = ArtV5ReviewScript.new()
+	_arena.add_child(review)
+	review.configure(_arena, profile)
+	var review_state: Dictionary = review.get_debug_state()
+	if not bool(review_state.get("full_map_foreground_loaded", false)) \
+		or int(review_state.get("collision_nodes", -1)) != 0 \
+		or int(review_state.get("art_version", 0)) != 5:
+		_fail("Art V5 review foreground contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V5 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", profile)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V5 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", profile)
+	for portal_vfx in _arena.find_children("*", "TwinBaysPortalVFX", true, false):
+		if portal_vfx.has_method("apply_art_profile"):
+			portal_vfx.call("apply_art_profile", profile)
+	print("OK  Art V5 review enabled: ", review_state)
+
+
+func _enable_art_v6_review() -> void:
+	var base_profile := _load_json_dictionary(ART_V5_PROFILE_PATH)
+	var override_profile := _load_json_dictionary(ART_V6_PROFILE_PATH)
+	if base_profile.is_empty() or override_profile.is_empty():
+		_fail("Art V6 review requires valid V5 base and V6 override profiles")
+		return
+	var expected_base_hash := String(override_profile.get("base_profile_sha256", ""))
+	var actual_base_hash := FileAccess.get_sha256(ART_V5_PROFILE_PATH)
+	if expected_base_hash != actual_base_hash:
+		_fail("Art V6 base profile hash is stale")
+		return
+	var profile := _deep_merge_dictionary(base_profile, override_profile)
+	var review: Node = ArtV6ReviewScript.new()
+	_arena.add_child(review)
+	review.configure(_arena, profile)
+	var review_state: Dictionary = review.get_debug_state()
+	if not bool(review_state.get("full_map_foreground_loaded", false)) \
+		or int(review_state.get("collision_nodes", -1)) != 0 \
+		or int(review_state.get("art_version", 0)) != 6:
+		_fail("Art V6 review foreground contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V6 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", profile)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V6 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", profile)
+	for portal_vfx in _arena.find_children("*", "TwinBaysPortalVFX", true, false):
+		if portal_vfx.has_method("apply_art_profile"):
+			portal_vfx.call("apply_art_profile", profile)
+	print("OK  Art V6 review enabled: ", review_state)
+
+
+func _enable_art_v7_review() -> void:
+	var v5_profile := _load_json_dictionary(ART_V5_PROFILE_PATH)
+	var v6_profile := _load_json_dictionary(ART_V6_PROFILE_PATH)
+	var v7_profile := _load_json_dictionary(ART_V7_PROFILE_PATH)
+	if v5_profile.is_empty() or v6_profile.is_empty() or v7_profile.is_empty():
+		_fail("Art V7 review requires valid V5, V6, and V7 profiles")
+		return
+	if String(v6_profile.get("base_profile_sha256", "")) \
+			!= FileAccess.get_sha256(ART_V5_PROFILE_PATH):
+		_fail("Art V6 base profile hash is stale")
+		return
+	if String(v7_profile.get("base_profile_sha256", "")) \
+			!= FileAccess.get_sha256(ART_V6_PROFILE_PATH):
+		_fail("Art V7 base profile hash is stale")
+		return
+	var profile := _deep_merge_dictionary(
+		_deep_merge_dictionary(v5_profile, v6_profile),
+		v7_profile
+	)
+	var review: Node = ArtV7ReviewScript.new()
+	_arena.add_child(review)
+	review.configure(_arena, profile)
+	var review_state: Dictionary = review.get_debug_state()
+	if not bool(review_state.get("full_map_foreground_loaded", false)) \
+			or int(review_state.get("collision_nodes", -1)) != 0 \
+			or int(review_state.get("art_version", 0)) != 7:
+		_fail("Art V7 review foreground contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V7 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", profile)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V7 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", profile)
+	for portal_vfx in _arena.find_children("*", "TwinBaysPortalVFX", true, false):
+		if portal_vfx.has_method("apply_art_profile"):
+			portal_vfx.call("apply_art_profile", profile)
+	print("OK  Art V7 review enabled: ", review_state)
+
+
+func _enable_art_v8_review() -> void:
+	var v5_profile := _load_json_dictionary(ART_V5_PROFILE_PATH)
+	var v6_profile := _load_json_dictionary(ART_V6_PROFILE_PATH)
+	var v7_profile := _load_json_dictionary(ART_V7_PROFILE_PATH)
+	var v8_profile := _load_json_dictionary(ART_V8_PROFILE_PATH)
+	if v5_profile.is_empty() or v6_profile.is_empty() \
+			or v7_profile.is_empty() or v8_profile.is_empty():
+		_fail("Art V8 review requires valid V5, V6, V7, and V8 profiles")
+		return
+	if String(v6_profile.get("base_profile_sha256", "")) \
+			!= FileAccess.get_sha256(ART_V5_PROFILE_PATH):
+		_fail("Art V6 base profile hash is stale")
+		return
+	if String(v7_profile.get("base_profile_sha256", "")) \
+			!= FileAccess.get_sha256(ART_V6_PROFILE_PATH):
+		_fail("Art V7 base profile hash is stale")
+		return
+	if String(v8_profile.get("base_profile_sha256", "")) \
+			!= FileAccess.get_sha256(ART_V7_PROFILE_PATH):
+		_fail("Art V8 base profile hash is stale")
+		return
+	var profile := _deep_merge_dictionary(
+		_deep_merge_dictionary(
+			_deep_merge_dictionary(v5_profile, v6_profile),
+			v7_profile
+		),
+		v8_profile
+	)
+	var review: Node = ArtV8ReviewScript.new()
+	_arena.add_child(review)
+	review.configure(_arena, profile)
+	var review_state: Dictionary = review.get_debug_state()
+	if not bool(review_state.get("full_map_foreground_loaded", false)) \
+			or int(review_state.get("collision_nodes", -1)) != 0 \
+			or int(review_state.get("art_version", 0)) != 8:
+		_fail("Art V8 review foreground contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V8 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", profile)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V8 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", profile)
+	for portal_vfx in _arena.find_children("*", "TwinBaysPortalVFX", true, false):
+		if portal_vfx.has_method("apply_art_profile"):
+			portal_vfx.call("apply_art_profile", profile)
+	print("OK  Art V8 review enabled: ", review_state)
+
+
+func _enable_art_v9_review() -> void:
+	var profiles := [
+		_load_json_dictionary(ART_V5_PROFILE_PATH),
+		_load_json_dictionary(ART_V6_PROFILE_PATH),
+		_load_json_dictionary(ART_V7_PROFILE_PATH),
+		_load_json_dictionary(ART_V8_PROFILE_PATH),
+		_load_json_dictionary(ART_V9_PROFILE_PATH),
+	]
+	for profile_value: Variant in profiles:
+		if (profile_value as Dictionary).is_empty():
+			_fail("Art V9 review requires valid V5 through V9 profiles")
+			return
+	var paths := [
+		ART_V5_PROFILE_PATH,
+		ART_V6_PROFILE_PATH,
+		ART_V7_PROFILE_PATH,
+		ART_V8_PROFILE_PATH,
+		ART_V9_PROFILE_PATH,
+	]
+	for index in range(1, profiles.size()):
+		var profile := profiles[index] as Dictionary
+		if String(profile.get("base_profile_sha256", "")) \
+				!= FileAccess.get_sha256(String(paths[index - 1])):
+			_fail("Art V%d base profile hash is stale" % (index + 5))
+			return
+	var resolved := {} as Dictionary
+	for profile_value: Variant in profiles:
+		resolved = _deep_merge_dictionary(
+			resolved,
+			profile_value as Dictionary
+		)
+	var review: Node = ArtV9ReviewScript.new()
+	_arena.add_child(review)
+	review.configure(_arena, resolved)
+	var review_state: Dictionary = review.get_debug_state()
+	if not bool(review_state.get("full_map_foreground_loaded", false)) \
+			or int(review_state.get("collision_nodes", -1)) != 0 \
+			or int(review_state.get("art_version", 0)) != 9:
+		_fail("Art V9 review foreground contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V9 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", resolved)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V9 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", resolved)
+	for portal_vfx in _arena.find_children("*", "TwinBaysPortalVFX", true, false):
+		if portal_vfx.has_method("apply_art_profile"):
+			portal_vfx.call("apply_art_profile", resolved)
+	print("OK  Art V9 review enabled: ", review_state)
+
+
+func _enable_art_v10_review() -> void:
+	var profiles := [
+		_load_json_dictionary(ART_V5_PROFILE_PATH),
+		_load_json_dictionary(ART_V6_PROFILE_PATH),
+		_load_json_dictionary(ART_V7_PROFILE_PATH),
+		_load_json_dictionary(ART_V8_PROFILE_PATH),
+		_load_json_dictionary(ART_V9_PROFILE_PATH),
+		_load_json_dictionary(ART_V10_PROFILE_PATH),
+	]
+	for profile_value: Variant in profiles:
+		if (profile_value as Dictionary).is_empty():
+			_fail("Art V10 review requires valid V5 through V10 profiles")
+			return
+	var paths := [
+		ART_V5_PROFILE_PATH,
+		ART_V6_PROFILE_PATH,
+		ART_V7_PROFILE_PATH,
+		ART_V8_PROFILE_PATH,
+		ART_V9_PROFILE_PATH,
+		ART_V10_PROFILE_PATH,
+	]
+	for index in range(1, profiles.size()):
+		var profile := profiles[index] as Dictionary
+		if String(profile.get("base_profile_sha256", "")) \
+				!= FileAccess.get_sha256(String(paths[index - 1])):
+			_fail("Art V%d base profile hash is stale" % (index + 5))
+			return
+	var resolved := {} as Dictionary
+	for profile_value: Variant in profiles:
+		resolved = _deep_merge_dictionary(
+			resolved,
+			profile_value as Dictionary
+		)
+	var review: Node = ArtV10ReviewScript.new()
+	_arena.add_child(review)
+	review.configure(_arena, resolved)
+	var review_state: Dictionary = review.get_debug_state()
+	if not bool(review_state.get("full_map_foreground_loaded", false)) \
+			or int(review_state.get("collision_nodes", -1)) != 0 \
+			or int(review_state.get("art_version", 0)) != 10:
+		_fail("Art V10 review foreground contract failed: %s" % review_state)
+		return
+	var tide := _arena.get_node_or_null("TwinBaysTideController")
+	if tide == null or not tide.has_method("apply_art_review_profile"):
+		_fail("Art V10 review requires the tide visual bridge")
+		return
+	tide.call("apply_art_review_profile", resolved)
+	var backdrop := _arena.find_child("SplashBackdropVisuals", true, false)
+	if backdrop == null or not backdrop.has_method("apply_art_review_profile"):
+		_fail("Art V10 review requires the backdrop visual bridge")
+		return
+	backdrop.call("apply_art_review_profile", resolved)
+	for portal_vfx in _arena.find_children("*", "TwinBaysPortalVFX", true, false):
+		if portal_vfx.has_method("apply_art_profile"):
+			portal_vfx.call("apply_art_profile", resolved)
+	print("OK  Art V10 review enabled: ", review_state)
+
+
+func _load_json_dictionary(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	return parsed as Dictionary if parsed is Dictionary else {}
+
+
+func _deep_merge_dictionary(parent: Dictionary, override: Dictionary) -> Dictionary:
+	var merged := parent.duplicate(true)
+	for key: Variant in override:
+		var value: Variant = override[key]
+		if value is Dictionary and merged.get(key) is Dictionary:
+			merged[key] = _deep_merge_dictionary(
+				merged[key] as Dictionary,
+				value as Dictionary
+			)
+		else:
+			merged[key] = value
+	return merged
 
 
 func _fail(message: String) -> void:

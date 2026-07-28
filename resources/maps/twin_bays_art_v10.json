@@ -1,0 +1,46 @@
+{
+  "schema": "chaos_gun.twin_bays_art",
+  "version": 10,
+  "status": "isolated_front_bumper_seams_candidate",
+  "base_profile": "resources/maps/twin_bays_art_v9.json",
+  "base_profile_sha256": "b49d6b5e49798aa86e58bf7535d5ef05e3d5bb5f8c6c827c9bd27f234dbda3e3",
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+  "camera_target": "docs/art-direction/concepts/twin_bays_art_v5_camera_target.png",
+  "visual_geometry": {
+    "platform_coral_bumper_seams": true,
+    "platform_coral_bumper_seam_half_span": 0.080,
+    "platform_coral_bumper_seam_radius_bonus": 0.035
+  },
+  "budgets": {
+    "primary_material_target": 11,
+    "primary_material_absolute_max": 12,
+    "transparent_batch_max": 3,
+    "texture_max_dimension": 2048,
+    "basis_universal_required": true,
+    "runtime_node_growth_allowed": false
+  },
+  "review": {
+    "candidate_id": "art_v10_front_bumper_seams_01",
+    "base_candidate_id": "art_v9_soft_cap_modules_01",
+    "production_assets_must_remain_byte_identical": true,
+    "art_v5_through_v9_must_remain_byte_identical": true,
+    "golden_update_allowed": false,
+    "fast_gate_modes": [
+      "high",
+      "drain_9_battle"
+    ],
+    "minimum_normal_camera_gain_percent": 1.0
+  },
+  "forbidden": [
+    "production_overwrite",
+    "prior_candidate_overwrite",
+    "golden_update",
+    "gameplay_collision",
+    "layout_coordinates",
+    "camera_changes",
+    "tide_gameplay_changes",
+    "new_runtime_material_batch",
+    "runtime_node_growth"
+  ]
+}

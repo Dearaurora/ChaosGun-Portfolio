@@ -1,6 +1,6 @@
 extends SceneTree
 
-const VIEWPORT_SIZE := Vector2i(1536, 960)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 
 var _stage: Node3D = null
 

@@ -13,9 +13,13 @@ param(
     [int]$CooldownSeconds = 30,
 
     [ValidatePattern("^\d{2,4}x\d{2,4}$")]
-    [string]$WindowResolution = "960x540",
+    [string]$WindowResolution = "1920x1080",
 
-    [string]$ReportPath = "res://reports/twin_bays_splash_arena_performance.json"
+    [string]$ReportPath = "res://reports/twin_bays_splash_arena_performance.json",
+
+    [switch]$VisibleWindowApproved,
+
+    [string]$VisibleWindowApprovalReason = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -47,9 +51,73 @@ function Exit-RenderPerformanceGate {
     $Mutex.Dispose()
     Write-Host "[Render performance gate released]"
 }
+
+function Assert-NoCompetingChaosGunGodot {
+    $projectToken = $projectPath.ToLowerInvariant()
+    $competing = @()
+    $querySucceeded = $false
+    $lastQueryError = $null
+    foreach ($attempt in 1..4) {
+        try {
+            $competing = @(
+                Get-CimInstance Win32_Process -Filter "Name LIKE 'Godot%'" -ErrorAction Stop |
+                    Where-Object {
+                        $commandLine = [string]$_.CommandLine
+                        $commandLine -and $commandLine.ToLowerInvariant().Contains($projectToken)
+                    }
+            )
+            $querySucceeded = $true
+            break
+        } catch {
+            $lastQueryError = $_.Exception.Message
+            if ($attempt -lt 4) {
+                Start-Sleep -Seconds 1
+            }
+        }
+    }
+    if (-not $querySucceeded) {
+        throw (
+            "Windows process isolation query failed after four attempts; " +
+            "performance evidence cannot be trusted. Last error: $lastQueryError"
+        )
+    }
+    if ($competing.Count -gt 0) {
+        $descriptions = @(
+            $competing | ForEach-Object {
+                "PID=$($_.ProcessId) $([string]$_.CommandLine)"
+            }
+        )
+        throw (
+            "A competing ChaosGun Godot workload is already running. " +
+            "Performance evidence would be contaminated; retry after it exits.`n" +
+            ($descriptions -join "`n")
+        )
+    }
+}
+
 $projectPath = Split-Path $PSScriptRoot -Parent | Split-Path -Parent
 $reportsPath = Join-Path $projectPath "reports"
 $failures = New-Object 'System.Collections.Generic.List[string]'
+$artifactInputPaths = [ordered]@{
+    project = (Join-Path $projectPath "project.godot")
+    layout = (Join-Path $projectPath "resources\maps\twin_bays_layout_v1.json")
+    art = (Join-Path $projectPath "resources\maps\twin_bays_art_v4.json")
+    tide = (Join-Path $projectPath "resources\maps\twin_bays_tide_v1.json")
+    twin_manifest = (Join-Path $projectPath "assets\models\generated\twin_bays_splash_arena_v4\twin_bays_splash_arena_v4_manifest.json")
+    twin_foreground = (Join-Path $projectPath "assets\models\generated\twin_bays_splash_arena_v4\twin_bays_splash_arena_v4_foreground.glb")
+    open_manifest = (Join-Path $projectPath "assets\source\open_ringout_art_v3\open_ringout_art_v3_manifest.json")
+    open_scene = (Join-Path $projectPath "scenes\maps\open_ringout_slice.tscn")
+    twin_scene = (Join-Path $projectPath "scenes\maps\twin_bays_splash_arena.tscn")
+    twin_arena_script = (Join-Path $projectPath "scripts\maps\twin_bays_splash_arena.gd")
+    tide_controller = (Join-Path $projectPath "scripts\maps\twin_bays_tide_controller.gd")
+    shallow_water = (Join-Path $projectPath "scripts\maps\twin_bays_shallow_water.gd")
+    splash_backdrop = (Join-Path $projectPath "scripts\maps\twin_bays_splash_backdrop.gd")
+    water_materials = (Join-Path $projectPath "scripts\maps\twin_bays_water_materials.gd")
+    water_master_shader = (Join-Path $projectPath "assets\shaders\twin_bays_water_master_v4.gdshader")
+    backdrop_water_shader = (Join-Path $projectPath "assets\shaders\twin_bays_backdrop_water_v4.gdshader")
+    benchmark_script = (Join-Path $projectPath "scripts\tests\twin_bays_splash_arena_performance.gd")
+    benchmark_wrapper = $PSCommandPath
+}
 $resolutionParts = $WindowResolution -split "x"
 $windowWidth = [int]$resolutionParts[0]
 $windowHeight = [int]$resolutionParts[1]
@@ -59,6 +127,13 @@ if ($windowWidth -lt 320 -or $windowHeight -lt 180) {
 
 if (-not (Test-Path -LiteralPath $GodotPath)) {
     throw "Godot executable not found: $GodotPath"
+}
+if (-not $VisibleWindowApproved -or [string]::IsNullOrWhiteSpace($VisibleWindowApprovalReason)) {
+    throw (
+        "The formal D3D12 performance gate needs a normal 960x540 visible Godot host " +
+        "to expose draw-call and primitive counters. Workspace safety requires explicit " +
+        "user approval; pass -VisibleWindowApproved and -VisibleWindowApprovalReason."
+    )
 }
 $performanceGodotPath = (Resolve-Path -LiteralPath $GodotPath).Path
 if ($performanceGodotPath.EndsWith("_console.exe", [StringComparison]::OrdinalIgnoreCase)) {
@@ -85,6 +160,22 @@ function Convert-ResourcePathToFilePath {
     param([string]$ResourcePath)
     $relativePath = $ResourcePath.Substring("res://".Length).Replace("/", [IO.Path]::DirectorySeparatorChar)
     return Join-Path $projectPath $relativePath
+}
+
+function Get-PerformanceArtifactBinding {
+    $binding = [ordered]@{}
+    foreach ($entry in $artifactInputPaths.GetEnumerator()) {
+        if (-not (Test-Path -LiteralPath $entry.Value -PathType Leaf)) {
+            throw "Performance artifact input is missing: $($entry.Value)"
+        }
+        $resolved = (Resolve-Path -LiteralPath $entry.Value).Path
+        $relative = $resolved.Substring($projectPath.Length).TrimStart("\").Replace("\", "/")
+        $binding[$entry.Key] = [ordered]@{
+            path = $relative
+            sha256 = (Get-FileHash -LiteralPath $resolved -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+    }
+    return $binding
 }
 
 function Get-ProblemLines {
@@ -131,7 +222,6 @@ function Test-MeasurementWindowState {
     if (@($requiredFields | Where-Object { $_ -notin $propertyNames }).Count -gt 0) {
         return
     }
-
     if (-not [bool]$Sample.focus_at_sample_start -or -not [bool]$Sample.focus_at_sample_end) {
         $failures.Add("$Label benchmark was not focused at both sample boundaries") | Out-Null
     }
@@ -170,7 +260,7 @@ function Invoke-MapMeasurement {
         "--rendering-driver", "d3d12",
         "--disable-vsync",
         "--windowed",
-        "--resolution", $WindowResolution,
+        "--resolution", "960x540",
         "--path", $projectPath,
         "-s", "res://scripts/tests/twin_bays_splash_arena_performance.gd",
         "--",
@@ -182,14 +272,16 @@ function Invoke-MapMeasurement {
         "--report=$rawReportResourcePath"
     )
 
-    # A real, non-minimized render window is required for representative GPU
-    # frame pacing. The benchmark exits itself after the configured sample.
+    # The user-approved physical host stays decorated, non-topmost and at or
+    # below 960x540. The measured GPU target remains the 1920x1080
+    # UPDATE_ALWAYS SubViewport.
     $process = Start-Process `
         -FilePath $performanceGodotPath `
         -ArgumentList $godotArguments `
+        -WorkingDirectory $projectPath `
         -RedirectStandardOutput $stdoutPath `
         -RedirectStandardError $stderrPath `
-        -NoNewWindow `
+        -WindowStyle Normal `
         -PassThru
     try {
         # A benchmark should not lose its 1% low evidence to background indexers
@@ -270,7 +362,9 @@ try {
     # Hold one global gate across both cooldowns, both samples, and both raw
     # report reads. Releasing between maps lets another benchmark steal focus
     # or remove the shared report paths before this wrapper can bind them.
+    Assert-NoCompetingChaosGunGodot
     $openRun = Invoke-MapMeasurement -Map "open"
+    Assert-NoCompetingChaosGunGodot
     $twinRun = Invoke-MapMeasurement -Map "twin"
 } finally {
     Exit-RenderPerformanceGate -Mutex $renderMutex
@@ -286,6 +380,10 @@ $ratios = [ordered]@{
 if ($null -eq $openSample -or $null -eq $twinSample) {
     $failures.Add("Performance samples are incomplete") | Out-Null
 } else {
+    $offscreenTarget = (
+        [string]$openRun.report.configuration.render_target -eq "always_updating_offscreen_subviewport" `
+        -and [string]$twinRun.report.configuration.render_target -eq "always_updating_offscreen_subviewport"
+    )
     Test-MeasurementWindowState -Label "Open Ring-Out" -Sample $openSample
     Test-MeasurementWindowState -Label "Twin Bays" -Sample $twinSample
 
@@ -294,6 +392,9 @@ if ($null -eq $openSample -or $null -eq $twinSample) {
     }
     if ([double]$twinSample.one_percent_low_fps -lt 55.0) {
         $failures.Add(("Twin Bays 1% low {0:N2} is below 55" -f [double]$twinSample.one_percent_low_fps)) | Out-Null
+    }
+    if ([double]$twinSample.frame_time_p99_ms -gt 18.2) {
+        $failures.Add(("Twin Bays p99 frame time {0:N2} ms exceeds 18.2 ms" -f [double]$twinSample.frame_time_p99_ms)) | Out-Null
     }
     if ([double]$twinSample.memory_drift_bytes -gt 5MB) {
         $failures.Add(("Twin Bays final-30-second memory drift {0:N2} MiB exceeds 5 MiB" -f ([double]$twinSample.memory_drift_bytes / 1MB))) | Out-Null
@@ -343,6 +444,10 @@ if ($null -eq $openConfiguration -or $null -eq $twinConfiguration) {
         "resolution",
         "window_size",
         "viewport_size",
+        "host_window_size",
+        "render_target",
+        "borderless",
+        "no_focus",
         "always_on_top",
         "vsync_mode",
         "engine_max_fps",
@@ -359,15 +464,22 @@ if ($null -eq $openConfiguration -or $null -eq $twinConfiguration) {
     }
     $requiredResolution = @(1920, 1080) | ConvertTo-Json -Compress
     if (($twinConfiguration.resolution | ConvertTo-Json -Compress) -ne $requiredResolution `
-        -or ($twinConfiguration.window_size | ConvertTo-Json -Compress) -ne $requiredResolution `
         -or ($twinConfiguration.viewport_size | ConvertTo-Json -Compress) -ne $requiredResolution) {
-        $failures.Add("Production performance gate requires a true 1920x1080 window and viewport") | Out-Null
+        $failures.Add("Production performance gate requires a true 1920x1080 render target and viewport") | Out-Null
+    }
+    if ([string]$twinConfiguration.render_target -ne "always_updating_offscreen_subviewport") {
+        $failures.Add("Production performance gate requires the always-updating offscreen render target") | Out-Null
+    }
+    $hostSize = @($twinConfiguration.host_window_size)
+    if ($hostSize.Count -ne 2 -or [int]$hostSize[0] -gt 960 -or [int]$hostSize[1] -gt 540) {
+        $failures.Add("Offscreen performance host window must not exceed 960x540") | Out-Null
     }
 }
 
 $finalReport = [ordered]@{
     schema_version = 1
     mode = "separate_process_comparison"
+    artifact_binding = Get-PerformanceArtifactBinding
     configuration = [ordered]@{
         launcher_path = $performanceGodotPath
         launcher_sha256 = $performanceLauncherSha256
@@ -379,7 +491,10 @@ $finalReport = [ordered]@{
         resolution = if ($null -ne $twinConfiguration) { $twinConfiguration.resolution } else { @(1920, 1080) }
         window_size = if ($null -ne $twinConfiguration) { $twinConfiguration.window_size } else { $null }
         viewport_size = if ($null -ne $twinConfiguration) { $twinConfiguration.viewport_size } else { $null }
+        host_window_size = if ($null -ne $twinConfiguration) { $twinConfiguration.host_window_size } else { $null }
+        render_target = if ($null -ne $twinConfiguration) { $twinConfiguration.render_target } else { $null }
         always_on_top = if ($null -ne $twinConfiguration) { $twinConfiguration.always_on_top } else { $null }
+        borderless = if ($null -ne $twinConfiguration) { $twinConfiguration.borderless } else { $null }
         vsync_mode = if ($null -ne $twinConfiguration) { $twinConfiguration.vsync_mode } else { $null }
         engine_max_fps = if ($null -ne $twinConfiguration) { $twinConfiguration.engine_max_fps } else { $null }
         low_processor_usage_mode = if ($null -ne $twinConfiguration) { $twinConfiguration.low_processor_usage_mode } else { $null }
@@ -390,8 +505,13 @@ $finalReport = [ordered]@{
         thresholds = [ordered]@{
             minimum_average_fps = 60.0
             minimum_one_percent_low_fps = 55.0
+            maximum_p99_frame_time_ms = 18.2
             maximum_relative_render_cost = 1.10
             maximum_final_30_second_memory_drift_bytes = 5MB
+        }
+        visible_window_approval = [ordered]@{
+            approved = [bool]$VisibleWindowApproved
+            reason = $VisibleWindowApprovalReason
         }
         baseline_update = "not applicable; this is a live paired comparison and writes no golden baseline"
     }

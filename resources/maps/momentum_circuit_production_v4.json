@@ -1,0 +1,75 @@
+{
+  "schema": "chaos_gun.momentum_circuit_production",
+  "version": 4,
+  "layout_path": "res://resources/maps/momentum_circuit_layout_v2.json",
+  "foreground_path": "res://assets/models/generated/momentum_circuit_v3/momentum_circuit_foreground_v3.glb",
+  "visual_reference": {
+    "selected_path": "res://docs/art-direction/references/momentum_circuit/momentum_circuit_coverless_dark_deck_selected.png",
+    "selected_sha256": "8051C660FB828E1C8EB6CAA855C650EF6C27650D95ED4308250BEF3670B30A31",
+    "cloud_vortex_path": "res://docs/art-direction/references/momentum_circuit/momentum_circuit_gravity_side_swap_cloud_vortex.png",
+    "cloud_vortex_sha256": "07C82B612914B1B1F686C2D4C1091D2432338AD0BE464499452A65080B215606"
+  },
+  "wind_fields": {
+    "enabled": true,
+    "catch_depth": -0.35,
+    "bottom_depth": -8.0,
+    "flight_min_seconds": 0.90,
+    "flight_max_seconds": 1.25,
+    "apex_height": 8.0,
+    "landing_inset": 2.2,
+    "landing_release_height": 2.0,
+    "landing_timeout_seconds": 1.1
+  },
+  "teleporters": {
+    "enabled": true,
+    "trigger_radius": 2.75,
+    "trigger_height": 2.4,
+    "cooldown_seconds": 0.65,
+    "arrival_height": 1.25,
+    "seed": 71337
+  },
+  "surface_style": {
+    "base_color": "#45445F",
+    "inset_color": "#37364D",
+    "seam_color": "#716B91",
+    "static_rim_color": "#B7A8EA",
+    "side_color": "#3C315F",
+    "panel_count": 14,
+    "seam_width": 0.10,
+    "static_rim_width": 0.12,
+    "static_rim_emission": 0.28,
+    "roughness_min": 0.78,
+    "roughness_max": 0.84,
+    "metallic_max": 0.03
+  },
+  "camera": {
+    "profile_id": "momentum_circuit_v4",
+    "map_focus": [0.0, 1.0, -2.0],
+    "view_offset": [0.0, 49.068444, 64.0],
+    "initial_size": 84.0,
+    "idle_overview_size": 88.0,
+    "min_size": 56.0,
+    "max_size": 104.0,
+    "playable_min": [-48.0, -46.0],
+    "playable_max": [48.0, 43.0],
+    "focus_min": [-39.0, -37.0],
+    "focus_max": [39.0, 34.0],
+    "track_min_y": -2.0,
+    "world_frame_padding": 7.0,
+    "character_screen_radius": 3.2,
+    "screen_edge_gutter": 20.0,
+    "fallback_viewport": [1280.0, 720.0]
+  },
+  "weapons": {
+    "initial_delay": 20.0,
+    "stay_duration": 30.0,
+    "respawn_cooldown": 10.0,
+    "max_active_pickups": 1,
+    "spawn_pool": ["smg", "ak_rifle", "shotgun", "gatling", "sniper"]
+  },
+  "cloud_vortex": {
+    "upper_angular_speed": 0.003,
+    "lower_angular_speed": -0.008,
+    "ev_reduction": 0.30
+  }
+}

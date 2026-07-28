@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Theme" path="res://resources/ui/chaosgun_theme.tres" id="1_theme"]
+
+[node name="KeybindRow" type="HBoxContainer"]
+custom_minimum_size = Vector2(0, 42)
+theme = ExtResource("1_theme")
+theme_override_constants/separation = 12
+
+[node name="ActionLabel" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.7
+theme_override_font_sizes/font_size = 15
+text = "动作"
+vertical_alignment = 1
+
+[node name="KeyButton" type="Button" parent="."]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "按键"

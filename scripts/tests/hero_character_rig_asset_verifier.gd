@@ -1,6 +1,6 @@
 extends SceneTree
 
-const ASSET_PATH := "res://assets/models/generated/characters/hero_character_rig_v2.glb"
+const ASSET_PATH := "res://assets/models/generated/characters/hero_character_rig_v3.glb"
 const EXPECTED_BONES := [
 	&"Root",
 	&"Spine",

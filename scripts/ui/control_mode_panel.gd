@@ -10,7 +10,7 @@ const MODE_LOCK_ON := "lock_on"
 const MODES := [
 	{"id": MODE_LANE, "label": "2D Gunline", "hint": "Keyboard left/right gunline. Press 1."},
 	{"id": MODE_TWIN_STICK, "label": "Twin Stick", "hint": "Move with keyboard, aim with mouse. Press 2."},
-	{"id": MODE_LOCK_ON, "label": "Lock On", "hint": "Keyboard movement with target lock assist. Press 3."},
+	{"id": MODE_LOCK_ON, "label": "Lock On", "hint": "Fire holds a target; use Target Cycle to choose another. Press 3."},
 ]
 
 var _buttons: Dictionary = {}

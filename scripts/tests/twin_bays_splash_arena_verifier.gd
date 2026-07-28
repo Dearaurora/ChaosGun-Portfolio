@@ -4,8 +4,11 @@ const SCENE_PATH := "res://scenes/maps/twin_bays_splash_arena.tscn"
 const WHITEBOX_SCENE_PATH := "res://scenes/maps/twin_bays_whitebox.tscn"
 const OPEN_RINGOUT_SCENE_PATH := "res://scenes/maps/open_ringout_slice.tscn"
 const LAYOUT_PATH := "res://resources/maps/twin_bays_layout_v1.json"
-const GENERATED_ASSET_DIR := "res://assets/models/generated/twin_bays_splash_arena"
-const GENERATED_MANIFEST_PATH := GENERATED_ASSET_DIR + "/twin_bays_splash_arena_manifest.json"
+const ART_PROFILE_PATH := "res://resources/maps/twin_bays_art_v4.json"
+const ARENA_SCRIPT_PATH := "res://scripts/maps/twin_bays_splash_arena.gd"
+const GENERATED_ASSET_DIR := "res://assets/models/generated/twin_bays_splash_arena_v4"
+const GENERATED_MANIFEST_PATH := GENERATED_ASSET_DIR + "/twin_bays_splash_arena_v4_manifest.json"
+const PRODUCTION_FOREGROUND_PATH := GENERATED_ASSET_DIR + "/twin_bays_splash_arena_v4_foreground.glb"
 const PLAYER_SCENE_PATH := "res://scenes/characters/player.tscn"
 const AI_SCENE_PATH := "res://scenes/characters/ai_character.tscn"
 const HERO_ASSET_NAME := "HeroCharacterAsset"
@@ -52,6 +55,7 @@ func _initialize() -> void:
 
 	_layout = _load_json_dictionary(LAYOUT_PATH)
 	_verify_layout_contract()
+	_verify_art_v4_production_authority()
 	_verify_player_map_policy()
 	await _verify_shared_character_and_weapon_identity()
 	_verify_generated_glbs()
@@ -332,6 +336,14 @@ func _verify_generated_manifest() -> void:
 	if manifest.is_empty():
 		_fail("Generated asset manifest is missing or invalid: %s" % GENERATED_MANIFEST_PATH)
 		return
+	if String(manifest.get("status", "")) != "approved_production":
+		_fail("Twin Bays production manifest is not approved_production")
+	if int(manifest.get("art_release_version", -1)) != 4:
+		_fail("Twin Bays production manifest must declare Art V4")
+	if String(manifest.get("candidate_id", "")) != "art_v4_convergence_01":
+		_fail("Twin Bays production manifest candidate id is not the approved V4 candidate")
+	if bool(manifest.get("legacy_art_v3_loaded", true)):
+		_fail("Twin Bays production manifest permits legacy Art V3 loading")
 	if int(manifest.get("material_count", -1)) != 8:
 		_fail("Generated manifest must freeze eight primary materials")
 	var production: Dictionary = manifest.get("production_foreground", {})
@@ -389,6 +401,30 @@ func _verify_generated_manifest() -> void:
 	_verify_export_consolidation(manifest)
 	if int(manifest.get("material_count", -1)) == 8 and int(production.get("semantic_anchors", -1)) == expected_anchor_count:
 		print("OK  manifest: %d production anchors, 8 materials, output hashes, visual-only contracts" % expected_anchor_count)
+
+
+func _verify_art_v4_production_authority() -> void:
+	print("\n--- Art V4 Production Authority ---")
+	if not FileAccess.file_exists(ART_PROFILE_PATH):
+		_fail("Twin Bays Art V4 profile is missing")
+	if not FileAccess.file_exists(PRODUCTION_FOREGROUND_PATH):
+		_fail("Twin Bays Art V4 production foreground is missing")
+	if not FileAccess.file_exists(ARENA_SCRIPT_PATH):
+		_fail("Twin Bays production arena script is missing")
+		return
+	var arena_script := FileAccess.get_file_as_string(ARENA_SCRIPT_PATH)
+	if not arena_script.contains(PRODUCTION_FOREGROUND_PATH):
+		_fail("Production arena does not load the approved Art V4 foreground")
+	if not arena_script.contains(ART_PROFILE_PATH):
+		_fail("Production arena does not load the approved Art V4 profile")
+	var legacy_foreground := (
+		"res://assets/models/generated/twin_bays_splash_arena/"
+		+ "twin_bays_splash_arena_foreground.glb"
+	)
+	if arena_script.contains(legacy_foreground):
+		_fail("Production arena still references the legacy Art V3 foreground")
+	else:
+		print("OK  production arena is locked to Art V4 and rejects Art V3 fallback")
 
 
 func _verify_pbr_texture_manifest(manifest: Dictionary) -> void:

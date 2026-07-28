@@ -1,7 +1,7 @@
 extends SceneTree
 
 const DEFAULT_OUT_PATH := "res://reports/p21_combat_language.png"
-const VIEWPORT_SIZE := Vector2i(1536, 900)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 const MuzzleFlashScene: PackedScene = preload("res://scenes/effects/muzzle_flash.tscn")
 const HitEffectScene: PackedScene = preload("res://scenes/effects/hit_effect.tscn")
 const ShotTracerScript = preload("res://scripts/effects/shot_tracer.gd")

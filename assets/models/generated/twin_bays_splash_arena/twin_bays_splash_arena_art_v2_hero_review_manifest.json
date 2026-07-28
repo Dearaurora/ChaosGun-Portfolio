@@ -1,0 +1,172 @@
+{
+  "asset": "Twin Bays Splash Arena Art V2 Hero Review",
+  "schema": "chaos_gun.twin_bays_art_review_manifest",
+  "version": 1,
+  "approval_state": "candidate_pending_human_approval",
+  "generated_at_utc": "2026-07-18T23:35:09.766471+00:00",
+  "generator": "tools/build_twin_bays_splash_arena.py",
+  "generator_sha256": "4bdc9513064d1ca8c374be596fa3e91c5719ebc562b3ffcf25295d8a3eb350e0",
+  "layout": "resources/maps/twin_bays_layout_v1.json",
+  "layout_sha256": "4e928d232be9cc77d5b48f3f2890bae0255eab177151cb38db10d82098b377f0",
+  "art_profile": "resources/maps/twin_bays_art_v2.json",
+  "art_schema": "chaos_gun.twin_bays_art",
+  "art_version": 2,
+  "art_sha256": "24fac5e947babdee285ae045e59586c0e84718af846c0ae0185a92a45be0c670",
+  "outputs": {
+    "blend": "assets/source/twin_bays_splash_arena/twin_bays_splash_arena_art_v2_hero_review.blend",
+    "hero_review_glb": "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_art_v2_hero_review.glb",
+    "hero_review_preview": "docs/art-direction/previews/twin_bays_splash_arena_art_v2_hero_review.png"
+  },
+  "output_sha256": {
+    "blend": "c153e57d9ca0c39579b073b919176980d8f8f3f5992da780f65353cc499389d6",
+    "hero_review_glb": "2f7de733e9f08f85e3215cc9c87dba0f9ffb7dff1038fd243fc8ff04ff15f578",
+    "hero_review_preview": "ad405cf069096aed0538fa430ac3e47e58db174b3586354b957bf82733465eec"
+  },
+  "hero_kit": {
+    "mesh_objects": 11,
+    "semantic_anchors": 5,
+    "triangles": 5356,
+    "materials": [
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_PickupOrange",
+      "TBSA_PortalCyan",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow",
+      "TBSA_ShallowWaterMeniscus",
+      "TBSA_ShallowWaterSurface",
+      "TBSA_ShallowWaterWetBed"
+    ]
+  },
+  "editable_source": {
+    "mesh_objects": 29,
+    "semantic_anchors": 5,
+    "triangles": 5356,
+    "materials": [
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_PickupOrange",
+      "TBSA_PortalCyan",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow",
+      "TBSA_ShallowWaterMeniscus",
+      "TBSA_ShallowWaterSurface",
+      "TBSA_ShallowWaterWetBed"
+    ]
+  },
+  "geometry_audit": {
+    "outline_simple": true,
+    "production_outline_simple": true,
+    "production_outline_covers_safe_collision": true,
+    "portal_mouths_mounted_on_platform": true,
+    "portal_mouth_platform_min_inset": 0.305177,
+    "portal_mouth_platform_max_inset": 0.305177,
+    "wall_pipe_min_clearance": 1.963492,
+    "south_wall_boundary_max_gap": 0.0,
+    "portal_aperture_min_clearance": 0.220999,
+    "portal_normal_min_alignment": 1.0,
+    "pipe_min_bend_radius": 9.894314,
+    "causeway_overlap_area": 0.0,
+    "trim_blocker_min_clearance": 0.338923,
+    "trim_path_count": 4,
+    "dynamic_envelope": {
+      "ring_scale_multiplier": 0.88,
+      "ring_pulse_amplitude": 0.018,
+      "foam_outer_radius_multiplier": 1.12,
+      "foam_pulse_amplitude": 0.026,
+      "inner_foam_outer_radius_multiplier": 1.04,
+      "core_scale_multiplier": 0.92
+    }
+  },
+  "production_water_mark_audit": {
+    "passed": true,
+    "cluster_count": 10,
+    "droplet_count": 12,
+    "coverage_area": 653.717264,
+    "platform_area": 5406.640547,
+    "coverage_ratio": 0.12091,
+    "coverage_min": 0.12,
+    "coverage_max": 0.18,
+    "minimum_edge_clearance": 1.036806,
+    "minimum_clean_zone_clearance": 0.084148
+  },
+  "pbr_texture_sets": {
+    "coral": {
+      "surface_style": "rounded_soft_padding_v2",
+      "resolution": 1024,
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_coral_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_coral_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_coral_roughness.png"
+      },
+      "sha256": {
+        "albedo": "899f011d217d8796a661e8f8b0852ed2ce9effff81dbc5c24b22227671c6fde2",
+        "normal": "202fab8dc6de19ddad7212ad5c40c332e30c4db25a7ae5f89b3e6cf973bd19f8",
+        "roughness": "9e3c9f6ba85071a785652bfb24614c7b4468a3359d6b849cd6d9c2566bded252"
+      }
+    },
+    "cyan": {
+      "surface_style": "bright_aqua_tile_v2",
+      "resolution": 1024,
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_cyan_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_cyan_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_cyan_roughness.png"
+      },
+      "sha256": {
+        "albedo": "1a674390ff59a013597edc7e648240072be6040de701d6ac66eb54f1e46feb1a",
+        "normal": "02c838236b51748b852ce453cddb8927d7f18887fbd2fd282e160510f725a377",
+        "roughness": "3e95ba0b01fc6c3116de2bfb9fdcf0ea57d97616a70b5cfe5c734785ddee0c15"
+      }
+    },
+    "cyan_dark": {
+      "surface_style": "bright_structural_side_tile_v2",
+      "resolution": 1024,
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_cyan_dark_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_cyan_dark_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_cyan_dark_roughness.png"
+      },
+      "sha256": {
+        "albedo": "018bcff1a5238f3994de21b115eb8cdd36956a447cd31d548511870478cec97d",
+        "normal": "e93d8f02dc83c0ceae0b3f3975140906661b3c32796d153a33d5a8db3dc03e67",
+        "roughness": "f40332d6e91dc235389d33e5a6d6e57ae723e12686c0e67bf7b3d8691af5d43c"
+      }
+    },
+    "dry_cream": {
+      "surface_style": "warm_satin_resin_tile_v2",
+      "resolution": 2048,
+      "maps": {
+        "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_dry_cream_albedo.png",
+        "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_dry_cream_normal.png",
+        "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_art_v2_review_dry_cream_roughness.png"
+      },
+      "sha256": {
+        "albedo": "9b2d9be3a33c1ab0af8aa9d22889b8e06a58da38b705fafe64b21b2f768a033c",
+        "normal": "34e5efeea3a2c195c3c389e0d6b37225344955eaa15fb6a92d543c09af01c17c",
+        "roughness": "8eb8b52649962d40081099f75a861f8ebd74e7f1c643ff911f1550880b1a8792"
+      }
+    }
+  },
+  "contracts": {
+    "review_only": true,
+    "production_foreground_overwritten": false,
+    "visual_only": true,
+    "collision_in_glb": false,
+    "camera_in_glb": false,
+    "light_in_glb": false,
+    "interactive_shallow_water": true,
+    "shallow_water_visual_layer_count": 3,
+    "shallow_water_static_geometry": true,
+    "shallow_water_animated_highlights": true,
+    "shallow_water_no_gameplay_effect": true,
+    "shallow_water_no_physics_triggers": true,
+    "shallow_water_wet_step_budget": 3,
+    "shallow_water_projectile_rate_limit": 24,
+    "golden_update_allowed": false
+  }
+}

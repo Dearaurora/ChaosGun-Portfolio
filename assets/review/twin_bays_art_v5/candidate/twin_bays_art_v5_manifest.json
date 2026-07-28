@@ -1,0 +1,358 @@
+{
+  "asset": "Twin Bays Splash Arena",
+  "schema": "chaos_gun.generated_environment_manifest",
+  "version": 1,
+  "generated_at_utc": "deterministic-art-v5-camera-target-build",
+  "generator": "tools/build_twin_bays_splash_arena.py",
+  "generator_sha256": "840ac464e904048adcffdb90756e65589b783dea2605e9ce0b11e5f4adf1efb8",
+  "layout": "resources/maps/twin_bays_layout_v1.json",
+  "layout_schema": "chaos_gun.twin_bays_layout",
+  "layout_version": 1,
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "art_profile": "resources/maps/twin_bays_art_v5.json",
+  "art_profile_schema": "chaos_gun.twin_bays_art",
+  "art_profile_version": 5,
+  "art_profile_sha256": "0675bbccbf1bbecf28a856c71e4ebd557499912465829ca538454f93d8c943f5",
+  "tide_profile": "resources/maps/twin_bays_tide_v1.json",
+  "tide_profile_schema": "chaos_gun.twin_bays_tide",
+  "tide_profile_version": 1,
+  "tide_profile_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+  "coordinate_conversion": "Godot(x,y,z) -> Blender(x,-z,y); glTF export_yup=true",
+  "outputs": {
+    "blend": "_art_source_review/twin_bays_art_v5/twin_bays_art_v5_review.blend",
+    "hero_glb": "assets/review/twin_bays_art_v5/candidate/twin_bays_art_v5_hero_kit.glb",
+    "foreground_glb": "assets/review/twin_bays_art_v5/candidate/twin_bays_art_v5_foreground.glb",
+    "hero_preview": "assets/review/twin_bays_art_v5/candidate/twin_bays_art_v5_hero_kit.png",
+    "foreground_preview": "assets/review/twin_bays_art_v5/candidate/twin_bays_art_v5_foreground.png"
+  },
+  "output_sha256": {
+    "hero_glb": "110b4046d2451b509f4e1d57dade6bc9b123a21623159dffca4781a589c9a25e",
+    "foreground_glb": "132c1ea0627660fc0c91030518bb3ed8fbbf913a4ecc57630024038b4bf0ef39"
+  },
+  "palette": {
+    "dry_cream": "#FBE9DB",
+    "cyan": "#50D5DF",
+    "coral": "#FF9A88",
+    "safety_yellow": "#FFD244",
+    "pickup_orange": "#FF7F36",
+    "portal_cyan": "#4DEBFF"
+  },
+  "support_colors": {
+    "cyan_dark": "#0B8DA8",
+    "portal_recess": "#0A657D",
+    "foam": "#DDF8F5",
+    "island_green": "#2DB99B",
+    "palm_trunk": "#B87952"
+  },
+  "pbr_texture_sets": {
+    "coral": {
+      "resolution": 1024,
+      "uv_world_scale": 12.0,
+      "surface_style": "continuous_molded_soft_padding",
+      "maps": {
+        "albedo": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_coral_albedo.png",
+        "normal": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_coral_normal.png",
+        "roughness": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_coral_roughness.png"
+      },
+      "sha256": {
+        "albedo": "43e8683d554ebd553095ea2bfcc230592d79cae488e323db930f182c061481d8",
+        "normal": "4a41bd9b76bf94d54ffc6d78f93ab7c519d83cbdbf126ebbf56e6ccdcf86062c",
+        "roughness": "b49254dd34b0fa4f7507882fe0b8a73f02f644cb3d4bebda4d56a972ebcd9ef9"
+      }
+    },
+    "cyan": {
+      "resolution": 1024,
+      "uv_world_scale": 9.0,
+      "surface_style": "continuous_aqua_glazed_wall",
+      "maps": {
+        "albedo": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_cyan_albedo.png",
+        "normal": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_cyan_normal.png",
+        "roughness": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_cyan_roughness.png"
+      },
+      "sha256": {
+        "albedo": "0ed9e94fa3edf87993a5e1133f344273d3edec21b2f7c0b69986a1c41eed8e06",
+        "normal": "68960c30f75da98544deb4febf1f6fcd89fb291e19444a69eea4d6ce90a767e2",
+        "roughness": "e207d84737f05be83183514c31fdb7ce5d303e9f0b2101b2e485792e0b89d572"
+      }
+    },
+    "cyan_dark": {
+      "resolution": 1024,
+      "uv_world_scale": 8.0,
+      "surface_style": "deep_pool_structural_tile",
+      "maps": {
+        "albedo": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_cyan_dark_albedo.png",
+        "normal": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_cyan_dark_normal.png",
+        "roughness": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_cyan_dark_roughness.png"
+      },
+      "sha256": {
+        "albedo": "fcd33b02124da7dcbb256cb1fbd0530109352b98e47982bab10bab2ccd1c4043",
+        "normal": "01d61a19bbf9c8880a1e0e88c48b0516dc34cfb6bc9f6bab9e4467e2a553f2e4",
+        "roughness": "b9af4f9f0f42736e8ea4d4d4681cff96f4d3245331fa0992b3a5c0d3f8704756"
+      }
+    },
+    "dry_cream": {
+      "resolution": 2048,
+      "uv_world_scale": 10.5,
+      "surface_style": "premium_warm_resin_tile",
+      "maps": {
+        "albedo": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_dry_cream_albedo.png",
+        "normal": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_dry_cream_normal.png",
+        "roughness": "assets/review/twin_bays_art_v5/candidate/textures/tbsa_dry_cream_roughness.png"
+      },
+      "sha256": {
+        "albedo": "2bcccf66616d0a72e4b8de3801ae7a1650316ba893fc0ce1a54066da4e2e11bb",
+        "normal": "6cd40cf86774681e3bf40a060020e0780226e29bc050782fcdd38f9fec2c827a",
+        "roughness": "c1d89bb02848796a121c6410536d9cf1720f1be80cad72888731a0d6189b66f2"
+      }
+    }
+  },
+  "material_count": 11,
+  "materials": [
+    "TBSA_ContactFoam",
+    "TBSA_CoralSoft",
+    "TBSA_Cyan",
+    "TBSA_CyanDark",
+    "TBSA_DryCream",
+    "TBSA_IslandGreen",
+    "TBSA_PalmTrunk",
+    "TBSA_PickupOrange",
+    "TBSA_PortalCyan",
+    "TBSA_PortalRecess",
+    "TBSA_SafetyYellow"
+  ],
+  "hero_kit": {
+    "mesh_objects": 8,
+    "semantic_anchors": 5,
+    "triangles": 4156,
+    "materials": [
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_PickupOrange",
+      "TBSA_PortalCyan",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow"
+    ]
+  },
+  "production_foreground": {
+    "mesh_objects": 10,
+    "semantic_anchors": 33,
+    "triangles": 101580,
+    "materials": [
+      "TBSA_ContactFoam",
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_IslandGreen",
+      "TBSA_PalmTrunk",
+      "TBSA_PickupOrange",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow"
+    ]
+  },
+  "editable_source": {
+    "hero_kit": {
+      "mesh_objects": 14,
+      "semantic_anchors": 5,
+      "triangles": 4156,
+      "materials": [
+        "TBSA_CoralSoft",
+        "TBSA_Cyan",
+        "TBSA_CyanDark",
+        "TBSA_DryCream",
+        "TBSA_PickupOrange",
+        "TBSA_PortalCyan",
+        "TBSA_PortalRecess",
+        "TBSA_SafetyYellow"
+      ]
+    },
+    "production_foreground": {
+      "mesh_objects": 236,
+      "semantic_anchors": 33,
+      "triangles": 101580,
+      "materials": [
+        "TBSA_ContactFoam",
+        "TBSA_CoralSoft",
+        "TBSA_Cyan",
+        "TBSA_CyanDark",
+        "TBSA_DryCream",
+        "TBSA_IslandGreen",
+        "TBSA_PalmTrunk",
+        "TBSA_PickupOrange",
+        "TBSA_PortalRecess",
+        "TBSA_SafetyYellow"
+      ]
+    }
+  },
+  "export_consolidation": {
+    "hero_source_meshes": 14,
+    "hero_export_meshes": 8,
+    "foreground_source_meshes": 236,
+    "foreground_export_meshes": 10,
+    "foreground_mesh_reduction": 0.957627
+  },
+  "semantic_anchors": [
+    "Anchor_CausewaySafeVisual",
+    "Anchor_EastCausewayCube",
+    "Anchor_EastNorthCoverFar",
+    "Anchor_EastNorthCoverOuter",
+    "Anchor_EastNorthOuterWall_00",
+    "Anchor_EastNorthOuterWall_03",
+    "Anchor_EastSouthCoverFar",
+    "Anchor_EastSouthCoverOuter",
+    "Anchor_EastSouthOuterWall_04",
+    "Anchor_ExitMarker_left_portal",
+    "Anchor_ExitMarker_right_portal",
+    "Anchor_HeroCover",
+    "Anchor_HeroDryFloor",
+    "Anchor_HeroPickup",
+    "Anchor_HeroPortalOpening",
+    "Anchor_HeroWall",
+    "Anchor_LeftPortal",
+    "Anchor_LeftPortalPipe",
+    "Anchor_Platform",
+    "Anchor_RightPortal",
+    "Anchor_RightPortalPipe",
+    "Anchor_SpecialPickupCenter",
+    "Anchor_WestCausewayCube",
+    "Anchor_WestNorthCoverFar",
+    "Anchor_WestNorthCoverOuter",
+    "Anchor_WestNorthOuterWall_00",
+    "Anchor_WestNorthOuterWall_03",
+    "Anchor_WestSouthCoverFar",
+    "Anchor_WestSouthCoverOuter",
+    "Anchor_WestSouthOuterWall_04",
+    "Anchor_YellowPickupNorthEast",
+    "Anchor_YellowPickupNorthWest",
+    "Anchor_YellowPickupSouthEast",
+    "Anchor_YellowPickupSouthWest",
+    "Anchor_spawn_north_east",
+    "Anchor_spawn_north_west",
+    "Anchor_spawn_south_east",
+    "Anchor_spawn_south_west"
+  ],
+  "geometry_audit": {
+    "outline_simple": true,
+    "production_outline_simple": true,
+    "production_outline_covers_safe_collision": true,
+    "portal_mouths_mounted_on_platform": true,
+    "portal_mouth_platform_min_inset": 0.305177,
+    "portal_mouth_platform_max_inset": 0.305177,
+    "wall_pipe_min_clearance": 1.963492,
+    "south_wall_boundary_max_gap": 0.0,
+    "portal_aperture_min_clearance": 0.220999,
+    "portal_normal_min_alignment": 1.0,
+    "pipe_min_bend_radius": 9.894314,
+    "causeway_overlap_area": 0.0,
+    "trim_blocker_min_clearance": 0.188923,
+    "trim_path_count": 4,
+    "dynamic_envelope": {
+      "ring_scale_multiplier": 0.88,
+      "ring_pulse_amplitude": 0.018,
+      "foam_outer_radius_multiplier": 1.12,
+      "foam_pulse_amplitude": 0.026,
+      "inner_foam_outer_radius_multiplier": 1.04,
+      "core_scale_multiplier": 0.92
+    },
+    "wall_visual_contract": {
+      "enabled": true,
+      "expected_section_count": 6,
+      "continuous_cap_count": 6,
+      "smoothed_body_count": 6,
+      "modular_cushion_count": 0,
+      "visual_module_seams_enabled": true,
+      "visual_module_seam_count": 18,
+      "curve_subdivisions": 8,
+      "cap_profile_segments": 24,
+      "cap_superellipse_power": 3.4
+    }
+  },
+  "runtime_shaders": {
+    "shallow_water": {
+      "path": "assets/shaders/twin_bays_water_master_v5.gdshader",
+      "sha256": "c2757a124edb6cf041d7e07bde090248236236fb6d26231bf98f8004b173fd47"
+    },
+    "backdrop_water": {
+      "path": "assets/shaders/twin_bays_backdrop_water_v5.gdshader",
+      "sha256": "b25c3ea0bc171492a56c509b622454c9927dcd18bb116605efcc3d927f670455"
+    },
+    "portal_water": {
+      "path": "assets/shaders/twin_bays_portal_water_v5.gdshader",
+      "sha256": "c59913ecc800bebdf72ac300716fdc60600adaaad8e7bb913b580f1db7647ccb"
+    }
+  },
+  "contracts": {
+    "visual_only": true,
+    "collision_in_glb": false,
+    "camera_in_glb": false,
+    "light_in_glb": false,
+    "character_in_glb": false,
+    "weapon_in_glb": false,
+    "dynamic_portal_ring_in_glb": false,
+    "floor_water_marks": false,
+    "static_floor_puddles": false,
+    "tide_visuals_godot_owned": true,
+    "structure_frozen": true,
+    "pbr_texture_families": [
+      "coral",
+      "cyan",
+      "cyan_dark",
+      "dry_cream"
+    ],
+    "editable_blend_unbatched": true,
+    "export_static_batched_by_material": true,
+    "causeway_visual_width": 16.0,
+    "safety_trim_visible_width": 0.82,
+    "safety_trim_lift": 0.04
+  },
+  "determinism_scope": {
+    "byte_identical_required": [
+      "hero_glb",
+      "foreground_glb",
+      "pbr_texture_sets",
+      "runtime_textures",
+      "manifest"
+    ],
+    "editable_blend": "excluded_blender_container_metadata",
+    "preview_png": "excluded_gpu_render_evidence"
+  },
+  "review": {
+    "schema": "chaos_gun.twin_bays_art_v5_review",
+    "version": 1,
+    "candidate_id": "art_v5_camera_convergence_01",
+    "status": "candidate_pending_camera_fidelity_gate",
+    "camera_target": "docs/art-direction/concepts/twin_bays_art_v5_camera_target.png",
+    "production_protection": {
+      "before": {
+        "resources/maps/twin_bays_art_v4.json": "29423c7a9e82710db3b18afc3c0432909e191d917916077b6754b2de54665909",
+        "assets/source/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4.blend": "e492e6f77e9fe9f73981df25b282774378fb99d5e29b83c513770d3c4c0f5c3d",
+        "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_hero_kit.glb": "5b8f1bb2997f25a9addf8b2d4907f3313e54f6eb63ff1fd4cfc66dcd9adf6c9d",
+        "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_foreground.glb": "14f3284d95e3b94ffac6674624e3370f42eaca9e9bb334c149002e79b9c673ec",
+        "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_manifest.json": "672c8227604d19fe4a341a693cb3176fd0e937f01bf3b73004227dd59a43fd58"
+      },
+      "after": {
+        "resources/maps/twin_bays_art_v4.json": "29423c7a9e82710db3b18afc3c0432909e191d917916077b6754b2de54665909",
+        "assets/source/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4.blend": "e492e6f77e9fe9f73981df25b282774378fb99d5e29b83c513770d3c4c0f5c3d",
+        "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_hero_kit.glb": "5b8f1bb2997f25a9addf8b2d4907f3313e54f6eb63ff1fd4cfc66dcd9adf6c9d",
+        "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_foreground.glb": "14f3284d95e3b94ffac6674624e3370f42eaca9e9bb334c149002e79b9c673ec",
+        "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_manifest.json": "672c8227604d19fe4a341a693cb3176fd0e937f01bf3b73004227dd59a43fd58"
+      },
+      "byte_identical": true
+    },
+    "golden_update_allowed": false,
+    "production_foreground_overwritten": false
+  },
+  "runtime_textures": {
+    "backdrop_caustics": {
+      "path": "assets/textures/generated/twin_bays_v5_caustics.png",
+      "sha256": "8e6306320338dec445dfe0dc0d5d4546fadfa5d8b5cb5154a7d6706861246f6d",
+      "width": 1024,
+      "height": 1024,
+      "algorithm": "periodic_domain_warped_voronoi_boundary",
+      "seed": 20260727,
+      "material_batch_growth": 0
+    }
+  }
+}

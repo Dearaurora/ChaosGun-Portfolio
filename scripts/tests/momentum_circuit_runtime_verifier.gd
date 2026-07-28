@@ -146,8 +146,11 @@ func _verify_hud_and_pause(characters: Array[BaseCharacter]) -> void:
 	else:
 		print("OK  human GameHUD")
 	var control_mode_panel := _find_script_node(_arena, "res://scripts/ui/control_mode_panel.gd")
-	if control_mode_panel == null:
-		_fail("Shared control-mode panel is missing")
+	var review_panel_enabled := bool(_arena.get_meta("enable_control_mode_review_panel", false))
+	if review_panel_enabled and control_mode_panel == null:
+		_fail("Control-mode review panel is enabled but missing")
+	elif not review_panel_enabled and control_mode_panel != null:
+		_fail("Production runtime must not expose the review-only control-mode panel")
 	var pause_menu := _arena.find_child("PauseMenu", true, false)
 	if pause_menu == null or not pause_menu.has_method("_toggle_pause"):
 		_fail("Pause flow is missing")
@@ -159,7 +162,7 @@ func _verify_hud_and_pause(characters: Array[BaseCharacter]) -> void:
 	if paused:
 		_fail("PauseMenu did not resume SceneTree")
 	else:
-		print("OK  pause/resume and shared control panel")
+		print("OK  pause/resume and production review-panel policy")
 
 
 func _verify_fall_and_respawn(characters: Array[BaseCharacter]) -> void:

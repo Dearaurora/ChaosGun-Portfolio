@@ -37,9 +37,15 @@ Visible cream deck must cover the full safe central collision width. There may b
 
 Primary tokens are `#F4EFE7`, `#4FC5D8`, `#FF8F82`, `#FFD54A`, `#FF8A3D`, and `#36D9FF`. Materials should be readable through color, value, and roughness before emissive bloom is considered.
 
-## Dry-floor veto
+## Tide-aware floor contract
 
-Any floor water stain, puddle, wet-mark Decal, wetness mask, or local glossy wet patch rejects the build. This includes assets or nodes named `FloorWetMarks`, `FloorPuddles`, `Decal` used on the gameplay floor, `wetness`, `puddle`, `water_stain`, or `floor_water`. Background water and short-lived portal spray are the only allowed water visuals.
+The dry phase uses warm cream tile/resin without decorative puddles. Tide V1 may
+add a single full-platform shallow-water layer at high tide, source-connected
+retreat residue, wet footsteps, and short-lived landing/projectile feedback.
+Static ellipse puddles, concept-derived splash decals, side-wall projection,
+screen-space reflection/refraction, and water outside a tide phase reject the
+build. All tide visuals remain collision-free; central bays and outer gaps stay
+lethal.
 
 ## Background
 

@@ -6,7 +6,7 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/maps/open_ringout_slice.tscn"
 const MAP_SCRIPT_PATH := "res://scripts/maps/open_ringout_slice.gd"
-const HERO_GLB_PATH := "res://assets/models/generated/characters/hero_character_rig_v2.glb"
+const HERO_GLB_PATH := "res://assets/models/generated/characters/hero_character_rig_v3.glb"
 const PROJECTILE_SCRIPT_PATH := "res://scripts/weapons/projectile.gd"
 const HUD_SCRIPT_PATH := "res://scripts/ui/ringout_hud.gd"
 const DEFAULT_REPORT_PATH := "res://reports/open_ringout_performance_raw.json"
@@ -144,11 +144,9 @@ func _measure_open_ringout(warmup_seconds: float, sample_seconds: float) -> Dict
 	await process_frame
 	await physics_frame
 	_apply_target_window_state()
-	DisplayServer.window_move_to_foreground()
 	await process_frame
 	await _wait_wall_seconds(warmup_seconds)
 	_apply_target_window_state()
-	DisplayServer.window_move_to_foreground()
 	await process_frame
 	await process_frame
 	RenderingServer.force_sync()
@@ -205,7 +203,6 @@ func _measure_open_ringout(warmup_seconds: float, sample_seconds: float) -> Dict
 			rejected_unfocused_samples += 1
 			rejected_samples += 1
 			previous_usec = now_usec
-			DisplayServer.window_move_to_foreground()
 			continue
 		_focus_loss_started_usec = 0
 		if DisplayServer.window_get_size() != _target_resolution or root.size != _target_resolution:
@@ -352,8 +349,9 @@ func _apply_target_window_state() -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, false)
-	DisplayServer.window_set_size(_target_resolution)
-	root.size = _target_resolution
+	var safe_window_size := Vector2i(mini(_target_resolution.x, 960), mini(_target_resolution.y, 540))
+	DisplayServer.window_set_size(safe_window_size)
+	root.size = safe_window_size
 
 
 func _active_character_count(arena: Node) -> int:

@@ -8,7 +8,7 @@ class_name CharacterVisual
 @export var show_vest: bool = false
 @export var show_visor: bool = true
 
-const HERO_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/hero_character_rig_v2.glb"
+const HERO_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/hero_character_rig_v3.glb"
 const LEGACY_CHARACTER_SCENE_PATH := "res://assets/models/generated/characters/bean_character.glb"
 const WEAPON_MODEL_ROOT := "res://assets/models/generated/weapons/"
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
@@ -17,7 +17,9 @@ const FOOTSTEP_STREAMS: Array[AudioStream] = [
 	preload("res://assets/audio/impact-sounds/Audio/footstep_wood_002.ogg"),
 	preload("res://assets/audio/impact-sounds/Audio/footstep_wood_004.ogg"),
 ]
-const HERO_RUNTIME_SCALE := Vector3(1.14, 1.06, 1.14)
+# Compensate for the top-down camera's vertical foreshortening: keep the hero
+# visually narrow and upright without changing collision or gameplay dimensions.
+const HERO_RUNTIME_SCALE := Vector3(0.90, 1.08, 1.06)
 const CONTACT_SHADOW_Y_OFFSET := -0.075
 const HERO_RECOIL_SCALE := 0.62
 const HERO_RECOIL_YAW_SCALE := 0.72
@@ -101,6 +103,9 @@ var _authored_motion_clip: StringName = &""
 var _authored_motion_desired_moving: bool = false
 var _last_footstep_phase: float = -1.0
 var _footstep_serial: int = 0
+var _surface_feedback_provider: Node = null
+var _surface_footsteps_handled := 0
+var _wood_footsteps_selected := 0
 
 func _ready() -> void:
 	if not _build_asset_visual():
@@ -854,6 +859,18 @@ func _update_authored_footsteps() -> void:
 
 func _play_footstep_sfx() -> void:
 	_footstep_serial += 1
+	if _surface_feedback_provider and is_instance_valid(_surface_feedback_provider) and _surface_feedback_provider.has_method("handle_character_footstep"):
+		var character := get_parent() as BaseCharacter
+		if character:
+			var lateral := character.global_basis.x.normalized() * (0.34 if _footstep_serial % 2 == 0 else -0.34)
+			var contact_data := {
+				"position": character.global_position + lateral,
+				"foot_index": _footstep_serial % 2,
+			}
+			if bool(_surface_feedback_provider.call("handle_character_footstep", character, contact_data)):
+				_surface_footsteps_handled += 1
+				return
+	_wood_footsteps_selected += 1
 	if RuntimeGlobals.runtime_audio_disabled() or not is_inside_tree() or FOOTSTEP_STREAMS.is_empty():
 		return
 	var scene_root := RuntimeGlobals.active_scene(get_tree())
@@ -869,6 +886,9 @@ func _play_footstep_sfx() -> void:
 	sfx.global_position = global_position
 	sfx.play()
 	sfx.finished.connect(sfx.queue_free)
+
+func set_surface_feedback_provider(provider: Node) -> void:
+	_surface_feedback_provider = provider
 
 func _set_weapon_pose_mesh_visibility(node: Node, wants_pistol: bool) -> void:
 	if node is MeshInstance3D:
@@ -1459,6 +1479,8 @@ func get_motion_debug() -> Dictionary:
 		"authored_motion_position": _animation_player.current_animation_position if _animation_player != null else 0.0,
 		"footstep_serial": _footstep_serial,
 		"footstep_phase": _last_footstep_phase,
+		"surface_footsteps_handled": _surface_footsteps_handled,
+		"wood_footsteps_selected": _wood_footsteps_selected,
 	}
 
 func get_material_debug() -> Dictionary:

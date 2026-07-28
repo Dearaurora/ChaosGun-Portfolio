@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "ChaosGun",
-  "engine": "Godot 4.6.2",
+  "engine": "Godot 4.7.1",
   "max_concurrency": 3,
   "max_escalations": 2,
   "cost_strategy": "value_per_cost",

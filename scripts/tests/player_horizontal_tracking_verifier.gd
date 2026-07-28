@@ -27,9 +27,9 @@ func _initialize() -> void:
 	arena_target.position = Vector3(12.0, 18.0, 16.0)
 	await process_frame
 
-	var target := player.call("_get_lock_target") as BaseCharacter
+	var target := player.call("_acquire_lock_target", player.get("_face_dir")) as BaseCharacter
 	if target != arena_target:
-		_fail("Lock-on should acquire targets across the full arena XZ plane")
+		_fail("Explicit lock acquisition should find targets across the full arena XZ plane")
 	var expected_direction := Vector3(12.0, 0.0, 16.0).normalized()
 	var fire_dir := player.call("_get_lock_on_fire_dir", expected_direction) as Vector3
 	if fire_dir.distance_to(expected_direction) > 0.001:

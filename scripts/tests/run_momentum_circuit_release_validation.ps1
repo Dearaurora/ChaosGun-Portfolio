@@ -246,7 +246,7 @@ function Invoke-GodotScript {
             "--rendering-method", "forward_plus",
             "--disable-vsync",
             "--windowed",
-            "--position", "0,0"
+            "--resolution", "960x540"
         )
     } else {
         $arguments += @("--headless", "--audio-driver", "Dummy")
@@ -323,7 +323,7 @@ function Invoke-IsolatedAIBatch {
     $results = @($seedReports | ForEach-Object { @($_.results) })
     $dangerVerified = @($seedReports | Where-Object { -not [bool]$_.aggregate.danger_bias.verified }).Count -eq 0
     if (-not $dangerVerified) {
-        throw "At least one isolated AI seed failed the gravity-danger bias probe."
+        throw "At least one isolated AI seed failed the warning-bridge escape-bias probe."
     }
     $combinedReport = [ordered]@{
         schema_version = 1
@@ -341,7 +341,7 @@ function Invoke-IsolatedAIBatch {
             rounds = $results.Count
             total_deaths = [int](($results | Measure-Object -Property total_deaths -Sum).Sum)
             total_kills = [int](($results | Measure-Object -Property total_kills -Sum).Sum)
-            gravity_activation_rounds = @($results | Where-Object { [int]$_.controller_activation_serial -gt 0 }).Count
+            bridge_switch_rounds = @($results | Where-Object { [int]$_.bridge_switch_serial -gt 0 }).Count
             danger_bias = $seedReports[0].aggregate.danger_bias
         }
         failures = @()
@@ -378,11 +378,23 @@ try {
         -UserArguments @("--require-map-pool=false")
     $stageResults.production = "passed"
 
-    Write-Host "`n=== Deterministic pseudo-gravity mechanics ==="
+    Write-Host "`n=== v9 environment asset and motion contract ==="
     Invoke-GodotScript `
-        -Label "Momentum Circuit mechanics" `
-        -ScriptPath "res://scripts/tests/momentum_circuit_mechanics_verifier.gd"
+        -Label "Momentum Circuit v9 environment" `
+        -ScriptPath "res://scripts/tests/momentum_circuit_environment_v9_verifier.gd"
+    $stageResults.environment_v9 = "ten-families-three-motion-systems-pass"
+
+    Write-Host "`n=== Rotating light bridges and random teleport mechanics ==="
+    Invoke-GodotScript `
+        -Label "Momentum Circuit rotating light bridge mechanics" `
+        -ScriptPath "res://scripts/tests/momentum_circuit_light_bridge_mechanics_verifier.gd"
     $stageResults.mechanics = "passed"
+
+    Write-Host "`n=== Random teleporter landing-pad cooldown ==="
+    Invoke-GodotScript `
+        -Label "Momentum Circuit teleporter cooldown" `
+        -ScriptPath "res://scripts/tests/momentum_circuit_teleporter_cooldown_verifier.gd"
+    $stageResults.teleporter_cooldown = "3-second-pass"
 
     Write-Host "`n=== Projectile readability on dark deck ==="
     Invoke-GodotScript `
@@ -447,6 +459,12 @@ try {
             -ScriptPath "res://scripts/tests/momentum_circuit_production_verifier.gd" `
             -UserArguments @("--require-map-pool=true")
         $stageResults.map_pool = "passed-index-2"
+
+        Write-Host "`n=== Player-facing selector and rematch routes ==="
+        Invoke-GodotScript `
+            -Label "Three-map player entry routes" `
+            -ScriptPath "res://scripts/tests/playable_match_routes_open_ringout_verifier.gd"
+        $stageResults.player_routes = "three-map-entry-pass"
     }
 
     $releaseComplete = -not $DevOnly -and -not $Quick -and -not $SkipPerformance

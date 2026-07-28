@@ -1,7 +1,7 @@
 extends SceneTree
 
 const DEFAULT_OUT_PATH := "res://reports/p16_impact_showcase.png"
-const VIEWPORT_SIZE := Vector2i(1536, 800)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 const HitEffectScene: PackedScene = preload("res://scenes/effects/hit_effect.tscn")
 
 var _entries := [

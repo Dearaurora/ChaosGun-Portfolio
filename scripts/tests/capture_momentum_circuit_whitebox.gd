@@ -2,7 +2,7 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/maps/momentum_circuit_whitebox.tscn"
 const DEFAULT_OUT_PATH := "res://reports/momentum_circuit_whitebox.png"
-const VIEWPORT_SIZE := Vector2i(1536, 1024)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 
 
 func _initialize() -> void:

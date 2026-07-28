@@ -10,6 +10,8 @@ Set-StrictMode -Version Latest
 $root = Split-Path -Parent $PSScriptRoot
 $builder = Join-Path $PSScriptRoot "build_twin_bays_splash_arena.py"
 $layout = Join-Path $root "resources\maps\twin_bays_layout_v1.json"
+$artProfile = Join-Path $root "resources\maps\twin_bays_art_v3.json"
+$tideProfile = Join-Path $root "resources\maps\twin_bays_tide_v1.json"
 
 if (-not (Test-Path -LiteralPath $BlenderExe -PathType Leaf)) {
     throw "Blender 5.1 executable not found: $BlenderExe"
@@ -19,6 +21,11 @@ if (-not (Test-Path -LiteralPath $builder -PathType Leaf)) {
 }
 if (-not (Test-Path -LiteralPath $layout -PathType Leaf)) {
     throw "Canonical Twin Bays layout not found: $layout"
+}
+foreach ($profile in @($artProfile, $tideProfile)) {
+    if (-not (Test-Path -LiteralPath $profile -PathType Leaf)) {
+        throw "Twin Bays production profile not found: $profile"
+    }
 }
 
 $expectedOutputs = @(
@@ -32,7 +39,9 @@ $expectedOutputs = @(
 
 $freshestInputUtc = @(
     (Get-Item -LiteralPath $builder).LastWriteTimeUtc,
-    (Get-Item -LiteralPath $layout).LastWriteTimeUtc
+    (Get-Item -LiteralPath $layout).LastWriteTimeUtc,
+    (Get-Item -LiteralPath $artProfile).LastWriteTimeUtc,
+    (Get-Item -LiteralPath $tideProfile).LastWriteTimeUtc
 ) | Sort-Object -Descending | Select-Object -First 1
 
 Write-Host "Rebuilding Twin Bays Splash Arena from canonical layout..."
@@ -56,6 +65,14 @@ foreach ($output in $expectedOutputs) {
 
 $manifestPath = Join-Path $root "assets\models\generated\twin_bays_splash_arena\twin_bays_splash_arena_manifest.json"
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$layoutSha = (Get-FileHash -LiteralPath $layout -Algorithm SHA256).Hash.ToLowerInvariant()
+$artSha = (Get-FileHash -LiteralPath $artProfile -Algorithm SHA256).Hash.ToLowerInvariant()
+$tideSha = (Get-FileHash -LiteralPath $tideProfile -Algorithm SHA256).Hash.ToLowerInvariant()
+if ([string]$manifest.layout_sha256 -ne $layoutSha `
+    -or [string]$manifest.art_profile_sha256 -ne $artSha `
+    -or [string]$manifest.tide_profile_sha256 -ne $tideSha) {
+    throw "Generated manifest is not bound to the current Layout/Art/Tide fingerprint"
+}
 if ([int]$manifest.material_count -gt 12) {
     throw "Material budget exceeded: $($manifest.material_count) > 12"
 }

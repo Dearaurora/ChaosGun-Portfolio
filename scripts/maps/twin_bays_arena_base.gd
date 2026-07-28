@@ -749,8 +749,8 @@ func _twin_bays_runtime_camera_profile() -> Dictionary:
 		"min_layout_viewport": Vector2(640.0, 360.0),
 		"fallback_layout_viewport": Vector2(1280.0, 720.0),
 		"reserve_corner_hud": true,
-		# Read the legacy duel HUD's real visible controls. This remains correct
-		# after a resolution change and reserves nothing for an all-AI match.
+		# Read the shared responsive HUD's real visible player cards. This remains
+		# correct after a resolution change and reserves nothing for an all-AI match.
 		"hud_occlusion_group": &"party_shooter_camera_occluder",
 		"hud_occlusion_gutter": 12.0,
 	}

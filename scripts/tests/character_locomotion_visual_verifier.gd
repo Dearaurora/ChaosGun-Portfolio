@@ -38,12 +38,12 @@ func _verify_runtime_readability(visual: CharacterVisual) -> void:
 	var visual_scale := debug.get("visual_scale", Vector3.ONE) as Vector3
 	if shadow == null or not shadow.top_level:
 		_fail("Hero runtime should have a grounded top-level contact shadow")
-	if visual_scale.x < 1.08 or visual_scale.z < 1.08:
-		_fail("Hero runtime silhouette should be enlarged for the locked gameplay camera")
+	if visual_scale.x > 1.02 or visual_scale.y <= visual_scale.x or visual_scale.z < 1.02:
+		_fail("Hero runtime silhouette should stay narrow, upright, and deep enough for the locked gameplay camera")
 	if not bool(debug.get("has_contact_shadow", false)):
 		_fail("Motion debug should report the contact shadow")
 	else:
-		print("OK  enlarged hero silhouette with grounded contact shadow")
+		print("OK  narrow upright hero silhouette with grounded contact shadow")
 
 func _verify_runtime_material_profile(visual: CharacterVisual) -> void:
 	var debug := visual.call("get_material_debug") as Dictionary
@@ -208,7 +208,9 @@ func _verify_action_feedback(visual: CharacterVisual) -> void:
 
 	visual.animate_squash(0.65, 1.22, 0.20)
 	await process_frame
-	if visual.scale.y >= visual.scale.x:
+	var squash_debug := visual.call("get_motion_debug") as Dictionary
+	var squash_scale := squash_debug.get("action_scale", Vector3.ONE) as Vector3
+	if squash_scale.y >= squash_scale.x:
 		_fail("Landing squash should deform the complete character assembly")
 	else:
 		print("OK  fire, impact, respawn, and whole-body deformation feedback")

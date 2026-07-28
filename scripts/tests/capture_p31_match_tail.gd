@@ -32,11 +32,13 @@ func _initialize() -> void:
 		_fail("P31 tail must be 16:9")
 		return
 	var window_policy := root.get_node_or_null("TestWindowPolicy")
-	if window_policy:
-		window_policy.set_process(false)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
-	DisplayServer.window_set_size(viewport_size)
-	root.size = viewport_size
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, false)
+	var safe_window_size := Vector2i(mini(viewport_size.x, 960), mini(viewport_size.y, 540))
+	DisplayServer.window_set_size(safe_window_size)
+	root.size = safe_window_size
+	if window_policy != null and window_policy.has_method("enforce_now"):
+		window_policy.call("enforce_now")
 	_configure_slots()
 	var packed := load(SCENE_PATH) as PackedScene
 	_arena = packed.instantiate() as Node3D if packed else null
@@ -111,7 +113,6 @@ func _request_production_result() -> void:
 
 func _acquire_capture_focus() -> bool:
 	for _attempt in range(12):
-		DisplayServer.window_move_to_foreground()
 		await process_frame
 		if DisplayServer.window_is_focused():
 			return true

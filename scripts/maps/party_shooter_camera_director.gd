@@ -248,6 +248,21 @@ func begin_winner_focus(target: Node3D, duration: float = -1.0) -> void:
 	_zoom_velocity = 0.0
 
 
+func settle_winner_focus() -> void:
+	if _presentation_mode != &"winner_focus" or _camera == null \
+		or _presentation_target == null or not is_instance_valid(_presentation_target):
+		return
+	var winner_focus := _clamp_track_point(_presentation_target.global_position)
+	_current_focus = winner_focus
+	_target_focus = winner_focus
+	_target_size = _winner_focus_size
+	_camera.size = _winner_focus_size
+	_presentation_mode = &"winner_hold"
+	_focus_velocity = Vector3.ZERO
+	_zoom_velocity = 0.0
+	_apply_camera_transform()
+
+
 func release_presentation_override() -> void:
 	_presentation_mode = &"none"
 	_presentation_target = null

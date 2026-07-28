@@ -1,23 +1,25 @@
 extends RefCounted
 class_name ToySunsetUI
 
-const INK := Color("#261a34")
-const INK_SOFT := Color("#382844")
-const PANEL := Color(0.145, 0.094, 0.205, 0.72)
-const PANEL_SOLID := Color("#2b1d39")
-const PANEL_RAISED := Color("#3a2948")
-const CREAM := Color("#fff1d6")
-const CREAM_DIM := Color("#d8c8b5")
-const GOLD := Color("#ffd05a")
-const CORAL := Color("#ff6f61")
-const PEACH := Color("#f4a261")
-const SKY := Color("#65cbe8")
-const SUCCESS := Color("#8bd45b")
+const INK := Color("#21142f")
+const INK_SOFT := Color("#3b2548")
+const PANEL := Color(0.105, 0.055, 0.165, 0.78)
+const PANEL_SOLID := Color("#2c1738")
+const PANEL_RAISED := Color("#472b55")
+const CREAM := Color("#fff1cf")
+const CREAM_DIM := Color("#dfccb8")
+const GOLD := Color("#f8c84f")
+const CORAL := Color("#ff6248")
+const PEACH := Color("#f49a5a")
+const SKY := Color("#4da4ff")
+const VIOLET := Color("#d66bdc")
+const SUCCESS := Color("#77cf6b")
 const DISABLED := Color("#786b80")
+const PLAYER_COLORS := [SKY, CORAL, VIOLET, SUCCESS]
 
-const PANEL_RADIUS := 6
-const CONTROL_RADIUS := 6
-const SMALL_RADIUS := 4
+const PANEL_RADIUS := 12
+const CONTROL_RADIUS := 10
+const SMALL_RADIUS := 8
 
 
 static func ui_scale(viewport_size: Vector2) -> float:
@@ -76,7 +78,7 @@ static func apply_button(button: Button, accent: Color = GOLD, filled: bool = fa
 	pressed.border_color = accent
 
 	var focus := normal.duplicate() as StyleBoxFlat
-	focus.bg_color = Color(PANEL_RAISED.r, PANEL_RAISED.g, PANEL_RAISED.b, 0.96)
+	focus.bg_color = accent.lightened(0.06) if filled else Color(PANEL_RAISED.r, PANEL_RAISED.g, PANEL_RAISED.b, 0.96)
 	focus.border_color = CREAM
 	_set_border_width(focus, 2)
 
@@ -96,6 +98,13 @@ static func apply_button(button: Button, accent: Color = GOLD, filled: bool = fa
 	button.add_theme_color_override("font_focus_color", INK if filled else Color.WHITE)
 	button.add_theme_color_override("font_disabled_color", DISABLED)
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.focus_mode = Control.FOCUS_ALL
+
+
+static func player_color(index: int) -> Color:
+	if index >= 0 and index < PLAYER_COLORS.size():
+		return PLAYER_COLORS[index]
+	return CREAM
 
 
 static func apply_label(label: Label, font_size: int, color: Color = CREAM, outline_size: int = 0) -> void:

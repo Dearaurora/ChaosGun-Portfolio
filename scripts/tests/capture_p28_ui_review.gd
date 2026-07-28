@@ -99,11 +99,11 @@ func _configure_roster() -> void:
 
 
 func _requested_size() -> Vector2i:
-	var raw := _argument_value("--size=", "1536x960")
+	var raw := _argument_value("--size=", "960x540")
 	var parts := raw.to_lower().split("x")
 	if parts.size() != 2:
-		return Vector2i(1536, 960)
-	return Vector2i(maxi(int(parts[0]), 640), maxi(int(parts[1]), 360))
+		return Vector2i(960, 540)
+	return Vector2i(clampi(int(parts[0]), 640, 960), clampi(int(parts[1]), 360, 540))
 
 
 func _argument_value(prefix: String, fallback: String) -> String:

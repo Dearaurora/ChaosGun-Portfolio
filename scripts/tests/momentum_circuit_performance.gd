@@ -149,7 +149,10 @@ func _measure_scene(
 	var mode_at_start := DisplayServer.window_get_mode()
 	var size_at_start := DisplayServer.window_get_size()
 	var viewport_at_start := _benchmark_viewport.size
-	if not focus_at_start:
+	var offscreen_sampling := (
+		_benchmark_viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS
+	)
+	if not focus_at_start and not offscreen_sampling:
 		_fail("%s benchmark window is not focused at sample start" % label)
 	if mode_at_start == DisplayServer.WINDOW_MODE_MINIMIZED:
 		_fail("%s benchmark window is minimized at sample start" % label)
@@ -178,15 +181,15 @@ func _measure_scene(
 		await process_frame
 		var now_usec := Time.get_ticks_usec()
 		if float(now_usec - started_usec) / 1000000.0 > maximum_wall_seconds:
-			_fail("%s could not collect %.1f focused seconds" % [label, sample_seconds])
+			_fail("%s could not collect %.1f rendered seconds" % [label, sample_seconds])
 			break
 		if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED:
 			_minimized_during_sample = true
 		if not DisplayServer.window_is_focused():
 			rejected_unfocused_frames += 1
-			previous_usec = now_usec
-			DisplayServer.window_move_to_foreground()
-			continue
+			if not offscreen_sampling:
+				previous_usec = now_usec
+				continue
 		var frame_seconds := float(now_usec - previous_usec) / 1000000.0
 		previous_usec = now_usec
 		if frame_seconds <= 0.0 or not is_finite(frame_seconds):
@@ -334,7 +337,6 @@ func _restore_benchmark_window() -> void:
 	var test_window_policy := root.get_node_or_null("TestWindowPolicy")
 	if test_window_policy != null and test_window_policy.has_method("enforce_now"):
 		test_window_policy.call("enforce_now")
-	DisplayServer.window_move_to_foreground()
 	await process_frame
 	await process_frame
 

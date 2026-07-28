@@ -15,22 +15,26 @@ Frozen on 2026-07-16 for **Twin Bays Splash Arena / 双湾水上竞技场**.
    water, and party-shooter tone only. It must never be used to infer geometry.
 4. Earlier whitebox, structure, foreground-style, and dry-floor images remain
    design-history evidence. They cannot override the current as-built contract.
-5. The dry-floor contract below overrides every image. Blue splash shapes on
-   concept floors are rejected reference residue.
+5. `twin_bays_art_v3.json` and `twin_bays_tide_v1.json` override the historical
+   dry-floor-only rule. Concept splash shapes still cannot define runtime water.
 
 The complete conflict and retirement rules live in
 `res://docs/art-direction/twin-bays-reference-contract.md`.
 
-## Dry-floor contract (veto rule)
+## Tide-aware floor contract
 
-Gameplay floor must be dry cream tile/resin. It may have low-contrast seams and broad roughness variation, but it must not contain:
+The gameplay floor is warm cream tile/resin while dry. Water may appear only as
+the configured high-tide surface, source-connected retreat network, wet
+footprints, projectile/landing feedback, or portal effects. It must not contain:
 
-- painted splash shapes, water stains, wet footprints, drips, puddles, or pooled-water meshes;
-- `Decal` nodes used as wet marks;
-- textures, masks, or shader parameters named for puddles, floor water, wetness, or dampness;
-- reflections or gloss patches that imply standing water.
+- static ellipse puddles or painted splash shapes copied from concept art;
+- gameplay-floor water unrelated to a Tide V1 phase or runoff source;
+- `Decal` nodes projecting water onto platform sides;
+- screen-space reflection or refraction water.
 
-Water is legal only below/outside the playable platform in `Backdrop`, and as short-lived depth-tested portal-ring/transfer effects in `Portals`. Portal effects must not leave a mark on the floor.
+All water remains collision-free. Central bays and outer gaps remain lethal at
+every tide phase. Tide residue must respect spawn, pickup, portal-exit, cover,
+and danger-edge clean zones.
 
 ## Frozen visual tokens
 
@@ -49,8 +53,8 @@ Large clean color fields, rounded low-poly silhouettes, low-noise seams, and cle
 
 | File | SHA-256 |
 | --- | --- |
-| `twin_bays_as_built_reference_v1.png` | `6865D5376AE833FE917B5A758D2EF7465B74C11B8F663536349217AF67FCDBA3` |
-| `twin_bays_as_built_reference_v1.json` | `FD14D2B338D578F435E38DCF0DCFEC7C7FC4716B8FA09BE16D410F5BC123F4F5` |
+| `twin_bays_as_built_reference_v1.png` | `2DB58AB4D246BB8D25F53C9CDAC85D2B2FC12932FD579060256B6F95FC992E0D` |
+| `twin_bays_as_built_reference_v1.json` | `2C660F52DDA13A703A2E8DA045BAEC4E1E87CB9256E05C30824F8A7E816AC76F` |
 | `twin_bays_as_built_source_empty_v1.png` | `04C8DCA087E62C233225621C0D5F7EEB2FE238FD50257AAED9F480A370DAEF93` |
 | `twin_bays_dry_floor_implementation_baseline.png` | `5FB4792C98688BECFEAE6033F3BE3709F3425832592BFE0BD753873ACE594E1A` |
 | `twin_bays_splash_arena_foreground_style.png` | `3C190A62909AE6CB780082A46109E1616F21711BACFDB97FB567F23158896C9E` |

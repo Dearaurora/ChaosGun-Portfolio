@@ -1,6 +1,6 @@
 extends SceneTree
 
-const VIEWPORT_SIZE := Vector2i(1536, 820)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 const DEFAULT_OUTPUT := "res://reports/projectile_teardrop_showcase.png"
 const PROJECTILE_SCENE: PackedScene = preload("res://scenes/weapons/pistol_projectile.tscn")
 

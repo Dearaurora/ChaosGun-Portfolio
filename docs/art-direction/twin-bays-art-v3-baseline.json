@@ -1,0 +1,25 @@
+{
+  "schema": "chaos_gun.twin_bays_art_baseline",
+  "version": 1,
+  "status": "frozen_before_art_v3_hero_review",
+  "fingerprint": {
+    "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+    "art_v3_sha256": "b00c51bdba2b9a4da83941c366659508b5c3d13d0f0da1c42e00c9bc2d52e5ab",
+    "tide_v1_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46"
+  },
+  "visual_evidence": [
+    {"path": "reports/twin_bays_tide_dry_1536x1024.png", "sha256": "d518aead396ada8741d5e481845af90b8a206884441785416f7bb037383a8bc6"},
+    {"path": "reports/twin_bays_tide_high_battle_1920x1080.png", "sha256": "9a194bc08b1439de2cc16b3f76b90ed272d9e98d913869043539e945ba0d3f4b"},
+    {"path": "reports/twin_bays_tide_drain_0_1536x1024.png", "sha256": "c32de041113924fb1659863d80e1c4430c900409a083fc4af502f4fd7b164a98"},
+    {"path": "reports/twin_bays_tide_drain_9_1536x1024.png", "sha256": "01c02781944163322d64cd433cd3be407f004233aa51a54a83079619cb7e4791"}
+  ],
+  "paired_performance": {
+    "path": "reports/twin_bays_art_v3_before_performance.json",
+    "sha256": "13077c1e56772642652f95088601f66263e7e376ffbb1c42419cd4e2c3058d9b",
+    "configuration": "D3D12 Forward+ 1920x1080 borderless; 2 s warmup + 5 s diagnostic sample per map",
+    "open_ringout": {"average_fps": 178.6419, "one_percent_low_fps": 99.0175, "average_draw_calls": 978.3613},
+    "twin_bays": {"average_fps": 327.8859, "one_percent_low_fps": 152.3926, "p99_ms": 5.372, "average_draw_calls": 492.2963, "memory_drift_bytes": 1063526},
+    "ratios": {"draw_calls": 0.503185, "primitives": 0.237880, "render_memory": 0.404989},
+    "release_evidence": false
+  }
+}

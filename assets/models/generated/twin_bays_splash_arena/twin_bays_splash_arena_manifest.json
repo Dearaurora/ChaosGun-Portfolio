@@ -2,13 +2,21 @@
   "asset": "Twin Bays Splash Arena",
   "schema": "chaos_gun.generated_environment_manifest",
   "version": 1,
-  "generated_at_utc": "2026-07-18T09:53:52.752200+00:00",
+  "generated_at_utc": "2026-07-23T13:10:51.489418+00:00",
   "generator": "tools/build_twin_bays_splash_arena.py",
-  "generator_sha256": "19ac9729c238948480ffcc52dfebb89e81bdf7f4f88a29a9c759c468746e5915",
+  "generator_sha256": "13512c4f6d7632851788be55b3c63f5610728cb8181d807ef48c59b3c25622b7",
   "layout": "resources/maps/twin_bays_layout_v1.json",
   "layout_schema": "chaos_gun.twin_bays_layout",
   "layout_version": 1,
-  "layout_sha256": "ea69b591ae88df766967596a18dacbcaff047c07e65b41fc008330f5e94a0227",
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "art_profile": "resources/maps/twin_bays_art_v3.json",
+  "art_profile_schema": "chaos_gun.twin_bays_art",
+  "art_profile_version": 3,
+  "art_profile_sha256": "ccbaba05cf471e400f1102318ae44defa886133bf484d8cbf3cbb645db68cd3d",
+  "tide_profile": "resources/maps/twin_bays_tide_v1.json",
+  "tide_profile_schema": "chaos_gun.twin_bays_tide",
+  "tide_profile_version": 1,
+  "tide_profile_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
   "coordinate_conversion": "Godot(x,y,z) -> Blender(x,-z,y); glTF export_yup=true",
   "outputs": {
     "blend": "assets/source/twin_bays_splash_arena/twin_bays_splash_arena.blend",
@@ -18,83 +26,83 @@
     "foreground_preview": "docs/art-direction/previews/twin_bays_splash_arena_foreground.png"
   },
   "output_sha256": {
-    "blend": "9b111543bef403bf4314260d371bbf2f65585a973a90cf8b8ee3390fbc38cee3",
-    "hero_glb": "ec9f2dabde4033919eec22b936eccf0bd8b4546159ba2bfa00b82f64171adfb5",
-    "foreground_glb": "1c782a57f3da7e24dacbb881b44e35b58bc510fcb019de549fec02b6a5b10c40",
-    "hero_preview": "99a57cf5419adca138769f334211f91f77576c1412f8ff39347887e184314963",
-    "foreground_preview": "8c11af0da5eff72ce2aec3d607e492354dc2dda1d022a93fc2810a648b3e9964"
+    "blend": "d02bdef4d99c9bb49fcb2070f3515a65ee6bb8713980df360dd380738f188aa3",
+    "hero_glb": "9f307d544cee1c4717c98b74536cf4eb00512b952d61c6ed09d888323b70deac",
+    "foreground_glb": "d6e8602acda03c65cf10358b8a18de0857e0a7c39c72a9de201b46a7a4a0aba7",
+    "hero_preview": "79f7237b1c57a239406a369e529fa042bf7c7e0874c64681709e5d6107ee9bed",
+    "foreground_preview": "c647d921b0aa772b63d211145ff8eebc61a7511308714a02a5b8cbf5f35bd0c2"
   },
   "palette": {
-    "dry_cream": "#F4EFE7",
-    "cyan": "#4FC5D8",
-    "coral": "#FF8F82",
-    "safety_yellow": "#FFD54A",
+    "dry_cream": "#FFF4E8",
+    "cyan": "#63D5E4",
+    "coral": "#FF9B8C",
+    "safety_yellow": "#FFDA4F",
     "pickup_orange": "#FF8A3D",
-    "portal_cyan": "#36D9FF"
+    "portal_cyan": "#3FE7FF"
   },
   "support_colors": {
-    "cyan_dark": "#178DA8",
-    "portal_recess": "#176E88"
+    "cyan_dark": "#218DAA",
+    "portal_recess": "#125D78"
   },
   "pbr_texture_sets": {
     "coral": {
       "resolution": 1024,
-      "uv_world_scale": 10.0,
-      "surface_style": "broad_soft_padding",
+      "uv_world_scale": 9.0,
+      "surface_style": "broad_soft_plastic",
       "maps": {
         "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_coral_albedo.png",
         "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_coral_normal.png",
         "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_coral_roughness.png"
       },
       "sha256": {
-        "albedo": "fdaf3df21213188c6f1b23091d937ec469270a9ef53343db9e2706e57aedcadd",
-        "normal": "046885fbfe7d0112f12541e94db24c36f26bde33210f6045554981c04aac3abc",
-        "roughness": "457f17aefa4ac3c520365f95ce86261c435ad13bbd9c87433621f4783211be49"
+        "albedo": "5de03dd04757a6dc715b0b77d80ed09764c067b6473d9c7973159598a1852867",
+        "normal": "b9297573d671680cc112b7c7669f427935b30ba4f8481755ad818f96c3a02807",
+        "roughness": "e6690252c53ed8fb09ba9d970b157e635e7421d05d1bb49b3f24f56a032402c6"
       }
     },
     "cyan": {
       "resolution": 1024,
-      "uv_world_scale": 8.0,
-      "surface_style": "clean_aqua_tile",
+      "uv_world_scale": 7.2,
+      "surface_style": "bright_aqua_tile",
       "maps": {
         "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_albedo.png",
         "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_normal.png",
         "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_roughness.png"
       },
       "sha256": {
-        "albedo": "f0d3bdd41dbae0160b8702257a97db32926999cee793bf549fbe9a175d6c412a",
-        "normal": "712a9741c92c17c41c2eb14d65895f5a337f69e9337e5db0772294f4e66a039a",
-        "roughness": "94dcaf6f567b0736a842805bb486940b4a702b64bc3d8c1e32f2f5ceb35be414"
+        "albedo": "b8b0577466b6cb6fab227c638ab33deb40238f790006ef4c79208a000cefe584",
+        "normal": "4e04e2e2b492f8e05437222106435b776eb9c0e0c39f9c9f398ab80ebdf41e06",
+        "roughness": "450c9d58d1ef4f7e8d64ea1b8b8f591776636b31a694967860f1b832ee4d4165"
       }
     },
     "cyan_dark": {
       "resolution": 1024,
-      "uv_world_scale": 9.0,
-      "surface_style": "clean_structural_side_tile",
+      "uv_world_scale": 8.2,
+      "surface_style": "structural_side_gradient_tile",
       "maps": {
         "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_dark_albedo.png",
         "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_dark_normal.png",
         "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_cyan_dark_roughness.png"
       },
       "sha256": {
-        "albedo": "c7b873db7c04818fa41cda1de70f2bb193ea51e4e764e71dc85c854e2a5260d9",
-        "normal": "7175a7d6852ec5edd0ea6bcbf34a21c1a32d5e2ef92c94c42b9ecad2e8b3804e",
-        "roughness": "7e9101f11cac719b3a681700927c286c4b6a101a88c33fa658d2a1fa75ba787a"
+        "albedo": "6185a99ddb0a61895f25f31b81b7e4e787de960bfdf0e4d94d410a4f6ed26064",
+        "normal": "080306feb552c09754204119206b1cd270c1f088f0acaef53f422b1a74972cae",
+        "roughness": "9c9a476a423366ae3c4dc90651333c3df5a89320bacf08c93d2306fa9b8cd2d9"
       }
     },
     "dry_cream": {
       "resolution": 2048,
-      "uv_world_scale": 16.0,
-      "surface_style": "dry_large_resin_tile",
+      "uv_world_scale": 10.0,
+      "surface_style": "warm_resin_tile_low_noise",
       "maps": {
         "albedo": "assets/textures/generated/twin_bays_splash_arena/tbsa_dry_cream_albedo.png",
         "normal": "assets/textures/generated/twin_bays_splash_arena/tbsa_dry_cream_normal.png",
         "roughness": "assets/textures/generated/twin_bays_splash_arena/tbsa_dry_cream_roughness.png"
       },
       "sha256": {
-        "albedo": "604044ed45324ed52a32b7d4d209ef3fc6a107f18b3a9ae2a827dfeec80de25f",
-        "normal": "343865d0caf234160fd3a7f5cfda2d0926dc04ba62f753d227d7696125afaefc",
-        "roughness": "e1077bec9fd41a07f4fac48953c094fa27b135039d48fbcaf0302e79da465e65"
+        "albedo": "3e13c63f88cbf5c142520aca26de03802c9518d85fd9dfa071fbf2be42575a01",
+        "normal": "7107560d6e81f900f136469816f9915e9d5369ed21eb3225ffc755e334fcda75",
+        "roughness": "7b14455923067e25c40a67aec304dc39cf06a1c66f3eb76b8da634ea8508d254"
       }
     }
   },
@@ -127,7 +135,7 @@
   "production_foreground": {
     "mesh_objects": 7,
     "semantic_anchors": 33,
-    "triangles": 25124,
+    "triangles": 26692,
     "materials": [
       "TBSA_CoralSoft",
       "TBSA_Cyan",
@@ -157,7 +165,7 @@
     "production_foreground": {
       "mesh_objects": 40,
       "semantic_anchors": 33,
-      "triangles": 25124,
+      "triangles": 26692,
       "materials": [
         "TBSA_CoralSoft",
         "TBSA_Cyan",
@@ -229,7 +237,7 @@
     "portal_normal_min_alignment": 1.0,
     "pipe_min_bend_radius": 9.894314,
     "causeway_overlap_area": 0.0,
-    "trim_blocker_min_clearance": 0.408923,
+    "trim_blocker_min_clearance": 0.338923,
     "trim_path_count": 4,
     "dynamic_envelope": {
       "ring_scale_multiplier": 0.88,
@@ -238,6 +246,18 @@
       "foam_pulse_amplitude": 0.026,
       "inner_foam_outer_radius_multiplier": 1.04,
       "core_scale_multiplier": 0.92
+    }
+  },
+  "runtime_shaders": {
+    "shallow_water": {
+      "path": "assets/shaders/twin_bays_water_master.gdshader",
+      "sha256": "5e3329ba02d99bc9d7dccd473a40fcff744857c4d859ddc93c780b991500f6ce",
+      "precompiled_project_resource": true
+    },
+    "backdrop_water": {
+      "path": "assets/shaders/twin_bays_backdrop_water.gdshader",
+      "sha256": "864c4500b4568555ace675d1c911d7d0dbde2d62672057e191f683c13d6bba07",
+      "precompiled_project_resource": true
     }
   },
   "contracts": {
@@ -249,6 +269,8 @@
     "weapon_in_glb": false,
     "dynamic_portal_ring_in_glb": false,
     "floor_water_marks": false,
+    "static_floor_puddles": false,
+    "tide_visuals_godot_owned": true,
     "structure_frozen": true,
     "pbr_texture_families": [
       "coral",
@@ -259,7 +281,7 @@
     "editable_blend_unbatched": true,
     "export_static_batched_by_material": true,
     "causeway_visual_width": 16.0,
-    "safety_trim_visible_width": 0.38,
-    "safety_trim_lift": 0.02
+    "safety_trim_visible_width": 0.52,
+    "safety_trim_lift": 0.022
   }
 }

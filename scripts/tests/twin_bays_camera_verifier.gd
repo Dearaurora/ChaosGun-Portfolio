@@ -427,9 +427,9 @@ func _verify_live_hud_regions(state: Dictionary, label: String) -> void:
 			_fail("%s director region does not enclose live HUD control %s" % [label, control.name])
 			return
 	if label == "1920x1080":
-		var ai_panel := root.find_child("AIStatusPanel", true, false) as Control
-		if ai_panel == null or ai_panel.position.x < 1500.0:
-			_fail("Legacy HUD did not relayout after the 1920x1080 resize")
+		var second_player_panel := root.find_child("PlayerPanel2", true, false) as Control
+		if second_player_panel == null or second_player_panel.get_global_rect().position.x < 1500.0:
+			_fail("Shared responsive HUD did not relayout after the 1920x1080 resize")
 			return
 	print("OK  %s camera regions match the live responsive HUD" % label)
 

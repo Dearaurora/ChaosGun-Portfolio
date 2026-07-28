@@ -49,7 +49,7 @@ Write-Output "MOMENTUM_CIRCUIT_RUN|phase=capture"
 $captureArgs = @(
     "--audio-driver", "Dummy",
     "--display-driver", "windows",
-    "--resolution", "1536x1024",
+    "--resolution", "960x540",
     "--path", $projectPath,
     "-s", "res://scripts/tests/capture_momentum_circuit_whitebox.gd",
     "--", "--output=res://reports/momentum_circuit_whitebox.png"

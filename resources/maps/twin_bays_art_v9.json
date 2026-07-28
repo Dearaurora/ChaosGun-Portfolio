@@ -1,0 +1,53 @@
+{
+  "schema": "chaos_gun.twin_bays_art",
+  "version": 9,
+  "status": "isolated_soft_cap_modules_candidate",
+  "base_profile": "resources/maps/twin_bays_art_v8.json",
+  "base_profile_sha256": "782f2c48d238ff09d33c06132299b0c8ba84be7280ff88e8f1a0907dae583b23",
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+  "camera_target": "docs/art-direction/concepts/twin_bays_art_v5_camera_target.png",
+  "visual_geometry": {
+    "wall_cap_segment_cushions": true,
+    "wall_cap_segment_gap": 0.16,
+    "wall_cap_cushion_height_multiplier": 0.34,
+    "wall_cap_module_length": 7.4,
+    "wall_cap_visual_module_seams": true
+  },
+  "budgets": {
+    "primary_material_target": 11,
+    "primary_material_absolute_max": 12,
+    "transparent_batch_max": 3,
+    "texture_max_dimension": 2048,
+    "basis_universal_required": true,
+    "runtime_node_growth_allowed": false
+  },
+  "review": {
+    "candidate_id": "art_v9_soft_cap_modules_01",
+    "base_candidate_id": "art_v8_water_mass_light_01",
+    "production_assets_must_remain_byte_identical": true,
+    "art_v5_must_remain_byte_identical": true,
+    "art_v6_must_remain_byte_identical": true,
+    "art_v7_must_remain_byte_identical": true,
+    "golden_update_allowed": false,
+    "fast_gate_modes": [
+      "high",
+      "drain_9_battle",
+      "cap_close"
+    ],
+    "minimum_normal_camera_gain_percent": 3.0
+  },
+  "forbidden": [
+    "production_overwrite",
+    "art_v5_overwrite",
+    "art_v6_overwrite",
+    "art_v7_overwrite",
+    "golden_update",
+    "gameplay_collision",
+    "layout_coordinates",
+    "camera_changes",
+    "tide_gameplay_changes",
+    "new_runtime_material_batch",
+    "runtime_node_growth"
+  ]
+}

@@ -165,7 +165,7 @@ try {
     $versionOutput = & $GodotPath --version 2>&1 | Out-String
     $godotVersion = $versionOutput.Trim()
 
-    Get-HashBinding -Name "hero_glb" -RelativePath "assets/models/generated/characters/hero_character_rig_v2.glb"
+    Get-HashBinding -Name "hero_glb" -RelativePath "assets/models/generated/characters/hero_character_rig_v3.glb"
     Get-HashBinding -Name "hero_blend" -RelativePath "assets/source/characters/hero_character_rig_v2.blend"
     Get-HashBinding -Name "p29_builder" -RelativePath "tools/build_hero_character_rig_v2.py"
     Get-HashBinding -Name "p29_geometry" -RelativePath "tools/hero_character_p29_geometry.py"

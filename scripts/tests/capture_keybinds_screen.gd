@@ -1,7 +1,7 @@
 extends SceneTree
 
 const SCENE_PATH := "res://scenes/ui/keybinds_screen.tscn"
-const VIEWPORT_SIZE := Vector2i(1536, 960)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 
 func _initialize() -> void:
 	if DisplayServer.get_name().to_lower() == "headless":

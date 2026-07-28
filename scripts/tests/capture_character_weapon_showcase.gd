@@ -1,7 +1,7 @@
 extends SceneTree
 
 const DEFAULT_OUT_PATH := "res://reports/character_weapon_p9_showcase.png"
-const VIEWPORT_SIZE := Vector2i(1536, 800)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 const MuzzleFlashScene: PackedScene = preload("res://scenes/effects/muzzle_flash.tscn")
 
 var _showcase_entries: Array = []

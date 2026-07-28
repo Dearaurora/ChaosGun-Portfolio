@@ -6,6 +6,8 @@ The goal is not to add heavy process. The goal is to stop mixing design, whitebo
 
 For the complete concept-to-Demo workflow, including cost controls, release gates, and a reusable Definition of Done, see [`game-demo-production-workflow.md`](game-demo-production-workflow.md).
 
+For the evidence-backed ChaosGun operating manual—including the frozen baseline, 0–7 SOP, scope-to-gate matrix, Golden/RC rules, tool decisions, complete commit/task coverage, and maintenance protocol—use [`chaosgun-demo-production-playbook.md`](chaosgun-demo-production-playbook.md). This playbook is the maintained content source for its generated DOCX edition.
+
 ## Core Principle
 
 Each iteration should solve one class of problems at a time.

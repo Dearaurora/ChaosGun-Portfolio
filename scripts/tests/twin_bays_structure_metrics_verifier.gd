@@ -7,8 +7,8 @@ extends SceneTree
 
 const LAYOUT_PATH := "res://resources/maps/twin_bays_layout_v1.json"
 const FOREGROUND_GLB_PATH := (
-	"res://assets/models/generated/twin_bays_splash_arena/"
-	+ "twin_bays_splash_arena_foreground.glb"
+	"res://assets/models/generated/twin_bays_splash_arena_v4/"
+	+ "twin_bays_splash_arena_v4_foreground.glb"
 )
 const REPORT_PATH := "res://reports/twin_bays_splash_arena_structure_metrics.json"
 # The deterministic builder batches static meshes by material before GLB export.

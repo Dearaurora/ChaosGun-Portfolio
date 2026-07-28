@@ -1,6 +1,266 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=8 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/character_select.gd" id="1_select"]
+[ext_resource type="Script" path="res://scripts/ui/character_select.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/textures/generated/sunset_toy_sky_islands/sunset_sky_backplate_v1.png" id="2_sky"]
+[ext_resource type="Theme" path="res://resources/ui/chaosgun_theme.tres" id="3_theme"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/player_slot_card.tscn" id="4_slot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/roster_status_card.tscn" id="5_status"]
+
+[sub_resource type="StyleBoxFlat" id="StyleStage"]
+bg_color = Color(0.105, 0.055, 0.165, 0.24)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.945, 0.812, 0.16)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleMap"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0.105, 0.055, 0.165, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.945, 0.812, 0.24)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [node name="CharacterSelect" type="CanvasLayer"]
-script = ExtResource("1_select")
+script = ExtResource("1_script")
+
+[node name="CharacterSelectRoot" type="Control" parent="."]
+theme = ExtResource("3_theme")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SunsetBackground" type="TextureRect" parent="CharacterSelectRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_sky")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ScreenWash" type="ColorRect" parent="CharacterSelectRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.129, 0.078, 0.184, 0.32)
+
+[node name="TopGlow" type="ColorRect" parent="CharacterSelectRoot"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 5.0
+grow_horizontal = 2
+mouse_filter = 2
+color = Color(0.973, 0.784, 0.31, 0.72)
+
+[node name="SafeArea" type="MarginContainer" parent="CharacterSelectRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 24.0
+offset_right = -32.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Page" type="VBoxContainer" parent="CharacterSelectRoot/SafeArea"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="CharacterSelectRoot/SafeArea/Page"]
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+
+[node name="TitleBlock" type="VBoxContainer" parent="CharacterSelectRoot/SafeArea/Page/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = -3
+
+[node name="Title" type="Label" parent="CharacterSelectRoot/SafeArea/Page/Header/TitleBlock"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0.129, 0.078, 0.184, 0.92)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 36
+text = "本地对战"
+
+[node name="Subtitle" type="Label" parent="CharacterSelectRoot/SafeArea/Page/Header/TitleBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.973, 0.784, 0.31, 1)
+theme_override_font_sizes/font_size = 16
+text = "配置 2–4 名参赛者"
+
+[node name="Brand" type="Label" parent="CharacterSelectRoot/SafeArea/Page/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.945, 0.812, 0.8)
+theme_override_font_sizes/font_size = 15
+text = "CHAOS GUN  /  LOCAL LOBBY"
+vertical_alignment = 1
+
+[node name="StageArea" type="PanelContainer" parent="CharacterSelectRoot/SafeArea/Page"]
+custom_minimum_size = Vector2(0, 330)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleStage")
+
+[node name="SlotRow" type="HBoxContainer" parent="CharacterSelectRoot/SafeArea/Page/StageArea"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CardP3" parent="CharacterSelectRoot/SafeArea/Page/StageArea/SlotRow" instance=ExtResource("4_slot")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+size_flags_stretch_ratio = 0.72
+slot_index = 2
+
+[node name="CardP1" parent="CharacterSelectRoot/SafeArea/Page/StageArea/SlotRow" instance=ExtResource("4_slot")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.28
+slot_index = 0
+
+[node name="CardP2" parent="CharacterSelectRoot/SafeArea/Page/StageArea/SlotRow" instance=ExtResource("4_slot")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.28
+slot_index = 1
+
+[node name="CardP4" parent="CharacterSelectRoot/SafeArea/Page/StageArea/SlotRow" instance=ExtResource("4_slot")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+size_flags_stretch_ratio = 0.72
+slot_index = 3
+
+[node name="RosterStatusRow" type="HBoxContainer" parent="CharacterSelectRoot/SafeArea/Page"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="StatusP1" parent="CharacterSelectRoot/SafeArea/Page/RosterStatusRow" instance=ExtResource("5_status")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatusP2" parent="CharacterSelectRoot/SafeArea/Page/RosterStatusRow" instance=ExtResource("5_status")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatusP3" parent="CharacterSelectRoot/SafeArea/Page/RosterStatusRow" instance=ExtResource("5_status")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatusP4" parent="CharacterSelectRoot/SafeArea/Page/RosterStatusRow" instance=ExtResource("5_status")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FooterRail" type="HBoxContainer" parent="CharacterSelectRoot/SafeArea/Page"]
+custom_minimum_size = Vector2(0, 78)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="BackButton" type="Button" parent="CharacterSelectRoot/SafeArea/Page/FooterRail"]
+custom_minimum_size = Vector2(142, 56)
+layout_mode = 2
+text = "‹  返回"
+
+[node name="FooterSpacer" type="Control" parent="CharacterSelectRoot/SafeArea/Page/FooterRail"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.25
+
+[node name="MapSelector" type="PanelContainer" parent="CharacterSelectRoot/SafeArea/Page/FooterRail"]
+custom_minimum_size = Vector2(520, 66)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleMap")
+
+[node name="MapContent" type="HBoxContainer" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/MapSelector"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PreviousButton" type="Button" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/MapSelector/MapContent"]
+custom_minimum_size = Vector2(50, 48)
+layout_mode = 2
+text = "‹"
+
+[node name="MapPreview" type="TextureRect" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/MapSelector/MapContent"]
+custom_minimum_size = Vector2(92, 48)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_sky")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="MapInfo" type="VBoxContainer" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/MapSelector/MapContent"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+theme_override_constants/separation = -2
+
+[node name="MapLabel" type="Label" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/MapSelector/MapContent/MapInfo"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "OPEN RING-OUT SLICE"
+horizontal_alignment = 1
+
+[node name="MapDots" type="Label" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/MapSelector/MapContent/MapInfo"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.973, 0.784, 0.31, 1)
+theme_override_font_sizes/font_size = 13
+text = "●  ○"
+horizontal_alignment = 1
+
+[node name="NextButton" type="Button" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/MapSelector/MapContent"]
+custom_minimum_size = Vector2(50, 48)
+layout_mode = 2
+text = "›"
+
+[node name="FooterSpacer2" type="Control" parent="CharacterSelectRoot/SafeArea/Page/FooterRail"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.25
+
+[node name="StartBlock" type="VBoxContainer" parent="CharacterSelectRoot/SafeArea/Page/FooterRail"]
+custom_minimum_size = Vector2(228, 68)
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 1
+
+[node name="StartButton" type="Button" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/StartBlock"]
+custom_minimum_size = Vector2(228, 56)
+layout_mode = 2
+text = "开始对战"
+
+[node name="StartReason" type="Label" parent="CharacterSelectRoot/SafeArea/Page/FooterRail/StartBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.384, 0.282, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1

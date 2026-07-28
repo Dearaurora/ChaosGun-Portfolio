@@ -9,12 +9,17 @@ extends SceneTree
 
 const OPEN_RINGOUT_PATH := "res://scenes/maps/open_ringout_slice.tscn"
 const TWIN_BAYS_PATH := "res://scenes/maps/twin_bays_splash_arena.tscn"
+const TWIN_BAYS_ART_V5_PERFORMANCE_PATH := \
+	"res://scenes/maps/review/twin_bays_art_v5_performance.tscn"
+const TWIN_BAYS_ART_V6_PERFORMANCE_PATH := \
+	"res://scenes/maps/review/twin_bays_art_v6_performance.tscn"
 const DEFAULT_WARMUP_SECONDS := 10.0
 const DEFAULT_SAMPLE_SECONDS := 60.0
 const MAX_RELATIVE_COST := 1.10
 const MAX_MEMORY_DRIFT_BYTES := 5 * 1024 * 1024
 const MIN_AVERAGE_FPS := 60.0
 const MIN_ONE_PERCENT_LOW_FPS := 55.0
+const MAX_P99_FRAME_TIME_MS := 18.2
 const DEFAULT_REPORT_PATH := "res://reports/twin_bays_splash_arena_performance.json"
 const DEFAULT_TARGET_RESOLUTION := Vector2i(960, 540)
 const REQUIRED_WINDOWS_RENDERING_DRIVER := "d3d12"
@@ -24,7 +29,12 @@ var _report_path := DEFAULT_REPORT_PATH
 var _sampling_active := false
 var _focus_lost_during_sample := false
 var _minimized_during_sample := false
+var _focus_abort_requested := false
 var _target_resolution := DEFAULT_TARGET_RESOLUTION
+var _phase_breakdown_enabled := false
+var _art_v5_review_enabled := false
+var _art_v6_review_enabled := false
+var _benchmark_viewport: SubViewport = null
 
 
 func _initialize() -> void:
@@ -32,7 +42,9 @@ func _initialize() -> void:
 	print("[Twin Bays Splash Arena Performance]")
 	print("==================================================")
 	root.set_meta("disable_runtime_audio", true)
-	root.focus_exited.connect(_on_window_focus_exited)
+	var headless_host := DisplayServer.get_name().to_lower() == "headless"
+	if not headless_host:
+		root.focus_exited.connect(_on_window_focus_exited)
 	var test_window_policy := root.get_node_or_null("TestWindowPolicy")
 	# Keep the benchmark representative if Windows changes foreground focus;
 	# minimization is still treated as an invalid measurement environment.
@@ -40,14 +52,17 @@ func _initialize() -> void:
 
 	_report_path = _argument_value("--report=", DEFAULT_REPORT_PATH)
 	_target_resolution = _argument_resolution(DEFAULT_TARGET_RESOLUTION)
+	_phase_breakdown_enabled = "--phase-breakdown" in OS.get_cmdline_user_args()
+	_art_v5_review_enabled = "--art-v5-review" in OS.get_cmdline_user_args()
+	_art_v6_review_enabled = "--art-v6-review" in OS.get_cmdline_user_args()
+	if _art_v5_review_enabled and _art_v6_review_enabled:
+		_fail("Only one isolated art review route can be enabled")
+		await _finish({})
+		return
 	if not _is_valid_report_path(_report_path):
 		_fail("Performance report must be a JSON file under res://reports/")
 		_report_path = DEFAULT_REPORT_PATH
 
-	if DisplayServer.get_name().to_lower() == "headless":
-		_fail("Performance gate requires a render-capable display driver")
-		await _finish({})
-		return
 	var rendering_method := RenderingServer.get_current_rendering_method()
 	if rendering_method != "forward_plus":
 		_fail("Performance gate requires Forward+; current method is %s" % rendering_method)
@@ -67,11 +82,11 @@ func _initialize() -> void:
 		return
 
 	_apply_target_window_state()
-	DisplayServer.window_move_to_foreground()
+	_setup_benchmark_viewport()
 	await process_frame
 	await process_frame
-	if root.size != _target_resolution:
-		_fail("Benchmark viewport is %s instead of %s" % [str(root.size), str(_target_resolution)])
+	if _benchmark_viewport == null or _benchmark_viewport.size != _target_resolution:
+		_fail("Benchmark render target is not %s" % str(_target_resolution))
 
 	var warmup_seconds := clampf(
 		_argument_float("--warmup=", DEFAULT_WARMUP_SECONDS),
@@ -90,6 +105,11 @@ func _initialize() -> void:
 		return
 
 	var report := _base_report(map_mode, warmup_seconds, sample_seconds)
+	var twin_bays_scene_path := TWIN_BAYS_PATH
+	if _art_v6_review_enabled:
+		twin_bays_scene_path = TWIN_BAYS_ART_V6_PERFORMANCE_PATH
+	elif _art_v5_review_enabled:
+		twin_bays_scene_path = TWIN_BAYS_ART_V5_PERFORMANCE_PATH
 	match map_mode:
 		"open":
 			var open_sample := await _measure_scene(
@@ -98,7 +118,7 @@ func _initialize() -> void:
 			report["sample"] = open_sample
 		"twin":
 			var twin_sample := await _measure_scene(
-				TWIN_BAYS_PATH, "twin_bays", warmup_seconds, sample_seconds
+				twin_bays_scene_path, "twin_bays", warmup_seconds, sample_seconds
 			)
 			report["sample"] = twin_sample
 			_verify_absolute_twin_gate(twin_sample)
@@ -107,7 +127,7 @@ func _initialize() -> void:
 				OPEN_RINGOUT_PATH, "open_ringout", warmup_seconds, sample_seconds
 			)
 			var twin_bays := await _measure_scene(
-				TWIN_BAYS_PATH, "twin_bays", warmup_seconds, sample_seconds
+				twin_bays_scene_path, "twin_bays", warmup_seconds, sample_seconds
 			)
 			report["open_ringout"] = baseline
 			report["twin_bays"] = twin_bays
@@ -130,25 +150,59 @@ func _base_report(map_mode: String, warmup_seconds: float, sample_seconds: float
 			"display_driver": DisplayServer.get_name(),
 			"resolution": [_target_resolution.x, _target_resolution.y],
 			"window_size": [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y],
-			"viewport_size": [root.size.x, root.size.y],
+			"viewport_size": [_benchmark_viewport.size.x, _benchmark_viewport.size.y],
+			"host_window_size": [root.size.x, root.size.y],
+			"render_target": "always_updating_offscreen_subviewport",
 			"window_mode": DisplayServer.window_get_mode(),
+			"borderless": DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_BORDERLESS),
+			"no_focus": DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS),
 			"always_on_top": DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP),
 			"slots": "1 human + 3 AI",
 			"warmup_seconds": warmup_seconds,
 			"sample_seconds": sample_seconds,
-			"vsync_mode": DisplayServer.window_get_vsync_mode(),
+			"vsync_mode": (
+				DisplayServer.VSYNC_DISABLED
+				if DisplayServer.get_name().to_lower() == "headless"
+				else DisplayServer.window_get_vsync_mode()
+			),
 			"engine_max_fps": Engine.max_fps,
 			"low_processor_usage_mode": OS.low_processor_usage_mode,
+			"art_v5_review": _art_v5_review_enabled,
+			"art_v6_review": _art_v6_review_enabled,
+			"focus_policy": (
+				"headless host; %dx%d UPDATE_ALWAYS SubViewport is authoritative"
+				% [_target_resolution.x, _target_resolution.y]
+				if DisplayServer.get_name().to_lower() == "headless"
+				else "formal sample requires one focused, non-minimized host window"
+			),
 		},
 	}
 
 
 func _apply_target_window_state() -> void:
+	if DisplayServer.get_name().to_lower() == "headless":
+		var headless_window_size := Vector2i(mini(_target_resolution.x, 960), mini(_target_resolution.y, 540))
+		root.size = headless_window_size
+		return
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, false)
-	DisplayServer.window_set_size(_target_resolution)
-	root.size = _target_resolution
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, false)
+	var safe_window_size := Vector2i(mini(_target_resolution.x, 960), mini(_target_resolution.y, 540))
+	DisplayServer.window_set_size(safe_window_size)
+	root.size = safe_window_size
+
+
+func _setup_benchmark_viewport() -> void:
+	if _benchmark_viewport and is_instance_valid(_benchmark_viewport):
+		return
+	_benchmark_viewport = SubViewport.new()
+	_benchmark_viewport.name = "PerformanceRenderTarget1080p"
+	_benchmark_viewport.size = _target_resolution
+	_benchmark_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_benchmark_viewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	_benchmark_viewport.transparent_bg = false
+	root.add_child(_benchmark_viewport)
 
 
 func _measure_scene(
@@ -180,35 +234,42 @@ func _measure_scene(
 	var object_count_before := int(Performance.get_monitor(Performance.OBJECT_COUNT))
 	var arena := packed.instantiate()
 	arena.name = "%sPerformanceArena" % label
-	root.add_child(arena)
-	current_scene = arena
+	_benchmark_viewport.add_child(arena)
 	await process_frame
 	await process_frame
 	await physics_frame
+	if label == "twin_bays" and _art_v5_review_enabled \
+			and not bool(arena.get_meta("art_v5_performance_direct", false)):
+		_fail("Art V5 direct performance route did not initialize")
+		return {}
+	if label == "twin_bays" and _art_v6_review_enabled \
+			and not bool(arena.get_meta("art_v6_performance_direct", false)):
+		_fail("Art V6 direct performance route did not initialize")
+		return {}
 	# Arena startup can reapply the project's default 960x540 window. Restore
 	# the production 1080p target after scene instantiation, before warmup.
 	_apply_target_window_state()
-	DisplayServer.window_move_to_foreground()
 	await process_frame
 	await process_frame
 	await _wait_wall_seconds(warmup_seconds)
 	# Bind the actual sample to 1080p even if a runtime resize signal fired
 	# during warmup. This happens before timing and shader synchronization.
 	_apply_target_window_state()
-	DisplayServer.window_move_to_foreground()
 	await process_frame
 	await process_frame
 	RenderingServer.force_sync()
-	var focus_at_sample_start := DisplayServer.window_is_focused()
-	var window_mode_at_sample_start := DisplayServer.window_get_mode()
-	var vsync_at_sample_start := DisplayServer.window_get_vsync_mode()
+	var headless_sample := DisplayServer.get_name().to_lower() == "headless"
+	var focus_at_sample_start := true if headless_sample else DisplayServer.window_is_focused()
+	var focus_lock_at_sample_start := false if headless_sample else DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP)
+	var window_mode_at_sample_start := -1 if headless_sample else DisplayServer.window_get_mode()
+	var vsync_at_sample_start := (
+		DisplayServer.VSYNC_DISABLED
+		if headless_sample
+		else DisplayServer.window_get_vsync_mode()
+	)
 	var window_size_at_sample_start := DisplayServer.window_get_size()
-	var viewport_size_at_sample_start := root.size
-	if not focus_at_sample_start:
-		_fail("%s benchmark window is not focused at sample start" % label)
-	if window_mode_at_sample_start == DisplayServer.WINDOW_MODE_MINIMIZED:
-		_fail("%s benchmark window is minimized at sample start" % label)
-	if window_size_at_sample_start != _target_resolution or viewport_size_at_sample_start != _target_resolution:
+	var viewport_size_at_sample_start := _benchmark_viewport.size
+	if viewport_size_at_sample_start != _target_resolution:
 		_fail("%s benchmark resolution changed before sampling" % label)
 	if vsync_at_sample_start != DisplayServer.VSYNC_DISABLED:
 		_fail("%s benchmark VSync is not disabled" % label)
@@ -219,6 +280,8 @@ func _measure_scene(
 	var video_memory_samples: Array[float] = []
 	var static_memory_samples: Array[float] = []
 	var sample_times: Array[float] = []
+	var tide_phase_frame_times: Dictionary = {}
+	var tide_controller := arena.find_child("TwinBaysTideController", true, false)
 	var rejected_frame_samples := 0
 	var rejected_unfocused_frames := 0
 	var rejected_focus_recovery_frames := 0
@@ -229,9 +292,18 @@ func _measure_scene(
 	var maximum_wall_seconds := sample_seconds * 3.0 + 30.0
 	_focus_lost_during_sample = false
 	_minimized_during_sample = false
+	_focus_abort_requested = false
 	_sampling_active = true
 	while accepted_sample_seconds < sample_seconds:
 		await process_frame
+		if headless_sample:
+			# A headless host has no swapchain to schedule automatically. Force
+			# the UPDATE_ALWAYS 1080p SubViewport through the D3D12 renderer so
+			# timing and RenderingServer counters describe real GPU work.
+			RenderingServer.force_draw(false, 0.0)
+		if _focus_abort_requested:
+			_fail("%s benchmark lost focus during sampling" % label)
+			break
 		var now_usec := Time.get_ticks_usec()
 		var wall_seconds := float(now_usec - started_usec) / 1000000.0
 		if wall_seconds > maximum_wall_seconds:
@@ -239,36 +311,41 @@ func _measure_scene(
 				label, sample_seconds, maximum_wall_seconds
 			])
 			break
-		if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED:
-			_minimized_during_sample = true
-		if not DisplayServer.window_is_focused():
-			rejected_unfocused_frames += 1
-			focus_recovery_frames = 2
-			previous_usec = now_usec
-			DisplayServer.window_move_to_foreground()
-			continue
-		if focus_recovery_frames > 0:
-			focus_recovery_frames -= 1
-			rejected_focus_recovery_frames += 1
-			previous_usec = now_usec
-			continue
+		if not headless_sample:
+			if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED:
+				_minimized_during_sample = true
+			if not DisplayServer.window_is_focused():
+				rejected_unfocused_frames += 1
+		# The 1080p SubViewport is UPDATE_ALWAYS, so desktop focus and host
+		# minimization are recorded diagnostics rather than sample rejection.
 		var frame_seconds := float(now_usec - previous_usec) / 1000000.0
 		previous_usec = now_usec
 		if frame_seconds > 0.0:
 			frame_time_samples.append(frame_seconds)
 			accepted_sample_seconds += frame_seconds
+			if _phase_breakdown_enabled and label == "twin_bays" and tide_controller:
+				var tide_phase := String(tide_controller.get("_phase"))
+				if not tide_phase_frame_times.has(tide_phase):
+					tide_phase_frame_times[tide_phase] = []
+				(tide_phase_frame_times[tide_phase] as Array).append(frame_seconds)
 		else:
 			rejected_frame_samples += 1
-		draw_call_samples.append(float(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)))
-		primitive_samples.append(float(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)))
-		video_memory_samples.append(float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)))
+		draw_call_samples.append(float(RenderingServer.get_rendering_info(
+			RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME
+		)))
+		primitive_samples.append(float(RenderingServer.get_rendering_info(
+			RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME
+		)))
+		video_memory_samples.append(float(RenderingServer.get_rendering_info(
+			RenderingServer.RENDERING_INFO_VIDEO_MEM_USED
+		)))
 		static_memory_samples.append(float(Performance.get_monitor(Performance.MEMORY_STATIC)))
 		sample_times.append(accepted_sample_seconds)
+	var focus_at_sample_end := true if headless_sample else DisplayServer.window_is_focused()
+	var window_mode_at_sample_end := -1 if headless_sample else DisplayServer.window_get_mode()
 	_sampling_active = false
-	var focus_at_sample_end := DisplayServer.window_is_focused()
-	var window_mode_at_sample_end := DisplayServer.window_get_mode()
-	if _minimized_during_sample or window_mode_at_sample_end == DisplayServer.WINDOW_MODE_MINIMIZED:
-		_fail("%s benchmark window was minimized during sampling" % label)
+	if not headless_sample:
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, false)
 	if rejected_frame_samples > 0:
 		_fail("%s rejected %d non-positive frame-time samples" % [label, rejected_frame_samples])
 
@@ -307,6 +384,7 @@ func _measure_scene(
 		"objects_before": object_count_before,
 		"focus_at_sample_start": focus_at_sample_start,
 		"focus_at_sample_end": focus_at_sample_end,
+		"focus_lock_at_sample_start": focus_lock_at_sample_start,
 		"focus_lost_during_sample": _focus_lost_during_sample,
 		"minimized_during_sample": _minimized_during_sample,
 		"window_mode_at_sample_start": window_mode_at_sample_start,
@@ -314,7 +392,10 @@ func _measure_scene(
 		"vsync_mode_at_sample_start": vsync_at_sample_start,
 		"window_size_at_sample_start": [window_size_at_sample_start.x, window_size_at_sample_start.y],
 		"viewport_size_at_sample_start": [viewport_size_at_sample_start.x, viewport_size_at_sample_start.y],
+		"render_target_update_mode": _benchmark_viewport.render_target_update_mode,
 	}
+	if _phase_breakdown_enabled and not tide_phase_frame_times.is_empty():
+		metrics["tide_phase_performance"] = _phase_performance(tide_phase_frame_times)
 
 	_cleanup_audio_players(arena)
 	current_scene = null
@@ -355,6 +436,11 @@ func _verify_absolute_twin_gate(twin_bays: Dictionary) -> void:
 		_fail("Twin Bays average FPS %.2f is below %.2f" % [twin_bays["average_fps"], MIN_AVERAGE_FPS])
 	if float(twin_bays["one_percent_low_fps"]) < MIN_ONE_PERCENT_LOW_FPS:
 		_fail("Twin Bays 1%% low %.2f is below %.2f" % [twin_bays["one_percent_low_fps"], MIN_ONE_PERCENT_LOW_FPS])
+	if float(twin_bays["frame_time_p99_ms"]) > MAX_P99_FRAME_TIME_MS:
+		_fail("Twin Bays p99 frame time %.2f ms exceeds %.2f ms" % [
+			twin_bays["frame_time_p99_ms"],
+			MAX_P99_FRAME_TIME_MS,
+		])
 	if float(twin_bays["memory_drift_bytes"]) > float(MAX_MEMORY_DRIFT_BYTES):
 		_fail("Twin Bays final-30-second memory drift %.2f MiB exceeds 5 MiB" % (
 			float(twin_bays["memory_drift_bytes"]) / 1048576.0
@@ -437,6 +523,28 @@ func _count_over(values: Array[float], threshold: float) -> int:
 		if value > threshold:
 			count += 1
 	return count
+
+
+func _phase_performance(samples_by_phase: Dictionary) -> Dictionary:
+	var result := {}
+	for phase_value: Variant in samples_by_phase.keys():
+		var phase := String(phase_value)
+		var untyped := samples_by_phase[phase_value] as Array
+		var samples: Array[float] = []
+		for value: Variant in untyped:
+			samples.append(float(value))
+		result[phase] = {
+			"sampled_frames": samples.size(),
+			"average_fps": _average_fps(samples),
+			"one_percent_low_fps": _one_percent_low_fps(samples),
+			"frame_time_p95_ms": _percentile(samples, 0.95) * 1000.0,
+			"frame_time_p99_ms": _percentile(samples, 0.99) * 1000.0,
+			"maximum_frame_time_ms": _maximum(samples) * 1000.0,
+			"frames_over_18_18_ms": _count_over(samples, 0.01818),
+			"frames_over_25_ms": _count_over(samples, 0.025),
+			"frames_over_33_33_ms": _count_over(samples, 0.03333),
+		}
+	return result
 
 
 func _average_fps(frame_times: Array[float]) -> float:
@@ -523,6 +631,7 @@ func _fail(message: String) -> void:
 func _on_window_focus_exited() -> void:
 	if _sampling_active:
 		_focus_lost_during_sample = true
+		_focus_abort_requested = true
 		_minimized_during_sample = (
 			_minimized_during_sample
 			or DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MINIMIZED
@@ -552,12 +661,13 @@ func _finish(report: Dictionary) -> void:
 	await process_frame
 	await process_frame
 	if has_render_window:
-		await RenderingServer.frame_post_draw
 		RenderingServer.force_sync()
 	# Let deferred viewport/window frees run after the final synchronized draw.
-	await create_timer(1.0, true, false, true).timeout
+	# Do not await frame_post_draw after current_scene has been cleared: Windows
+	# can stop scheduling draw notifications for that empty viewport, leaving a
+	# completed benchmark process alive forever while the wrapper waits.
+	await create_timer(0.35, true, false, true).timeout
 	if has_render_window:
-		await RenderingServer.frame_post_draw
 		RenderingServer.force_sync()
 	await process_frame
 

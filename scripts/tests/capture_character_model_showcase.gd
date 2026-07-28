@@ -1,7 +1,7 @@
 extends SceneTree
 
 const DEFAULT_OUT_PATH := "res://reports/character_model_showcase.png"
-const VIEWPORT_SIZE := Vector2i(1536, 800)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 
 
 func _initialize() -> void:

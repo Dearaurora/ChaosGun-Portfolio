@@ -1,6 +1,8 @@
 extends Area3D
 class_name Projectile
 
+signal impact_resolved(position: Vector3, direction: Vector3, weapon_id: StringName)
+
 const RuntimeGlobals = preload("res://scripts/globals/runtime_globals.gd")
 const HitEffectScene: PackedScene = preload("res://scenes/effects/hit_effect.tscn")
 const CombatVisualResourceCache = preload("res://scripts/effects/combat_visual_resource_cache.gd")
@@ -39,6 +41,7 @@ var _visual_build_count := 0
 var _hit := false  # 闃叉灏勭嚎鍜?Area3D 淇″彿閲嶅瑙﹀彂
 
 func _ready() -> void:
+	add_to_group("projectile")
 	body_entered.connect(_on_body_entered)
 	_cache_collision_exclusions()
 	get_tree().create_timer(lifetime).timeout.connect(queue_free)
@@ -112,6 +115,7 @@ func _handle_hit(body: Node3D) -> void:
 		body.apply_knockback(direction * knockback_power * distance_multiplier)
 	# 鍑讳腑鐗规晥
 	_spawn_hit_effect()
+	impact_resolved.emit(global_position, direction, _visual_weapon_id)
 	queue_free()
 
 func _cache_collision_exclusions() -> void:

@@ -78,6 +78,8 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if is_dead or is_game_over:
 		return
+	if is_scripted_traversal_active():
+		return
 
 	# --- 坠落检测 ---
 	_check_fall()

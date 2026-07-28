@@ -1,0 +1,159 @@
+{
+  "schema": "chaos_gun.twin_bays_art_v3_hero_review",
+  "version": 1,
+  "status": "hero_approved_full_map_pending",
+  "approval": {
+    "reviewer": "project_owner",
+    "reviewed_at": "2026-07-23",
+    "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+    "art_profile_sha256": "ccbaba05cf471e400f1102318ae44defa886133bf484d8cbf3cbb645db68cd3d",
+    "tide_profile_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46"
+  },
+  "generated_at_utc": "2026-07-22T18:25:10.781059+00:00",
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "art_profile_sha256": "ccbaba05cf471e400f1102318ae44defa886133bf484d8cbf3cbb645db68cd3d",
+  "tide_profile_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+  "outputs": {
+    "blend": "_art_source_review/twin_bays_art_v3/twin_bays_art_v3_hero_review.blend",
+    "glb": "assets/review/twin_bays_art_v3/twin_bays_art_v3_hero_review.glb",
+    "preview": "docs/art-direction/previews/twin_bays_art_v3_hero_review.png",
+    "runtime_water_master": "assets/shaders/twin_bays_water_master.gdshader"
+  },
+  "output_sha256": {
+    "blend": "9ea83cdb74cdb8fe5505b2364d362d69cefa15f56cc082729531eb3227b796c3",
+    "glb": "2bc62bbf89fabfc1df50070b5017fe074898695831b5cb30c7e84df457a36502",
+    "preview": "e958babb2027579ad8a8b05d130faad09a5de1e6a880bc4fac4dd5d5fdf6b538",
+    "runtime_water_master": "5e3329ba02d99bc9d7dccd473a40fcff744857c4d859ddc93c780b991500f6ce"
+  },
+  "editable": {
+    "mesh_objects": 14,
+    "semantic_anchors": 5,
+    "triangles": 4156,
+    "materials": [
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_PickupOrange",
+      "TBSA_PortalCyan",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow"
+    ]
+  },
+  "exported": {
+    "mesh_objects": 8,
+    "semantic_anchors": 5,
+    "triangles": 4156,
+    "materials": [
+      "TBSA_CoralSoft",
+      "TBSA_Cyan",
+      "TBSA_CyanDark",
+      "TBSA_DryCream",
+      "TBSA_PickupOrange",
+      "TBSA_PortalCyan",
+      "TBSA_PortalRecess",
+      "TBSA_SafetyYellow"
+    ]
+  },
+  "textures": {
+    "dry_cream": {
+      "resolution": 2048,
+      "style": "warm_resin_tile_low_noise",
+      "maps": {
+        "albedo": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_dry_cream_albedo.png",
+          "sha256": "3e13c63f88cbf5c142520aca26de03802c9518d85fd9dfa071fbf2be42575a01"
+        },
+        "normal": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_dry_cream_normal.png",
+          "sha256": "7107560d6e81f900f136469816f9915e9d5369ed21eb3225ffc755e334fcda75"
+        },
+        "roughness": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_dry_cream_roughness.png",
+          "sha256": "7b14455923067e25c40a67aec304dc39cf06a1c66f3eb76b8da634ea8508d254"
+        }
+      }
+    },
+    "cyan": {
+      "resolution": 1024,
+      "style": "bright_aqua_tile",
+      "maps": {
+        "albedo": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_cyan_albedo.png",
+          "sha256": "b8b0577466b6cb6fab227c638ab33deb40238f790006ef4c79208a000cefe584"
+        },
+        "normal": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_cyan_normal.png",
+          "sha256": "4e04e2e2b492f8e05437222106435b776eb9c0e0c39f9c9f398ab80ebdf41e06"
+        },
+        "roughness": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_cyan_roughness.png",
+          "sha256": "450c9d58d1ef4f7e8d64ea1b8b8f591776636b31a694967860f1b832ee4d4165"
+        }
+      }
+    },
+    "cyan_dark": {
+      "resolution": 1024,
+      "style": "structural_side_gradient_tile",
+      "maps": {
+        "albedo": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_cyan_dark_albedo.png",
+          "sha256": "6185a99ddb0a61895f25f31b81b7e4e787de960bfdf0e4d94d410a4f6ed26064"
+        },
+        "normal": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_cyan_dark_normal.png",
+          "sha256": "080306feb552c09754204119206b1cd270c1f088f0acaef53f422b1a74972cae"
+        },
+        "roughness": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_cyan_dark_roughness.png",
+          "sha256": "9c9a476a423366ae3c4dc90651333c3df5a89320bacf08c93d2306fa9b8cd2d9"
+        }
+      }
+    },
+    "coral": {
+      "resolution": 1024,
+      "style": "broad_soft_plastic",
+      "maps": {
+        "albedo": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_coral_albedo.png",
+          "sha256": "5de03dd04757a6dc715b0b77d80ed09764c067b6473d9c7973159598a1852867"
+        },
+        "normal": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_coral_normal.png",
+          "sha256": "b9297573d671680cc112b7c7669f427935b30ba4f8481755ad818f96c3a02807"
+        },
+        "roughness": {
+          "path": "assets/review/twin_bays_art_v3/textures/tbsa_coral_roughness.png",
+          "sha256": "e6690252c53ed8fb09ba9d970b157e635e7421d05d1bb49b3f24f56a032402c6"
+        }
+      }
+    }
+  },
+  "production_protection": {
+    "before": {
+      "assets/source/twin_bays_splash_arena/twin_bays_splash_arena.blend": "9b111543bef403bf4314260d371bbf2f65585a973a90cf8b8ee3390fbc38cee3",
+      "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_hero_kit.glb": "ec9f2dabde4033919eec22b936eccf0bd8b4546159ba2bfa00b82f64171adfb5",
+      "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_foreground.glb": "1c782a57f3da7e24dacbb881b44e35b58bc510fcb019de549fec02b6a5b10c40",
+      "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_manifest.json": "0e62f3f98be11a8858ea29fe126736e1344e9abb0b7662a5c0414f78a60d0dfa",
+      "docs/art-direction/previews/twin_bays_splash_arena_hero_kit.png": "99a57cf5419adca138769f334211f91f77576c1412f8ff39347887e184314963",
+      "docs/art-direction/previews/twin_bays_splash_arena_foreground.png": "8c11af0da5eff72ce2aec3d607e492354dc2dda1d022a93fc2810a648b3e9964"
+    },
+    "after": {
+      "assets/source/twin_bays_splash_arena/twin_bays_splash_arena.blend": "9b111543bef403bf4314260d371bbf2f65585a973a90cf8b8ee3390fbc38cee3",
+      "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_hero_kit.glb": "ec9f2dabde4033919eec22b936eccf0bd8b4546159ba2bfa00b82f64171adfb5",
+      "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_foreground.glb": "1c782a57f3da7e24dacbb881b44e35b58bc510fcb019de549fec02b6a5b10c40",
+      "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_manifest.json": "0e62f3f98be11a8858ea29fe126736e1344e9abb0b7662a5c0414f78a60d0dfa",
+      "docs/art-direction/previews/twin_bays_splash_arena_hero_kit.png": "99a57cf5419adca138769f334211f91f77576c1412f8ff39347887e184314963",
+      "docs/art-direction/previews/twin_bays_splash_arena_foreground.png": "8c11af0da5eff72ce2aec3d607e492354dc2dda1d022a93fc2810a648b3e9964"
+    },
+    "byte_identical": true
+  },
+  "contracts": {
+    "visual_only": true,
+    "collision_in_glb": false,
+    "camera_in_glb": false,
+    "light_in_glb": false,
+    "golden_update_allowed": false,
+    "production_foreground_overwritten": false
+  }
+}

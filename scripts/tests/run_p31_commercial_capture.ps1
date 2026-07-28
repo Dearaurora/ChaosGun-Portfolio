@@ -31,7 +31,7 @@ function Resolve-Executable([string]$Requested, [string]$Fallback) {
 
 function Invoke-Godot([string]$Label, [string]$ScriptPath, [string[]]$Arguments) {
     Write-Host "P31_RUN|phase=$Label"
-    $allArguments = @("--path", $projectPath, "--windowed", "--resolution", "1920x1080", "--fixed-fps", "60", "--script", $ScriptPath, "--") + $Arguments
+    $allArguments = @("--path", $projectPath, "--windowed", "--resolution", "960x540", "--fixed-fps", "60", "--script", $ScriptPath, "--") + $Arguments
     $output = & $script:godot @allArguments 2>&1
     $exitCode = $LASTEXITCODE
     $output | ForEach-Object { Write-Host $_ }
@@ -77,7 +77,7 @@ function Get-EvidenceBinding {
         runner = "scripts/tests/run_p31_commercial_capture.ps1"
         open_ringout_scene = "scenes/maps/open_ringout_slice.tscn"
         open_ringout_script = "scripts/maps/open_ringout_slice.gd"
-        hero_glb = "assets/models/generated/characters/hero_character_rig_v2.glb"
+        hero_glb = "assets/models/generated/characters/hero_character_rig_v3.glb"
         projectile = "scripts/weapons/projectile.gd"
         hud = "scripts/ui/ringout_hud.gd"
     }
@@ -156,7 +156,7 @@ try {
         Remove-Item -LiteralPath $mainAvi, $mainMp4, $tailAvi, $tailMp4 -Force -ErrorAction SilentlyContinue
         Enable-MovieCaptureOverride
         $mainReport = Join-Path $reportDir "p31_final_capture.json"
-        $mainArgs = @("--path", $projectPath, "--windowed", "--resolution", "1920x1080", "--fixed-fps", "60", "--write-movie", $mainAvi, "--script", $mainScript, "--", "--attempt=0", "--audio=true", "--report=$mainReport", "--frames-dir=$framesDir")
+        $mainArgs = @("--path", $projectPath, "--windowed", "--resolution", "960x540", "--fixed-fps", "60", "--write-movie", $mainAvi, "--script", $mainScript, "--", "--attempt=0", "--audio=true", "--report=$mainReport", "--frames-dir=$framesDir")
         $mainOutput = & $script:godot @mainArgs 2>&1
         $mainOutput | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0 -or ($mainOutput -join "`n") -notmatch "P31_COMMERCIAL_CAPTURE_PASS") { throw "Final P31 movie capture failed" }
@@ -166,7 +166,7 @@ try {
         $artifacts.commercial = Assert-Media $mainMp4 "Commercial MP4" 5.0
         Remove-Item -LiteralPath $mainAvi -Force
 
-        $tailArgs = @("--path", $projectPath, "--windowed", "--resolution", "1920x1080", "--fixed-fps", "60", "--write-movie", $tailAvi, "--script", $tailScript, "--", "--audio=true", "--report=$tailReport")
+        $tailArgs = @("--path", $projectPath, "--windowed", "--resolution", "960x540", "--fixed-fps", "60", "--write-movie", $tailAvi, "--script", $tailScript, "--", "--audio=true", "--report=$tailReport")
         $tailOutput = & $script:godot @tailArgs 2>&1
         $tailOutput | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0 -or ($tailOutput -join "`n") -notmatch "P31_MATCH_TAIL_PASS") { throw "Final P31 tail movie capture failed" }

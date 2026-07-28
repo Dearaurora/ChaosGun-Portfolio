@@ -1,0 +1,141 @@
+{
+  "schema": "chaos_gun.momentum_circuit_production",
+  "version": 7,
+  "layout_path": "res://resources/maps/momentum_circuit_layout_v2.json",
+  "foreground_path": "res://assets/models/generated/momentum_circuit_v4/momentum_circuit_foreground_v4.glb",
+  "visual_reference": {
+    "selected_path": "res://docs/art-direction/references/momentum_circuit/momentum_circuit_coverless_dark_deck_selected.png",
+    "selected_sha256": "8051C660FB828E1C8EB6CAA855C650EF6C27650D95ED4308250BEF3670B30A31",
+    "cloud_vortex_path": "res://docs/art-direction/references/momentum_circuit/momentum_circuit_gravity_side_swap_cloud_vortex.png",
+    "cloud_vortex_sha256": "07C82B612914B1B1F686C2D4C1091D2432338AD0BE464499452A65080B215606"
+  },
+  "teleporters": {
+    "enabled": true,
+    "trigger_radius": 2.75,
+    "trigger_height": 2.4,
+    "cooldown_seconds": 0.65,
+    "landing_cooldown_seconds": 3.0,
+    "arrival_height": 1.25,
+    "occupied_radius": 2.6,
+    "occupied_retry_seconds": 0.25,
+    "trail_duration": 0.28,
+    "cooldown_ring_segments": 8,
+    "seed": 71337
+  },
+  "light_bridges": {
+    "enabled": true,
+    "width": 4.0,
+    "top_y": 1.06,
+    "thickness": 0.18,
+    "active_seconds": 8.0,
+    "warning_seconds": 2.0,
+    "switching_seconds": 0.45,
+    "active_color": "#C8BBFF",
+    "warning_color": "#FFAE66",
+    "dormant_color": "#4A435F",
+    "ai_warning_bias_weight": 0.85,
+    "forced_traversal_enabled": true,
+    "traversal_speed": 13.0,
+    "bounce_speed": 15.0,
+    "bank_clearance": 1.6,
+    "capture_inset": 0.65,
+    "capture_lateral_margin": 0.30,
+    "capture_vertical_range": 2.6,
+    "arc_height": 0.35,
+    "arrival_lockout": 0.40,
+    "visual_layers": 3,
+    "opening_scan_seconds": 1.35,
+    "order": ["bridge_hole_02", "bridge_hole_01", "bridge_hole_03"],
+    "bridges": [
+      {
+        "id": "bridge_hole_01",
+        "hole_id": "void_hole_01",
+        "start_xz": [18.45, -12.47],
+        "end_xz": [12.17, -29.20]
+      },
+      {
+        "id": "bridge_hole_02",
+        "hole_id": "void_hole_02",
+        "start_xz": [-14.52, 8.66],
+        "end_xz": [-13.48, -12.44]
+      },
+      {
+        "id": "bridge_hole_03",
+        "hole_id": "void_hole_03",
+        "start_xz": [5.12, 25.40],
+        "end_xz": [10.32, 11.96]
+      }
+    ]
+  },
+  "foreground_art": {
+    "asset_version": 4,
+    "panel_units": 14,
+    "hole_inner_wall_layers": 3,
+    "endpoint_slot_count": 6,
+    "teleporter_device_layers": 3,
+    "max_device_height": 0.3,
+    "visual_only": true
+  },
+  "hole_depth": {
+    "enabled": true,
+    "inner_wall_layers": 3,
+    "occlusion_depth": 6.4,
+    "cloud_parallax_speed": 0.018,
+    "cloud_alpha": 0.16
+  },
+  "map_audio": {
+    "enabled": true,
+    "active_hum_db": -23.0,
+    "warning_pulse_count": 4,
+    "warning_db": -10.0,
+    "switch_db": -8.0,
+    "teleport_db": -8.0,
+    "ready_db": -12.0,
+    "max_distance": 38.0
+  },
+  "surface_style": {
+    "base_color": "#45445F",
+    "inset_color": "#37364D",
+    "seam_color": "#716B91",
+    "static_rim_color": "#B7A8EA",
+    "side_color": "#3C315F",
+    "panel_count": 14,
+    "seam_width": 0.10,
+    "static_rim_width": 0.12,
+    "static_rim_emission": 0.28,
+    "roughness_min": 0.78,
+    "roughness_max": 0.84,
+    "metallic_max": 0.03
+  },
+  "camera": {
+    "profile_id": "momentum_circuit_v7",
+    "map_focus": [0.0, 1.0, -2.0],
+    "view_offset": [0.0, 49.068444, 64.0],
+    "initial_size": 84.0,
+    "idle_overview_size": 88.0,
+    "min_size": 56.0,
+    "max_size": 104.0,
+    "playable_min": [-48.0, -46.0],
+    "playable_max": [48.0, 43.0],
+    "focus_min": [-39.0, -37.0],
+    "focus_max": [39.0, 34.0],
+    "track_min_y": -2.0,
+    "world_frame_padding": 7.0,
+    "character_screen_radius": 3.2,
+    "screen_edge_gutter": 20.0,
+    "fallback_viewport": [1280.0, 720.0]
+  },
+  "weapons": {
+    "initial_delay": 20.0,
+    "stay_duration": 30.0,
+    "respawn_cooldown": 10.0,
+    "max_active_pickups": 1,
+    "spawn_pool": ["smg", "ak_rifle", "shotgun", "gatling", "sniper"],
+    "pickup_telemetry": true
+  },
+  "cloud_vortex": {
+    "upper_angular_speed": 0.003,
+    "lower_angular_speed": -0.008,
+    "ev_reduction": 0.50
+  }
+}

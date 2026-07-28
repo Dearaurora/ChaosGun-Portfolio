@@ -2,6 +2,7 @@ extends CanvasLayer
 class_name VictoryScreen
 
 const TOY_UI = preload("res://scripts/ui/toy_sunset_ui.gd")
+const VICTORY_OVERLAY_SCENE = preload("res://scenes/ui/components/victory_overlay.tscn")
 
 var _root: Control = null
 
@@ -20,109 +21,83 @@ func show_victory(winner_name: String, winner_color: Color, characters: Array = 
 
 func _build_ui(winner_name: String, winner_color: Color, characters: Array) -> void:
 	if _root and is_instance_valid(_root):
-		_root.queue_free()
-
-	var viewport_size := get_viewport().get_visible_rect().size
-	var ui_scale := TOY_UI.ui_scale(viewport_size)
-	_root = Control.new()
-	_root.name = "VictoryRoot"
-	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_root.free()
+	_root = VICTORY_OVERLAY_SCENE.instantiate()
 	add_child(_root)
+	var result_panel := _root.get_node("Center/ResultPanel") as PanelContainer
+	var winner_label := _root.get_node("Center/ResultPanel/Content/WinnerName") as Label
+	var accent_line := _root.get_node("Center/ResultPanel/Content/WinnerAccent") as ColorRect
+	var table := _root.get_node("Center/ResultPanel/Content/ResultTable") as GridContainer
+	var rematch_button := _root.get_node("Center/ResultPanel/Content/Actions/RematchButton") as Button
+	var menu_button := _root.get_node("Center/ResultPanel/Content/Actions/MainMenuButton") as Button
 
-	var wash := ColorRect.new()
-	wash.name = "VictoryWash"
-	wash.color = TOY_UI.make_screen_wash(0.38)
-	wash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_root.add_child(wash)
+	var is_draw := winner_name.to_upper() == "DRAW"
+	winner_label.text = "平局  /  DRAW" if is_draw else "%s  WIN" % winner_name
+	winner_label.add_theme_color_override("font_color", winner_color if not is_draw else TOY_UI.CREAM)
+	accent_line.color = winner_color if not is_draw else TOY_UI.GOLD
+	var result_style := TOY_UI.panel_style(winner_color if not is_draw else TOY_UI.GOLD, 0.98, 18, 2, 12)
+	result_style.content_margin_left = 36.0
+	result_style.content_margin_top = 26.0
+	result_style.content_margin_right = 36.0
+	result_style.content_margin_bottom = 28.0
+	result_panel.add_theme_stylebox_override("panel", result_style)
+	_populate_result_table(table, characters)
+	TOY_UI.apply_button(rematch_button, TOY_UI.GOLD, true, 18)
+	TOY_UI.apply_button(menu_button, TOY_UI.CORAL, false, 16)
+	rematch_button.pressed.connect(func(): MatchConfig.restart_current_match(get_tree()))
+	menu_button.pressed.connect(_return_to_menu)
+	rematch_button.grab_focus()
+	_root.modulate.a = 0.0
+	result_panel.scale = Vector2(0.96, 0.96)
+	result_panel.pivot_offset = result_panel.size * 0.5
+	var tween := create_tween().set_parallel(true).set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.tween_property(_root, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(result_panel, "scale", Vector2.ONE, 0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-	var accent_line := ColorRect.new()
-	accent_line.name = "WinnerAccent"
-	accent_line.color = winner_color
-	accent_line.position = Vector2(viewport_size.x * 0.5 - 76.0 * ui_scale, viewport_size.y * 0.16)
-	accent_line.size = Vector2(152.0 * ui_scale, 4.0 * ui_scale)
-	_root.add_child(accent_line)
 
-	var kicker := Label.new()
-	kicker.name = "WinnerKicker"
-	kicker.text = "MATCH WINNER"
-	kicker.position = Vector2(0.0, viewport_size.y * 0.18)
-	kicker.size = Vector2(viewport_size.x, 24.0 * ui_scale)
-	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	TOY_UI.apply_label(kicker, roundi(14.0 * ui_scale), TOY_UI.CREAM_DIM)
-	_root.add_child(kicker)
-
-	var winner_label := Label.new()
-	winner_label.name = "WinnerName"
-	winner_label.text = "%s WINS!" % winner_name
-	winner_label.position = Vector2(0.0, viewport_size.y * 0.21)
-	winner_label.size = Vector2(viewport_size.x, 58.0 * ui_scale)
-	winner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	winner_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	TOY_UI.apply_label(winner_label, roundi(36.0 * ui_scale), winner_color.lightened(0.12), roundi(5.0 * ui_scale))
-	_root.add_child(winner_label)
-
+func _populate_result_table(table: GridContainer, characters: Array) -> void:
+	for child in table.get_children():
+		child.free()
+	for header in ["玩家", "KO", "FALL", "状态"]:
+		table.add_child(_make_cell(header, TOY_UI.CREAM_DIM, true))
 	var valid_characters: Array = []
 	for character in characters:
 		if is_instance_valid(character):
 			valid_characters.append(character)
-
-	var table_width := 390.0 * ui_scale
-	var row_height := 27.0 * ui_scale
-	var table_height := (44.0 + maxf(valid_characters.size(), 1) * 27.0) * ui_scale
-	var table := Panel.new()
-	table.name = "ResultTable"
-	table.position = Vector2((viewport_size.x - table_width) * 0.5, viewport_size.y * 0.36)
-	table.size = Vector2(table_width, table_height)
-	table.add_theme_stylebox_override("panel", TOY_UI.panel_style(winner_color, 0.56, TOY_UI.PANEL_RADIUS, 1, 0))
-	_root.add_child(table)
-
-	var header := Label.new()
-	header.text = "PLAYER                         KO      FALL"
-	header.position = Vector2(16.0, 8.0) * ui_scale
-	header.size = Vector2(table_width - 32.0 * ui_scale, 22.0 * ui_scale)
-	TOY_UI.apply_label(header, roundi(10.0 * ui_scale), TOY_UI.CREAM_DIM)
-	table.add_child(header)
-
 	if valid_characters.is_empty():
-		var no_stats := Label.new()
-		no_stats.text = "NO MATCH DATA"
-		no_stats.position = Vector2(16.0, 35.0) * ui_scale
-		no_stats.size = Vector2(table_width - 32.0 * ui_scale, row_height)
-		no_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		TOY_UI.apply_label(no_stats, roundi(12.0 * ui_scale), TOY_UI.CREAM_DIM)
-		table.add_child(no_stats)
-	else:
-		for index in range(valid_characters.size()):
-			var character = valid_characters[index]
-			var row := Label.new()
-			var character_name := String(character.name).left(14)
-			row.text = "%-18s      %2d       %2d" % [character_name, character.kills, character.deaths]
-			row.position = Vector2(16.0 * ui_scale, (35.0 * ui_scale) + row_height * index)
-			row.size = Vector2(table_width - 32.0 * ui_scale, row_height)
-			TOY_UI.apply_label(row, roundi(13.0 * ui_scale), TOY_UI.CREAM if not character.is_game_over else TOY_UI.CREAM_DIM)
-			table.add_child(row)
-
-	var button_width := 220.0 * ui_scale
-	var button_height := 42.0 * ui_scale
-	var button_x := (viewport_size.x - button_width) * 0.5
-	var button_y := minf(table.position.y + table.size.y + 22.0 * ui_scale, viewport_size.y - 116.0 * ui_scale)
-
-	var restart_button := _create_btn("REMATCH", TOY_UI.GOLD, button_x, button_y, button_width, button_height, true)
-	restart_button.pressed.connect(func(): MatchConfig.restart_current_match(get_tree()))
-	_root.add_child(restart_button)
-
-	var menu_button := _create_btn("MAIN MENU", TOY_UI.CORAL, button_x, button_y + 50.0 * ui_scale, button_width, button_height, false)
-	menu_button.pressed.connect(func():
-		get_tree().paused = false
-		get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
-	)
-	_root.add_child(menu_button)
+		table.add_child(_make_cell("暂无比赛数据", TOY_UI.CREAM_DIM))
+		table.add_child(_make_cell("—", TOY_UI.CREAM_DIM))
+		table.add_child(_make_cell("—", TOY_UI.CREAM_DIM))
+		table.add_child(_make_cell("—", TOY_UI.CREAM_DIM))
+		return
+	for index in range(valid_characters.size()):
+		var character = valid_characters[index]
+		var color := TOY_UI.player_color(index)
+		table.add_child(_make_cell(String(character.name).left(18), color))
+		table.add_child(_make_cell(str(character.kills), TOY_UI.CREAM))
+		table.add_child(_make_cell(str(character.deaths), TOY_UI.CREAM))
+		table.add_child(_make_cell("出局" if character.is_game_over else "存活", TOY_UI.CREAM_DIM))
 
 
-func _create_btn(text: String, color: Color, x: float, y: float, width: float, height: float, filled: bool) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.position = Vector2(x, y)
-	button.size = Vector2(width, height)
-	TOY_UI.apply_button(button, color, filled, roundi(15.0 * TOY_UI.ui_scale(get_viewport().get_visible_rect().size)))
-	return button
+func _make_cell(text: String, color: Color, header := false) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.custom_minimum_size = Vector2(100, 30)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 13 if header else 15)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if visible and event is InputEventKey and event.pressed and event.keycode == KEY_R:
+		var active_viewport := get_viewport()
+		MatchConfig.restart_current_match(get_tree())
+		if active_viewport and is_instance_valid(active_viewport):
+			active_viewport.set_input_as_handled()
+
+
+func _return_to_menu() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")

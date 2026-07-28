@@ -2,7 +2,7 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/maps/open_ringout_slice.tscn"
 const DEFAULT_OUT_PATH := "res://reports/open_ringout_slice_screenshot.png"
-const VIEWPORT_SIZE := Vector2i(1536, 960)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 const RENDER_DRIVER_REQUIRED_MESSAGE := "Open Ring-Out screenshot capture cannot run with --headless: Godot's headless DisplayServer disables rendering and window management, so root.get_texture() cannot provide a screenshot. Run this gate from a render-capable display driver, for example the Windows console Godot executable without --headless."
 
 func _initialize() -> void:

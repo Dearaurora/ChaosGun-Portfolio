@@ -51,7 +51,7 @@ function Get-CurrentEvidence {
     $paths = [ordered]@{
         open_ringout_scene = "res://scenes/maps/open_ringout_slice.tscn"
         open_ringout_script = "res://scripts/maps/open_ringout_slice.gd"
-        hero_glb = "res://assets/models/generated/characters/hero_character_rig_v2.glb"
+        hero_glb = "res://assets/models/generated/characters/hero_character_rig_v3.glb"
         projectile_script = "res://scripts/weapons/projectile.gd"
         hud_script = "res://scripts/ui/ringout_hud.gd"
     }
@@ -126,12 +126,12 @@ $godotArguments = @(
     "--rendering-driver", "d3d12",
     "--disable-vsync",
     "--windowed",
-    "--resolution", "1920x1080",
+    "--resolution", "960x540",
     "--path", $projectPath,
     "-s", "res://scripts/tests/open_ringout_performance.gd",
     "--",
     "--quick=$($Quick.IsPresent.ToString().ToLowerInvariant())",
-    "--resolution=1920x1080",
+    "--resolution=960x540",
     "--warmup=$warmupSeconds",
     "--sample=$sampleSeconds",
     "--commit=$commit",

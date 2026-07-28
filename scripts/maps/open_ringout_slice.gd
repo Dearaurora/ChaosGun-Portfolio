@@ -487,10 +487,11 @@ func _setup_control_mode_panel() -> void:
 	pass
 
 func _setup_hud() -> void:
-	_ringout_hud = RINGOUT_HUD_SCRIPT.new()
-	_ringout_hud.name = "OpenRingoutHUD"
-	add_child(_ringout_hud)
-	_ringout_hud.set_characters(_characters)
+	super._setup_hud()
+	if _match_hud.get_parent() != self:
+		_match_hud.reparent(self)
+	_match_hud.name = "OpenRingoutHUD"
+	_ringout_hud = _match_hud
 
 func _spawn_characters() -> void:
 	super._spawn_characters()

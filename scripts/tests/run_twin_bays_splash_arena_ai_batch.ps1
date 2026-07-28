@@ -52,7 +52,7 @@ $reportsPath = Join-Path $projectPath "reports"
 $stdoutPath = Join-Path $reportsPath "twin_bays_splash_arena_ai_batch.stdout.log"
 $stderrPath = Join-Path $reportsPath "twin_bays_splash_arena_ai_batch.stderr.log"
 $layoutPath = Join-Path $projectPath "resources\maps\twin_bays_layout_v1.json"
-$manifestPath = Join-Path $projectPath "assets\models\generated\twin_bays_splash_arena\twin_bays_splash_arena_manifest.json"
+$manifestPath = Join-Path $projectPath "assets\models\generated\twin_bays_splash_arena_v4\twin_bays_splash_arena_v4_manifest.json"
 
 if (-not (Test-Path -LiteralPath $GodotPath)) {
     throw "Godot executable not found: $GodotPath"
@@ -173,7 +173,7 @@ if (Test-Path -LiteralPath $reportFilePath) {
     $artifactBinding = [pscustomobject]@{
         layout_path = "res://resources/maps/twin_bays_layout_v1.json"
         layout_sha256 = $layoutShaAfter
-        manifest_path = "res://assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_manifest.json"
+        manifest_path = "res://assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_manifest.json"
         manifest_sha256 = $manifestShaAfter
         manifest_layout_sha256 = [string]$manifest.layout_sha256
         stable_during_run = ($layoutShaBefore -eq $layoutShaAfter -and $manifestShaBefore -eq $manifestShaAfter)

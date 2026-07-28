@@ -9,8 +9,8 @@ extends SceneTree
 
 const LAYOUT_PATH := "res://resources/maps/twin_bays_layout_v1.json"
 const MANIFEST_PATH := (
-	"res://assets/models/generated/twin_bays_splash_arena/"
-	+ "twin_bays_splash_arena_manifest.json"
+	"res://assets/models/generated/twin_bays_splash_arena_v4/"
+	+ "twin_bays_splash_arena_v4_manifest.json"
 )
 const PORTAL_VFX_SCRIPT_PATH := "res://scripts/maps/twin_bays_portal_vfx.gd"
 

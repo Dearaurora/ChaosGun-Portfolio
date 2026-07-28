@@ -1,6 +1,162 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=6 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/keybinds_screen.gd" id="1_keybinds"]
+[ext_resource type="Script" path="res://scripts/ui/keybinds_screen.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/textures/generated/sunset_toy_sky_islands/sunset_sky_backplate_v1.png" id="2_sky"]
+[ext_resource type="Theme" path="res://resources/ui/chaosgun_theme.tres" id="3_theme"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/keybind_column.tscn" id="4_column"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleScroll"]
 
 [node name="KeybindsScreen" type="CanvasLayer"]
-script = ExtResource("1_keybinds")
+script = ExtResource("1_script")
+
+[node name="KeybindsRoot" type="Control" parent="."]
+theme = ExtResource("3_theme")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SunsetBackground" type="TextureRect" parent="KeybindsRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_sky")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ScreenWash" type="ColorRect" parent="KeybindsRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.129, 0.078, 0.184, 0.52)
+
+[node name="TopGlow" type="ColorRect" parent="KeybindsRoot"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 5.0
+grow_horizontal = 2
+mouse_filter = 2
+color = Color(0.973, 0.784, 0.31, 0.72)
+
+[node name="SafeArea" type="MarginContainer" parent="KeybindsRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 22.0
+offset_right = -32.0
+offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Page" type="VBoxContainer" parent="KeybindsRoot/SafeArea"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="KeybindsRoot/SafeArea/Page"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+
+[node name="TitleBlock" type="VBoxContainer" parent="KeybindsRoot/SafeArea/Page/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = -4
+
+[node name="Title" type="Label" parent="KeybindsRoot/SafeArea/Page/Header/TitleBlock"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 34
+text = "键位设置"
+
+[node name="Subtitle" type="Label" parent="KeybindsRoot/SafeArea/Page/Header/TitleBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.973, 0.784, 0.31, 1)
+theme_override_font_sizes/font_size = 14
+text = "本地输入 · 键盘与鼠标"
+
+[node name="Scope" type="Label" parent="KeybindsRoot/SafeArea/Page/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.875, 0.8, 0.722, 0.82)
+theme_override_font_sizes/font_size = 14
+text = "4 名玩家 / 8 项动作"
+vertical_alignment = 1
+
+[node name="KeybindScroll" type="ScrollContainer" parent="KeybindsRoot/SafeArea/Page"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+theme_override_styles/panel = SubResource("StyleScroll")
+
+[node name="KeybindContent" type="VBoxContainer" parent="KeybindsRoot/SafeArea/Page/KeybindScroll"]
+custom_minimum_size = Vector2(0, 480)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="PrimaryPlayers" type="HBoxContainer" parent="KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Player1Column" parent="KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/PrimaryPlayers" instance=ExtResource("4_column")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Player2Column" parent="KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/PrimaryPlayers" instance=ExtResource("4_column")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ExtraPlayersToggle" type="Button" parent="KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+toggle_mode = true
+text = "展开 P3 / P4"
+
+[node name="ExtraPlayersSection" type="HBoxContainer" parent="KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Player3Column" parent="KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/ExtraPlayersSection" instance=ExtResource("4_column")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Player4Column" parent="KeybindsRoot/SafeArea/Page/KeybindScroll/KeybindContent/ExtraPlayersSection" instance=ExtResource("4_column")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Footer" type="HBoxContainer" parent="KeybindsRoot/SafeArea/Page"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="KeybindsRoot/SafeArea/Page/Footer"]
+custom_minimum_size = Vector2(140, 46)
+layout_mode = 2
+text = "‹  返回"
+
+[node name="CaptureHint" type="Label" parent="KeybindsRoot/SafeArea/Page/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.875, 0.8, 0.722, 1)
+theme_override_font_sizes/font_size = 14
+text = "选择一项后按下新按键 · ESC 取消捕获"
+vertical_alignment = 1
+
+[node name="Policy" type="Label" parent="KeybindsRoot/SafeArea/Page/Footer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.875, 0.8, 0.722, 0.72)
+theme_override_font_sizes/font_size = 12
+text = "保留现有冲突策略"
+vertical_alignment = 1

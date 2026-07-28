@@ -9,7 +9,7 @@ extends SceneTree
 const SCENE_PATH := "res://scenes/maps/momentum_circuit_arena.tscn"
 const WHITEBOX_SCENE_PATH := "res://scenes/maps/momentum_circuit_whitebox.tscn"
 const LAYOUT_PATH := "res://resources/maps/momentum_circuit_layout_v2.json"
-const PRODUCTION_CONFIG_PATH := "res://resources/maps/momentum_circuit_production_v2.json"
+const PRODUCTION_CONFIG_PATH := "res://resources/maps/momentum_circuit_production_v9.json"
 const REQUIRED_LAYERS := [&"Gameplay", &"ForegroundVisuals", &"MechanismVFX", &"Backdrop"]
 const EXPECTED_WEAPON_IDS := [&"ak_rifle", &"gatling", &"shotgun", &"smg", &"sniper"]
 const EXPECTED_CLOUD_SPEED_A := 0.003
@@ -71,11 +71,14 @@ func _initialize() -> void:
 	_verify_layout_counts()
 	_verify_surface_style()
 	_verify_gameplay_collision_samples()
-	_verify_gravity_controller()
-	_verify_activators_and_anchors()
+	_verify_no_wind_controller()
+	_verify_light_bridges()
+	_verify_teleporters()
 	_verify_camera_contract()
 	_verify_weapon_contract()
 	_verify_cloud_vortex()
+	_verify_environment_dressing()
+	_verify_hole_depth()
 	_verify_mechanism_vfx()
 
 	await _finish()
@@ -85,11 +88,11 @@ func _verify_surface_style() -> void:
 	print("\n--- Coverless Dark Deck Surface ---")
 	var style := _production_config.get("surface_style", {}) as Dictionary
 	var expected_colors := {
-		"base_color": "#45445F",
-		"inset_color": "#37364D",
-		"seam_color": "#716B91",
-		"static_rim_color": "#B7A8EA",
-		"side_color": "#3C315F",
+		"base_color": "#3B3A52",
+		"inset_color": "#211F32",
+		"seam_color": "#252337",
+		"static_rim_color": "#A998E3",
+		"side_color": "#271C45",
 	}
 	for key: String in expected_colors:
 		if String(style.get(key, "")).to_upper() != String(expected_colors[key]).to_upper():
@@ -122,9 +125,13 @@ func _verify_surface_style() -> void:
 		if token.contains("cover"):
 			_fail("Foreground GLB contains prohibited cover object/material: %s" % token)
 	var joined := " ".join(names + material_names)
-	for required_token in ["decktop", "deckside", "deckseam", "staticrim"]:
-		if not joined.contains(required_token):
-			_fail("Foreground GLB is missing surface token: %s" % required_token)
+	for token_group in [["decktop", "panelunit"], ["deckside", "sidewall"], ["deckseam", "seam"], ["staticrim"]]:
+		var found := false
+		for required_token in token_group:
+			if joined.contains(required_token):
+				found = true
+		if not found:
+			_fail("Foreground GLB is missing surface token: %s" % "/".join(token_group))
 	print("OK  14-partition matte deck, zero covers, and low-energy static rim")
 
 
@@ -302,72 +309,80 @@ func _verify_gameplay_collision_samples() -> void:
 		)
 		query.collision_mask = 1
 		query.collide_with_areas = false
-		if not space.intersect_ray(query).is_empty():
-			_fail("Void center was filled by gameplay collision: %s" % hole.get("id", "?"))
-	print("OK  four spawn floors collide and three void centers remain open")
+		var hit := space.intersect_ray(query)
+		if not hit.is_empty():
+			var collider := hit.get("collider") as Node
+			if collider == null or not collider.is_in_group(&"momentum_circuit_light_bridge_collision"):
+				_fail("Void center was filled by non-bridge gameplay collision: %s" % hole.get("id", "?"))
+	print("OK  four spawn floors collide; voids remain open except for the current light bridge")
 
 
-func _verify_gravity_controller() -> void:
-	print("\n--- Gravity Controller Contract ---")
-	var controllers := _semantic_nodes(
-		&"momentum_circuit_gravity_controller",
-		["gravitycontroller"],
-		[&"request_toggle", &"get_debug_state", &"get_character_context"]
-	)
+func _verify_no_wind_controller() -> void:
+	print("\n--- Standard Hole Fall Contract ---")
+	var controllers := _nodes_in_arena_group(&"momentum_circuit_wind_controller")
+	if not controllers.is_empty():
+		_fail("Formal production scene must not contain a wind controller")
+	for node in _walk(_arena):
+		var script := node.get_script() as Script
+		if script != null and script.resource_path.ends_with("momentum_circuit_wind_field.gd"):
+			_fail("Formal production scene must not instantiate momentum_circuit_wind_field.gd")
+	print("OK  holes use the standard fall/respawn rule; no wind rescue")
+
+
+func _verify_light_bridges() -> void:
+	print("\n--- Rotating Light Bridge Contract ---")
+	var controllers := _nodes_in_arena_group(&"momentum_circuit_light_bridge_controller")
 	if controllers.size() != 1:
-		_fail("Production scene must contain exactly one gravity controller, got %d" % controllers.size())
+		_fail("Production scene must contain exactly one light-bridge controller, got %d" % controllers.size())
 		return
 	var controller := controllers[0]
-	for method_name in [&"request_toggle", &"get_debug_state", &"get_character_context", &"get_ai_movement_bias"]:
+	for method_name in [&"get_debug_state", &"test_step", &"test_scan_for_traversals", &"test_traversal_step", &"get_ai_movement_bias"]:
 		if not controller.has_method(method_name):
-			_fail("Gravity controller is missing public method: %s" % method_name)
+			_fail("Light-bridge controller is missing %s" % method_name)
 	var debug := controller.call("get_debug_state") as Dictionary
-	_expect_string(debug, "state", "idle", "initial controller state")
-	_expect_int(debug, "direction", 0, "initial field direction")
-	_expect_float_alias(debug, ["warning_seconds"], 1.25, "warning seconds")
-	_expect_float_alias(debug, ["active_seconds"], 4.0, "active seconds")
-	_expect_float_alias(debug, ["reversing_seconds", "reverse_warning_seconds"], 0.65, "reversing seconds")
-	_expect_float_alias(debug, ["recovery_seconds"], 0.75, "recovery seconds")
-	_expect_float_alias(debug, ["global_guard_seconds"], 0.75, "global guard")
-	_expect_float_alias(debug, ["acceleration", "field_acceleration"], 28.0, "field acceleration")
-	_expect_float_alias(debug, ["max_field_axis_speed", "max_contribution_speed"], 18.0, "environment contribution cap")
-	_expect_float_alias(debug, ["corridor_x_min", "corridor_min_x"], 2.0, "corridor X minimum")
-	_expect_float_alias(debug, ["corridor_y_min", "corridor_min_y"], -4.0, "corridor Y minimum")
-	_expect_float_alias(debug, ["corridor_y_max", "corridor_max_y"], 7.0, "corridor Y maximum")
-	_expect_float_alias(debug, ["anchor_outer_radius"], 5.5, "stabilizer outer radius")
-	_expect_float_alias(debug, ["anchor_core_radius"], 2.75, "stabilizer core radius")
-	_expect_float_alias(debug, ["anchor_clear_seconds"], 0.45, "stabilizer clear duration")
-	print("OK  public API and all frozen gravity parameters")
+	if String(debug.get("state", "")) != "ACTIVE":
+		_fail("Light bridges must start in ACTIVE")
+	if String(debug.get("active_bridge_id", "")) != "bridge_hole_02":
+		_fail("Opening bridge must be hole 2")
+	if String(debug.get("next_bridge_id", "")) != "bridge_hole_01":
+		_fail("Bridge order must begin hole 2 -> hole 1")
+	if int(debug.get("bridge_count", 0)) != 3:
+		_fail("Light-bridge controller must own three bridge specs")
+	if (debug.get("collision_enabled_ids", []) as Array).size() != 1:
+		_fail("Exactly one bridge must collide during ACTIVE")
+	if not bool(debug.get("forced_traversal_enabled", false)):
+		_fail("Light bridges must force safe centerline traversal")
+	if absf(float(debug.get("traversal_speed", 0.0)) - 13.0) > FLOAT_EPSILON:
+		_fail("Forced bridge traversal speed must be 13u/s")
+	if absf(float(debug.get("bounce_speed", 0.0)) - 15.0) > FLOAT_EPSILON:
+		_fail("Two-character bridge bounce speed must be 15u/s")
+	var collision_bodies := _nodes_in_arena_group(&"momentum_circuit_light_bridge_collision")
+	if collision_bodies.size() != 3:
+		_fail("Gameplay must own exactly three light-bridge collision bodies, got %d" % collision_bodies.size())
+	var bridge_config := _production_config.get("light_bridges", {}) as Dictionary
+	if absf(float(bridge_config.get("active_seconds", 0.0)) - 8.0) > FLOAT_EPSILON:
+		_fail("Light bridge stable duration must be 8 seconds")
+	if absf(float(bridge_config.get("warning_seconds", 0.0)) - 2.0) > FLOAT_EPSILON:
+		_fail("Light bridge warning duration must be 2 seconds")
+	if absf(float(bridge_config.get("switching_seconds", 0.0)) - 0.45) > FLOAT_EPSILON:
+		_fail("Light bridge switching duration must be 0.45 seconds")
+	if not bool(bridge_config.get("forced_traversal_enabled", false)):
+		_fail("Production bridge config must enable forced safe traversal")
+	print("OK  three Gameplay bridges; fixed 8/2/0.45 cadence; safe forced crossing and two-player return")
 
 
-func _verify_activators_and_anchors() -> void:
-	print("\n--- Activators And Stabilizers ---")
-	var activators := _semantic_nodes(
-		&"momentum_circuit_gravity_activator",
-		["gravityactivator", "gravitynode", "activator"],
-		[&"apply_hit", &"get_debug_state"]
-	)
-	var anchors := _semantic_nodes(
-		&"momentum_circuit_stabilizer_anchor",
-		["stabilizeranchor", "stabilityanchor"],
-		[&"get_stabilization_strength", &"contains_core"]
-	)
-	if activators.size() != 3:
-		_fail("Production scene must contain exactly three shootable activators, got %d" % activators.size())
-	if anchors.size() != 4:
-		_fail("Production scene must contain exactly four stabilizer anchors, got %d" % anchors.size())
-	for activator in activators:
-		var debug := activator.call("get_debug_state") as Dictionary
-		_expect_float_alias(debug, ["cooldown_seconds"], 8.0, "%s cooldown" % activator.name)
-		if activator.has_signal(&"body_entered") and activator is Area3D:
-			_fail("Shoot-only activator must not be an Area3D contact trigger: %s" % activator.name)
-	for anchor in anchors:
-		var debug: Dictionary = anchor.call("get_debug_state") if anchor.has_method("get_debug_state") else {}
-		_expect_float_alias(debug, ["outer_radius"], 5.5, "%s outer radius" % anchor.name)
-		_expect_float_alias(debug, ["core_radius"], 2.75, "%s core radius" % anchor.name)
-		if anchor is Area3D:
-			_fail("Stabilizer anchor must be sampled spatially, not act as a contact/teleport Area3D")
-	print("OK  three shoot-only activators and four non-portal stabilizers")
+func _verify_teleporters() -> void:
+	print("\n--- Random Teleporter Contract ---")
+	var teleporters := _nodes_in_arena_group(&"momentum_circuit_random_teleporter")
+	if teleporters.size() != 4:
+		_fail("Production scene must contain exactly four random teleporters, got %d" % teleporters.size())
+	for teleporter in teleporters:
+		if not teleporter.has_method("get_debug_state") or not teleporter.has_method("set_destinations") or not teleporter.has_method("test_step"):
+			_fail("Teleporter missing random destination contract: %s" % teleporter.name)
+		var debug := teleporter.call("get_debug_state") as Dictionary
+		if absf(float(debug.get("landing_cooldown_seconds", 0.0)) - 3.0) > 0.001:
+			_fail("Teleporter %s must use a 3-second landing-pad cooldown" % teleporter.name)
+	print("OK  four cyan discs use random destinations and 3-second landing-pad cooldowns")
 
 
 func _verify_camera_contract() -> void:
@@ -464,40 +479,104 @@ func _verify_cloud_vortex() -> void:
 	print("OK  two collision-free, shadow-free layers at +0.003 / -0.008 rad/s")
 
 
+func _verify_environment_dressing() -> void:
+	print("\n--- v9 Environment Dressing ---")
+	var nodes := _nodes_in_arena_group(&"momentum_circuit_environment_dressing")
+	if nodes.size() != 1:
+		_fail("Backdrop must contain exactly one v9 environment dressing controller, got %d" % nodes.size())
+		return
+	var dressing := nodes[0]
+	var backdrop: Node = _layers.get(&"Backdrop")
+	if backdrop != null and not backdrop.is_ancestor_of(dressing):
+		_fail("Environment dressing must live under Backdrop")
+	if not dressing.has_method("get_debug_state"):
+		_fail("Environment dressing must expose get_debug_state")
+		return
+	var debug := dressing.call("get_debug_state") as Dictionary
+	if not bool(debug.get("configured", false)):
+		_fail("Environment dressing did not configure its complete model library")
+	if int(debug.get("version", 0)) != 9:
+		_fail("Environment dressing must report version 9")
+	if int(debug.get("background_layer_count", 0)) != 3:
+		_fail("Environment dressing must expose far, mid, and ambient layers")
+	if int(debug.get("model_family_count", 0)) != 10:
+		_fail("Environment dressing must expose exactly ten low-poly model families")
+	if int(debug.get("active_motion_system_count", 0)) != 1:
+		_fail("Environment dressing must expose the low-poly ambient traffic motion system")
+	if int(debug.get("ring_instance_count", -1)) != 0:
+		_fail("Painted energy rings must not be duplicated by low-poly runtime stand-ins")
+	if int(debug.get("traffic_route_count", 0)) != 3:
+		_fail("Environment dressing must expose three ambient traffic loops")
+	if int(debug.get("sensor_scan_count", -1)) != 0:
+		_fail("Painted energy towers must not be covered by teleporter-like sensor scans")
+	if int(debug.get("collision_node_count", -1)) != 0:
+		_fail("Environment dressing must contain no collision")
+	if int(debug.get("shadow_caster_count", -1)) != 0:
+		_fail("Environment dressing must cast no shadows")
+	if int(debug.get("camera_node_count", -1)) != 0:
+		_fail("Environment dressing GLB/runtime must contain no cameras")
+	if int(debug.get("light_node_count", -1)) != 0:
+		_fail("Environment dressing GLB/runtime must contain no lights")
+	var environment_config := _production_config.get("environment_dressing", {}) as Dictionary
+	if int(environment_config.get("max_materials", 99)) > 5:
+		_fail("Environment dressing exceeds its five-material budget")
+	if int(environment_config.get("max_added_draw_calls", 999)) > 55:
+		_fail("Environment dressing exceeds its added draw-call budget")
+	print("OK  approved energy-array matte plus low-poly traffic, no collision/shadows")
+
+
 func _verify_mechanism_vfx() -> void:
 	print("\n--- Mechanism VFX Contract ---")
 	var nodes := _semantic_nodes(
 		&"momentum_circuit_mechanism_vfx",
-		["mechanismvfx"],
+		["rotatinglightbridgeandteleportvfx"],
 		[&"get_debug_state"]
 	)
 	if nodes.size() != 1:
 		_fail("MechanismVFX must expose exactly one controller, got %d" % nodes.size())
 		return
-	var debug := nodes[0].call("get_debug_state") as Dictionary
-	if not bool(debug.get("visual_only", nodes[0].get_meta("visual_only", false))):
+	if not bool(nodes[0].get_meta("visual_only", false)):
 		_fail("MechanismVFX controller must declare visual_only=true")
-	if int(debug.get("activator_visual_count", -1)) != 3:
-		_fail("MechanismVFX must render three activator visuals")
-	if int(debug.get("anchor_visual_count", -1)) != 4:
-		_fail("MechanismVFX must render four stabilizer visuals")
-	if bool(debug.get("surface_fill_present", true)):
-		_fail("Gravity presentation must not tint or fill the full right-side floor")
-	if int(debug.get("literal_arrow_count", -1)) != 0:
-		_fail("Gravity presentation must contain no literal floor-arrow meshes")
-	if not bool(debug.get("static_deck_rim_present", false)):
-		_fail("VFX debug state must report the independent static deck rim")
-	if not bool(debug.get("dynamic_gravity_rim_separate", false)):
-		_fail("Static deck rim and dynamic gravity chase must remain separate")
-	if int(debug.get("boundary_cue_count", 0)) != 1:
-		_fail("Gravity presentation must expose one thin corridor-boundary cue")
-	if int(debug.get("flow_streak_count", 0)) <= 0:
-		_fail("Gravity presentation must expose sparse directional flow streaks")
-	if int(debug.get("rim_segment_count", 0)) <= 0:
-		_fail("Gravity presentation must expose a right-side rim chase")
-	if int(debug.get("audio_player_count", 0)) < 3:
-		_fail("Gravity presentation must expose state, interaction, and stabilizer audio channels")
-	print("OK  diegetic boundary/rim/flow cues, three activators, four stabilizers, no floor fill or arrows")
+	var debug := nodes[0].call("get_debug_state") as Dictionary
+	if int(debug.get("bridge_visual_count", 0)) != 3:
+		_fail("MechanismVFX must render exactly three bridge surfaces")
+	if int(debug.get("endpoint_socket_count", 0)) != 6:
+		_fail("MechanismVFX must render exactly six embedded endpoint sockets")
+	if int(debug.get("teleporter_visual_count", 0)) != 4:
+		_fail("MechanismVFX must retain four teleporter pulse visuals")
+	if int(debug.get("visual_version", 0)) != 7:
+		_fail("MechanismVFX must use the v7 presentation")
+	if int(debug.get("bridge_visual_layers", 0)) != 3:
+		_fail("Every bridge must expose frame, energy core, and scan layers")
+	if int(debug.get("cooldown_ring_segments", 0)) != 8:
+		_fail("Teleporter cooldown presentation must use eight segments")
+	if not bool(debug.get("teleport_trail_enabled", false)):
+		_fail("Teleporter source-to-destination trail must be enabled")
+	if int(debug.get("audio_player_count", 0)) != 3:
+		_fail("MechanismVFX must expose bridge, event, and teleport spatial audio players")
+	if int(debug.get("literal_arrow_count", -1)) != 0 or int(debug.get("text_node_count", -1)) != 0:
+		_fail("Light-bridge presentation must contain no arrows or text")
+	print("OK  v7 three-layer bridges, eight-segment pads, trails/audio, no arrows/text")
+
+
+func _verify_hole_depth() -> void:
+	print("\n--- Hole Depth Parallax ---")
+	var node := _arena.get_node_or_null("Backdrop/HoleDepthParallax")
+	if node == null or not node.has_method("get_debug_state"):
+		_fail("Backdrop is missing the visual-only hole depth controller")
+		return
+	var debug := node.call("get_debug_state") as Dictionary
+	if int(debug.get("hole_count", 0)) != 3:
+		_fail("Hole depth presentation must cover all three holes")
+	if int(debug.get("cloud_layer_count", 0)) != 6:
+		_fail("Hole depth presentation must use two parallax layers per hole")
+	if int(debug.get("inner_wall_layers", 0)) != 3:
+		_fail("Hole depth contract must retain three inner-wall layers")
+	if bool(debug.get("platform_plane_fall_effect", true)):
+		_fail("No fall effect may exist at platform height")
+	if int(debug.get("collision_node_count", -1)) != 0:
+		_fail("Hole depth presentation must be collision-free")
+	print("OK  three deep holes, six sub-deck cloud layers, no platform-plane fall effect")
 
 
 func _semantic_nodes(

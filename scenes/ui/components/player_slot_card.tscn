@@ -1,0 +1,104 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/player_slot_card.gd" id="1_script"]
+[ext_resource type="Theme" path="res://resources/ui/chaosgun_theme.tres" id="2_theme"]
+
+[node name="PlayerSlotCard" type="PanelContainer"]
+custom_minimum_size = Vector2(210, 330)
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlayerLabel" type="Label" parent="Content/Header"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "P1"
+
+[node name="TypeLabel" type="Label" parent="Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 17
+text = "玩家"
+
+[node name="RemoveButton" type="Button" parent="Content/Header"]
+custom_minimum_size = Vector2(44, 34)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "移除"
+
+[node name="HeaderDivider" type="HSeparator" parent="Content"]
+layout_mode = 2
+
+[node name="HeroArea" type="Control" parent="Content"]
+custom_minimum_size = Vector2(0, 214)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Portrait" type="TextureRect" parent="Content/HeroArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EmptyState" type="CenterContainer" parent="Content/HeroArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EmptyContent" type="VBoxContainer" parent="Content/HeroArea/EmptyState"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="Plus" type="Label" parent="Content/HeroArea/EmptyState/EmptyContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.945, 0.812, 0.88)
+theme_override_font_sizes/font_size = 54
+text = "+"
+horizontal_alignment = 1
+
+[node name="EmptyLabel" type="Label" parent="Content/HeroArea/EmptyState/EmptyContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.875, 0.8, 0.722, 1)
+theme_override_font_sizes/font_size = 16
+text = "空位"
+horizontal_alignment = 1
+
+[node name="Actions" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="HumanButton" type="Button" parent="Content/Actions"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "加入玩家"
+
+[node name="AIButton" type="Button" parent="Content/Actions"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "加入 AI"
+
+[node name="AccentLine" type="ColorRect" parent="Content"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.302, 0.643, 1, 1)

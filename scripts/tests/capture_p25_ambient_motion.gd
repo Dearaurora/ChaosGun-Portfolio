@@ -2,7 +2,7 @@ extends SceneTree
 
 const SCENE_PATH := "res://scenes/maps/open_ringout_slice.tscn"
 const DEFAULT_PREFIX := "p25_ambient_motion"
-const VIEWPORT_SIZE := Vector2i(1536, 960)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 
 
 func _initialize() -> void:

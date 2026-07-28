@@ -423,13 +423,14 @@ func _verify_development_scene_isolated(match_config: Node) -> void:
 			_fail("Unapproved whitebox must not be exposed in the player-facing map list")
 			return
 	if (
-		match_config.MAPS.size() != 2
+		match_config.MAPS.size() != 3
 		or match_config.MAPS[0][1] != "res://scenes/maps/open_ringout_slice.tscn"
 		or match_config.MAPS[1][1] != "res://scenes/maps/twin_bays_splash_arena.tscn"
+		or match_config.MAPS[2][1] != "res://scenes/maps/momentum_circuit_arena.tscn"
 	):
-		_fail("Player-facing map policy must keep exactly Open Ring-Out and Twin Bays in release order")
+		_fail("Player-facing map policy must keep Open Ring-Out, Twin Bays, and Momentum Circuit at release indices 0, 1, and 2")
 	else:
-		print("OK  whitebox stays isolated while the two production maps retain their release indices")
+		print("OK  whitebox stays isolated while all three production maps retain their release indices")
 
 func _verify_runtime_teleport() -> void:
 	print("\n--- Runtime Teleport ---")

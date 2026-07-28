@@ -4,18 +4,20 @@ extends SceneTree
 ##
 ## Example:
 ##   godot --path . --script res://scripts/tests/capture_momentum_circuit_arena.gd -- \
-##     --mode=empty --mechanism=active_plus --width=1536 --height=1024 \
-##     --output=res://reports/momentum_circuit_active_plus.png --settle=4.0
+##     --mode=empty --mechanism=warning --width=1536 --height=1024 \
+##     --output=res://reports/momentum_circuit_bridge_warning.png --settle=4.0
 
 const SCENE_PATH := "res://scenes/maps/momentum_circuit_arena.tscn"
 const CAPTURE_MODES := ["empty", "battle"]
 const MECHANISM_STATES := [
-	"idle",
+	"stable",
 	"warning",
-	"active_plus",
-	"reversing",
-	"active_minus",
-	"recovery",
+	"switching",
+	"new_bridge",
+	"teleport_empty",
+	"teleport_half",
+	"teleport_ready",
+	"teleport_trail",
 ]
 
 var _arena: Node3D = null
@@ -32,7 +34,7 @@ func _initialize() -> void:
 		return
 
 	var mode := _argument_value("--mode=", "empty").to_lower()
-	var mechanism := _argument_value("--mechanism=", "idle").to_lower()
+	var mechanism := _argument_value("--mechanism=", "stable").to_lower()
 	if mode not in CAPTURE_MODES:
 		_fail("Unknown mode '%s'; expected empty or battle" % mode)
 		return
@@ -50,6 +52,10 @@ func _initialize() -> void:
 		"--output=",
 		_default_output_path(mode, mechanism, viewport_size)
 	)
+	var capture_id := _argument_value("--capture-id=", "")
+	var run_id := _argument_value("--run-id=", "")
+	if not capture_id.is_empty() and not run_id.is_empty() and _argument_value("--output=", "").is_empty():
+		output_path = "res://reports/momentum_circuit_release_validation/%s/captures/%s.png" % [run_id, capture_id]
 	if not output_path.to_lower().ends_with(".png"):
 		_fail("Capture output must end in .png: %s" % output_path)
 		return
@@ -57,8 +63,10 @@ func _initialize() -> void:
 	seed(20260718)
 	root.set_meta("disable_runtime_audio", true)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
-	DisplayServer.window_set_position(Vector2i.ZERO)
-	DisplayServer.window_set_size(viewport_size)
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, false)
+	var safe_window_size := Vector2i(mini(viewport_size.x, 960), mini(viewport_size.y, 540))
+	DisplayServer.window_set_size(safe_window_size)
+	root.size = safe_window_size
 	var test_window_policy := root.get_node_or_null("TestWindowPolicy")
 	if test_window_policy != null and test_window_policy.has_method("enforce_now"):
 		test_window_policy.call("enforce_now")
@@ -89,7 +97,7 @@ func _initialize() -> void:
 		_prepare_battle_capture()
 	await process_frame
 	await physics_frame
-	_advance_cloud_review(maxf(0.0, float(_argument_value("--cloud-advance=", "0.0"))))
+	_advance_cloud_review(maxf(0.0, float(_argument_value("--cloud-time=", _argument_value("--cloud-advance=", "0.0")))))
 
 	if not _drive_mechanism(mechanism):
 		return
@@ -101,6 +109,15 @@ func _initialize() -> void:
 	await create_timer(settle_seconds).timeout
 	await process_frame
 	await process_frame
+	if mechanism == "teleport_trail":
+		_stage_teleport_trail()
+		await process_frame
+		await process_frame
+	var weapon_id := _argument_value("--weapon=", "")
+	if not weapon_id.is_empty():
+		if not _stage_weapon_review(weapon_id):
+			return
+		await process_frame
 	if not _verify_capture_contract(mode, mechanism, viewport_size):
 		return
 
@@ -125,6 +142,29 @@ func _initialize() -> void:
 	if save_error != OK:
 		_fail("Could not save screenshot %s (error %d)" % [absolute_output, save_error])
 		return
+	var manifest_entry := _argument_value("--manifest-entry=", "")
+	if not manifest_entry.is_empty():
+		var entry := {
+			"id": capture_id,
+			"run_id": run_id,
+			"mode": mode,
+			"mechanism": mechanism,
+			"phase_progress": float(_argument_value("--phase-progress=", "0.0")),
+			"cloud_time_seconds": float(_argument_value("--cloud-time=", _argument_value("--cloud-advance=", "0.0"))),
+			"framing": _argument_value("--framing=", "overview"),
+			"weapon_id": _argument_value("--weapon=", ""),
+			"output_path": output_path,
+			"sha256": FileAccess.get_sha256(output_path),
+			"width": image.get_width(),
+			"height": image.get_height(),
+		}
+		var entry_absolute := _absolute_path(manifest_entry)
+		DirAccess.make_dir_recursive_absolute(entry_absolute.get_base_dir())
+		var entry_file := FileAccess.open(manifest_entry, FileAccess.WRITE)
+		if entry_file == null:
+			_fail("Could not write capture manifest entry: %s" % manifest_entry)
+			return
+		entry_file.store_string(JSON.stringify(entry, "\t"))
 
 	print("MOMENTUM_CIRCUIT_ARENA_CAPTURE_OK|mode=%s|mechanism=%s|width=%d|height=%d|path=%s" % [
 		mode,
@@ -133,6 +173,12 @@ func _initialize() -> void:
 		image.get_height(),
 		absolute_output,
 	])
+	if is_instance_valid(_capture_viewport):
+		_capture_viewport.queue_free()
+	_capture_viewport = null
+	_arena = null
+	await process_frame
+	await process_frame
 	quit(0)
 
 
@@ -230,86 +276,118 @@ func _prepare_battle_capture() -> void:
 
 func _drive_mechanism(target: String) -> bool:
 	_controller = (
-		_arena.call("get_gravity_controller")
-		if _arena.has_method("get_gravity_controller")
+		_arena.call("get_light_bridge_controller")
+		if _arena.has_method("get_light_bridge_controller")
 		else null
 	)
 	if _controller == null or not is_instance_valid(_controller):
-		_fail("Production gravity controller is missing")
+		_fail("Production light-bridge controller is missing")
 		return false
-	if not _controller.has_method("request_toggle") \
-		or not _controller.has_method("test_step") \
+	if not _controller.has_method("test_step") \
 		or not _controller.has_method("get_debug_state"):
-		_fail("Gravity controller does not expose the production capture API")
+		_fail("Light-bridge controller does not expose the production capture API")
 		return false
 	_controller.set_physics_process(false)
-
-	if target == "idle":
-		return _expect_mechanism_state("idle", 0)
-	var activator := _first_activator()
-	if activator == null:
-		_fail("No shootable gravity activator is available")
-		return false
-	if not bool(_controller.call("request_toggle", activator, null)):
-		_fail("Controller rejected the first capture activation")
-		return false
-	if target == "warning":
-		return _expect_mechanism_state("warning", 0)
-
 	var debug := _controller.call("get_debug_state") as Dictionary
-	_controller.call("test_step", float(debug.get("warning_seconds", 1.25)) + 0.001)
-	if target == "active_plus":
-		return _expect_mechanism_state("active", 1)
-	if target == "recovery":
-		debug = _controller.call("get_debug_state") as Dictionary
-		_controller.call("test_step", float(debug.get("active_seconds", 4.0)) + 0.001)
-		return _expect_mechanism_state("recovery", 1)
+	var phase := clampf(float(_argument_value("--phase-progress=", "0.0")), 0.0, 1.0)
+	var active_remaining := maxf(0.0, float(debug.get("state_duration", 8.0)) - float(debug.get("state_elapsed", 0.0)))
+	if target in ["teleport_empty", "teleport_half", "teleport_ready", "teleport_trail"]:
+		_controller.call("test_step", active_remaining * 0.40)
+		_stage_teleporter_cooldown(target)
+		return _expect_mechanism_state("ACTIVE", "bridge_hole_02")
+	match target:
+		"stable":
+			_controller.call("test_step", active_remaining * phase)
+			return _expect_mechanism_state("ACTIVE", "bridge_hole_02")
+		"warning":
+			_controller.call("test_step", active_remaining)
+			debug = _controller.call("get_debug_state") as Dictionary
+			_controller.call("test_step", float(debug.get("state_duration", 2.0)) * phase)
+			return _expect_mechanism_state("WARNING", "bridge_hole_02")
+		"switching":
+			_controller.call("test_step", active_remaining)
+			debug = _controller.call("get_debug_state") as Dictionary
+			_controller.call("test_step", float(debug.get("state_duration", 2.0)))
+			debug = _controller.call("get_debug_state") as Dictionary
+			_controller.call("test_step", float(debug.get("state_duration", 0.45)) * phase)
+			return _expect_mechanism_state("SWITCHING", "bridge_hole_02")
+		"new_bridge":
+			_controller.call("test_step", active_remaining)
+			debug = _controller.call("get_debug_state") as Dictionary
+			_controller.call("test_step", float(debug.get("state_duration", 2.0)))
+			debug = _controller.call("get_debug_state") as Dictionary
+			_controller.call("test_step", float(debug.get("state_duration", 0.45)))
+			return _expect_mechanism_state("ACTIVE", "bridge_hole_01")
+	return false
 
-	# The first warning is longer than the global guard, so a second successful
-	# public request now enters the real reversing branch and requests -X.
-	var reversal_activator := _activator_by_number(2)
-	if reversal_activator == null:
-		_fail("Second gravity activator is unavailable for the reversal capture")
+
+func _stage_teleporter_cooldown(target: String) -> void:
+	if not _arena.has_method("get_random_teleporters"):
+		return
+	var teleporters := _arena.call("get_random_teleporters") as Array
+	for value: Variant in teleporters:
+		var teleporter := value as Node
+		if teleporter:
+			teleporter.set_physics_process(false)
+	if teleporters.is_empty() or target in ["teleport_ready", "teleport_trail"]:
+		return
+	var review_pad := teleporters[0] as Node
+	review_pad.call("_begin_landing_cooldown")
+	if target == "teleport_half":
+		review_pad.call("test_step", 1.5)
+
+
+func _stage_teleport_trail() -> void:
+	var vfx := _arena.get_node_or_null("MechanismVFX/RotatingLightBridgeAndTeleportVFX")
+	if vfx == null or not vfx.has_method("stage_review_teleport_trail"):
+		_fail("v7 teleport trail review interface is missing")
+		return
+	if not bool(vfx.call("stage_review_teleport_trail", 0.40)):
+		_fail("v7 teleport trail could not be staged")
+
+
+func _stage_weapon_review(weapon_id: String) -> bool:
+	var characters := _review_characters()
+	if characters.is_empty():
+		_fail("Weapon trajectory review requires a battle capture")
 		return false
-	if not bool(_controller.call("request_toggle", reversal_activator, null)):
-		_fail("Controller rejected the reversal capture activation")
+	var factories := {
+		"pistol": WeaponData.create_pistol,
+		"smg": WeaponData.create_smg,
+		"ak_rifle": WeaponData.create_ak_rifle,
+		"shotgun": WeaponData.create_shotgun,
+		"gatling": WeaponData.create_gatling,
+		"sniper": WeaponData.create_sniper,
+	}
+	if not factories.has(weapon_id):
+		_fail("Unknown trajectory review weapon: %s" % weapon_id)
 		return false
-	if target == "reversing":
-		return _expect_mechanism_state("reversing", 1)
-	debug = _controller.call("get_debug_state") as Dictionary
-	_controller.call("test_step", float(debug.get("reversing_seconds", 0.65)) + 0.001)
-	return _expect_mechanism_state("active", -1)
-
-
-func _expect_mechanism_state(expected_state: String, expected_direction: int) -> bool:
-	var debug := _controller.call("get_debug_state") as Dictionary
-	var actual_state := String(debug.get("state", ""))
-	var actual_direction := int(debug.get("direction", 0))
-	if actual_state != expected_state or actual_direction != expected_direction:
-		_fail("Mechanism staging mismatch: expected=%s/%d actual=%s/%d" % [
-			expected_state, expected_direction, actual_state, actual_direction,
-		])
+	var character := characters[0]
+	if character.weapon_manager == null or character.weapon_point == null:
+		_fail("Trajectory review character has no weapon manager/fire point")
+		return false
+	character.weapon_manager.equip_weapon((factories[weapon_id] as Callable).call())
+	character.weapon_manager.is_switching = false
+	var target := Vector3(12.0, character.weapon_point.global_position.y, -4.0)
+	var direction := (
+		target - character.weapon_point.global_position
+	).normalized()
+	if not character.weapon_manager.try_fire(character.weapon_point, direction, character):
+		_fail("Trajectory review weapon did not fire: %s" % weapon_id)
 		return false
 	return true
 
 
-func _first_activator() -> Node3D:
-	return _activator_by_number(1)
-
-
-func _activator_by_number(number: int) -> Node3D:
-	var expected_name := "GravityActivator%02d" % number
-	var named := _arena.find_child(expected_name, true, false) if _arena else null
-	if named is Node3D and is_instance_valid(named):
-		return named as Node3D
-	var candidates := get_nodes_in_group(&"momentum_circuit_gravity_activator")
-	for index in range(candidates.size()):
-		if index != number - 1:
-			continue
-		var candidate := candidates[index] as Node
-		if candidate is Node3D and is_instance_valid(candidate):
-			return candidate as Node3D
-	return null
+func _expect_mechanism_state(expected_state: String, expected_bridge_id: String) -> bool:
+	var debug := _controller.call("get_debug_state") as Dictionary
+	var actual_state := String(debug.get("state", ""))
+	var actual_bridge_id := String(debug.get("active_bridge_id", ""))
+	if actual_state != expected_state or actual_bridge_id != expected_bridge_id:
+		_fail("Mechanism staging mismatch: expected=%s/%s actual=%s/%s" % [
+			expected_state, expected_bridge_id, actual_state, actual_bridge_id,
+		])
+		return false
+	return true
 
 
 func _verify_capture_contract(mode: String, mechanism: String, viewport_size: Vector2i) -> bool:
@@ -327,15 +405,15 @@ func _verify_capture_contract(mode: String, mechanism: String, viewport_size: Ve
 	if mode == "battle" and character_count != 4:
 		_fail("Battle capture lost characters during settle: %d" % character_count)
 		return false
-	var expected_state := mechanism
-	if mechanism in ["active_plus", "active_minus"]:
-		expected_state = "active"
-	var expected_direction := 0
-	if mechanism in ["active_plus", "reversing", "recovery"]:
-		expected_direction = 1
-	elif mechanism == "active_minus":
-		expected_direction = -1
-	return _expect_mechanism_state(expected_state, expected_direction)
+	var expected_state := "ACTIVE"
+	var expected_bridge := "bridge_hole_02"
+	if mechanism == "warning":
+		expected_state = "WARNING"
+	elif mechanism == "switching":
+		expected_state = "SWITCHING"
+	elif mechanism == "new_bridge":
+		expected_bridge = "bridge_hole_01"
+	return _expect_mechanism_state(expected_state, expected_bridge)
 
 
 func _review_characters() -> Array[BaseCharacter]:

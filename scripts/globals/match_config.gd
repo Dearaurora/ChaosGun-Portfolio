@@ -10,10 +10,10 @@ var slots: Array = [SlotType.HUMAN, SlotType.AI, SlotType.EMPTY, SlotType.EMPTY]
 
 ## 玩家颜色
 var PLAYER_COLORS: Array = [
-	Color("#ef3f3f"), # P1 红
-	Color("#78d23d"), # P2 绿
-	Color("#24a9e8"), # P3 青
-	Color("#f2bf27"), # P4 黄
+	Color("#4da4ff"), # P1 蓝
+	Color("#ff6248"), # P2 橙
+	Color("#d66bdc"), # P3 紫
+	Color("#77cf6b"), # P4 绿
 ]
 
 ## 四名本地玩家的输入前缀映射

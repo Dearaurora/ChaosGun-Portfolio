@@ -45,6 +45,52 @@ var movement_speed_multiplier := 1.0
 var outgoing_knockback_multiplier := 1.0
 var combat_owner: BaseCharacter = null
 var _powerup_controller: Node = null
+var _environment_motion_modifiers: Dictionary = {}
+var _surface_feedback_provider: Node = null
+var _previous_vertical_velocity := 0.0
+var _scripted_traversal_active := false
+var _scripted_traversal_owner: Node = null
+var _scripted_saved_collision_layer := 0
+var _scripted_saved_collision_mask := 0
+var _scripted_saved_freeze := false
+
+func is_scripted_traversal_active() -> bool:
+	return _scripted_traversal_active
+
+func begin_scripted_traversal(owner: Node) -> bool:
+	if owner == null or is_dead or is_game_over or _scripted_traversal_active:
+		return false
+	_scripted_traversal_owner = owner
+	_scripted_traversal_active = true
+	_scripted_saved_collision_layer = collision_layer
+	_scripted_saved_collision_mask = collision_mask
+	_scripted_saved_freeze = freeze
+	collision_layer = 0
+	collision_mask = 0
+	freeze = true
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	return true
+
+func update_scripted_traversal_position(owner: Node, position_value: Vector3) -> bool:
+	if owner != _scripted_traversal_owner or not _scripted_traversal_active:
+		return false
+	global_position = position_value
+	reset_physics_interpolation()
+	return true
+
+func release_scripted_traversal(owner: Node, landing_velocity := Vector3.ZERO) -> bool:
+	if owner != _scripted_traversal_owner or not _scripted_traversal_active:
+		return false
+	_scripted_traversal_active = false
+	_scripted_traversal_owner = null
+	collision_layer = _scripted_saved_collision_layer
+	collision_mask = _scripted_saved_collision_mask
+	freeze = _scripted_saved_freeze
+	sleeping = false
+	linear_velocity = landing_velocity
+	angular_velocity = Vector3.ZERO
+	return true
 
 func _game_config() -> Node:
 	return RuntimeGlobals.game_config()
@@ -98,6 +144,7 @@ func _ready() -> void:
 	var mat = PhysicsMaterial.new()
 	mat.friction = 0.0
 	physics_material_override = mat
+	_previous_vertical_velocity = linear_velocity.y
 
 func _base_process(delta: float) -> void:
 	# A game-over death exits before assigning a respawn timer. Keep eliminated
@@ -116,11 +163,14 @@ func _base_process(delta: float) -> void:
 		
 	# 落地压扁检测
 	var current_on_floor = is_on_floor()
-	if current_on_floor and not _was_on_floor and linear_velocity.y < -1.0:
+	if current_on_floor and not _was_on_floor and _previous_vertical_velocity < -1.0:
 		var visual = get_visual()
 		if visual:
 			visual.animate_squash(0.6, 1.25, 0.2)
+		if _surface_feedback_provider and is_instance_valid(_surface_feedback_provider) and _surface_feedback_provider.has_method("handle_character_landing"):
+			_surface_feedback_provider.call("handle_character_landing", self, global_position, absf(_previous_vertical_velocity))
 	_was_on_floor = current_on_floor
+	_previous_vertical_velocity = linear_velocity.y
 	_knockback_feedback_timer = maxf(0.0, _knockback_feedback_timer - delta)
 	_update_ringout_motion_feedback(current_on_floor)
 
@@ -137,7 +187,10 @@ func _base_process(delta: float) -> void:
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	# 模拟全局阻尼，但仅作用于水平面（X/Z）
-	var current_damp = _game_config_float("character_horizontal_damp", 2.0) if is_on_floor() else _game_config_float("character_air_horizontal_damp", 0.5)
+	var grounded := is_on_floor()
+	var current_damp = _game_config_float("character_horizontal_damp", 2.0) if grounded else _game_config_float("character_air_horizontal_damp", 0.5)
+	if grounded:
+		current_damp *= _environment_damp_multiplier()
 	if current_damp > 0.0:
 		var current_vel = state.linear_velocity
 		var h_vel = Vector3(current_vel.x, 0, current_vel.z)
@@ -169,7 +222,55 @@ func jump() -> void:
 			visual.animate_stretch(1.4, 0.7)
 
 func get_movement_speed() -> float:
-	return _game_config_float("character_speed", 550.0) * movement_speed_multiplier
+	var environment_multiplier := _environment_speed_multiplier() if is_on_floor() else 1.0
+	return _game_config_float("character_speed", 550.0) * movement_speed_multiplier * environment_multiplier
+
+func set_environment_motion_modifier(source_id: StringName, speed_multiplier: float, damp_multiplier: float) -> void:
+	if source_id.is_empty():
+		return
+	_environment_motion_modifiers[source_id] = {
+		"speed_multiplier": clampf(speed_multiplier, 0.05, 4.0),
+		"damp_multiplier": clampf(damp_multiplier, 0.05, 4.0),
+	}
+
+func clear_environment_motion_modifier(source_id: StringName) -> void:
+	_environment_motion_modifiers.erase(source_id)
+
+func get_environment_motion_debug() -> Dictionary:
+	return {
+		"sources": _environment_motion_modifiers.duplicate(true),
+		"speed_multiplier": _environment_speed_multiplier(),
+		"damp_multiplier": _environment_damp_multiplier(),
+		"powerup_speed_multiplier": movement_speed_multiplier,
+	}
+
+func set_surface_feedback_provider(provider: Node) -> void:
+	_surface_feedback_provider = provider
+	var visual := get_visual()
+	if visual and visual.has_method("set_surface_feedback_provider"):
+		visual.call("set_surface_feedback_provider", provider)
+
+func clear_surface_feedback_provider(provider: Node) -> void:
+	if _surface_feedback_provider != provider:
+		return
+	_surface_feedback_provider = null
+	var visual := get_visual()
+	if visual and visual.has_method("set_surface_feedback_provider"):
+		visual.call("set_surface_feedback_provider", null)
+
+func _environment_speed_multiplier() -> float:
+	var result := 1.0
+	for value: Variant in _environment_motion_modifiers.values():
+		var modifier := value as Dictionary
+		result *= float(modifier.get("speed_multiplier", 1.0))
+	return result
+
+func _environment_damp_multiplier() -> float:
+	var result := 1.0
+	for value: Variant in _environment_motion_modifiers.values():
+		var modifier := value as Dictionary
+		result *= float(modifier.get("damp_multiplier", 1.0))
+	return result
 
 func get_outgoing_knockback_multiplier() -> float:
 	return outgoing_knockback_multiplier
@@ -202,7 +303,7 @@ func _check_fall() -> void:
 
 func apply_knockback(impulse: Vector3) -> void:
 	# 无敌期间免疫击退
-	if is_invincible or is_dead:
+	if is_invincible or is_dead or _scripted_traversal_active:
 		return
 		
 	# 击退累积缩放 (Damage Scaling)：HP越低，击退越强（大乱斗机制）
@@ -223,7 +324,7 @@ func apply_knockback(impulse: Vector3) -> void:
 		visual.animate_squash(0.7, 1.3)
 
 func apply_recoil(impulse: Vector3) -> void:
-	if is_dead:
+	if is_dead or _scripted_traversal_active:
 		return
 	var h_impulse = Vector3(impulse.x, 0.0, impulse.z)
 	if h_impulse.length_squared() <= 0.0001:
@@ -245,7 +346,7 @@ func apply_hit(
 	weapon_id: StringName = &""
 ) -> void:
 	## 被敌人子弹击中时调用：施加冲量 + 扣血 + 受击闪白 + 顿帧/震屏
-	if is_invincible or is_dead:
+	if is_invincible or is_dead or _scripted_traversal_active:
 		return
 	if attacker is BaseCharacter:
 		last_hit_by = (attacker as BaseCharacter).get_combat_identity()
@@ -346,12 +447,18 @@ func _die() -> void:
 	last_hit_by = null
 	lives -= 1
 	is_dead = true
+	_previous_vertical_velocity = 0.0
 	if _combat_feedback:
 		_combat_feedback.set_shield_active(false)
 		_combat_feedback.update_motion_feedback(Vector3.ZERO, false, false)
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
-	_spawn_character_transition(&"ringout", Color("#ff4d62"), 1.45)
+	var active_scene := RuntimeGlobals.active_scene(get_tree())
+	var ringout_mode := String(active_scene.get_meta("ringout_burst_mode", "none")) if active_scene != null else "none"
+	if ringout_mode == "water_splash" and active_scene.has_method("spawn_water_fall_effect"):
+		active_scene.call("spawn_water_fall_effect", global_position)
+	elif ringout_mode == "legacy":
+		_spawn_character_transition(&"ringout", Color("#ff4d62"), 1.45)
 
 	# 隐藏角色
 	visible = false
@@ -379,6 +486,7 @@ func _respawn() -> void:
 	global_position = spawn_point
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
+	_previous_vertical_velocity = 0.0
 
 	# 显示角色
 	visible = true

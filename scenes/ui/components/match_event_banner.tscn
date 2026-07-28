@@ -1,0 +1,135 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/match_event_banner.gd" id="1_script"]
+[ext_resource type="Theme" path="res://resources/ui/chaosgun_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBanner"]
+content_margin_left = 22.0
+content_margin_top = 9.0
+content_margin_right = 22.0
+content_margin_bottom = 9.0
+bg_color = Color(0.105, 0.055, 0.165, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.973, 0.784, 0.31, 0.72)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.06, 0.02, 0.1, 0.42)
+shadow_size = 12
+shadow_offset = Vector2(0, 4)
+
+[node name="MatchEventBanner" type="Control"]
+visible = false
+custom_minimum_size = Vector2(600, 132)
+offset_right = 600.0
+offset_bottom = 132.0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Stack" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="MainRow" type="HBoxContainer" parent="Stack"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 0
+
+[node name="LeftRail" type="Control" parent="Stack/MainRow"]
+custom_minimum_size = Vector2(150, 88)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ShadowLine" type="ColorRect" parent="Stack/MainRow/LeftRail"]
+layout_mode = 0
+offset_top = 44.0
+offset_right = 150.0
+offset_bottom = 49.0
+mouse_filter = 2
+color = Color(0.129, 0.078, 0.184, 0.76)
+
+[node name="AccentLine" type="ColorRect" parent="Stack/MainRow/LeftRail"]
+layout_mode = 0
+offset_top = 42.0
+offset_right = 150.0
+offset_bottom = 45.0
+mouse_filter = 2
+color = Color(0.973, 0.784, 0.31, 1)
+
+[node name="Surface" type="PanelContainer" parent="Stack/MainRow"]
+custom_minimum_size = Vector2(300, 88)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBanner")
+
+[node name="Content" type="VBoxContainer" parent="Stack/MainRow/Surface"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 0
+
+[node name="Kicker" type="Label" parent="Stack/MainRow/Surface/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.973, 0.784, 0.31, 1)
+theme_override_font_sizes/font_size = 11
+text = "CHAOS GUN"
+horizontal_alignment = 1
+
+[node name="CueWord" type="Label" parent="Stack/MainRow/Surface/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.945, 0.812, 1)
+theme_override_colors/font_outline_color = Color(0.129, 0.078, 0.184, 0.94)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 36
+text = "READY"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Stack/MainRow/Surface/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.875, 0.8, 0.722, 0.92)
+theme_override_font_sizes/font_size = 13
+text = "离开低洼区"
+horizontal_alignment = 1
+
+[node name="RightRail" type="Control" parent="Stack/MainRow"]
+custom_minimum_size = Vector2(150, 88)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ShadowLine" type="ColorRect" parent="Stack/MainRow/RightRail"]
+layout_mode = 0
+offset_top = 44.0
+offset_right = 150.0
+offset_bottom = 49.0
+mouse_filter = 2
+color = Color(0.129, 0.078, 0.184, 0.76)
+
+[node name="AccentLine" type="ColorRect" parent="Stack/MainRow/RightRail"]
+layout_mode = 0
+offset_top = 42.0
+offset_right = 150.0
+offset_bottom = 45.0
+mouse_filter = 2
+color = Color(0.973, 0.784, 0.31, 1)
+
+[node name="PipsCenter" type="CenterContainer" parent="Stack"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Pips" type="HBoxContainer" parent="Stack/PipsCenter"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8

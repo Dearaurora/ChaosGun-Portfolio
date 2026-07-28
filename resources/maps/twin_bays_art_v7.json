@@ -1,0 +1,120 @@
+{
+  "schema": "chaos_gun.twin_bays_art",
+  "version": 7,
+  "status": "isolated_benchmark_corner_candidate",
+  "base_profile": "resources/maps/twin_bays_art_v6.json",
+  "base_profile_sha256": "291329519a7827e15c76ba144925e3bf1715fed3804b565aec9b46acbc3066af",
+  "layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+  "tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+  "camera_target": "docs/art-direction/concepts/twin_bays_art_v5_camera_target.png",
+  "visual_geometry": {
+    "pipe_outer_radius_multiplier": 1.02,
+    "pipe_collar_radius_multiplier": 1.10,
+    "pipe_collar_depth_multiplier": 1.20,
+    "pipe_band_radius_bonus": 0.0,
+    "pipe_band_half_span": 0.0,
+    "pipe_visual_path_fraction": 0.46,
+    "pipe_panel_seams": true,
+    "pipe_panel_seam_count": 3,
+    "pipe_panel_seam_half_span": 0.075,
+    "pipe_panel_seam_radius_bonus": 0.035
+  },
+  "tide_art": {
+    "authored_bay_foam_enabled": false,
+    "authored_bay_foam_subdivisions": 5,
+    "authored_bay_foam_width": 0.70,
+    "authored_bay_foam_width_variation": 0.22,
+    "authored_bay_foam_height": 0.14,
+    "authored_bay_foam_gap_period": 0,
+    "authored_bay_foam_double_band": false,
+    "danger_foam_alpha": 0.94,
+    "danger_foam_material_scale": 0.92,
+    "danger_foam_color": "#F5FFFF",
+    "authored_bay_foam_paths": [
+      [
+        [-7.0, 23.2],
+        [-8.4, 19.5],
+        [-12.8, 15.5],
+        [-16.2, 11.8],
+        [-19.4, 7.9],
+        [-21.7, 4.3]
+      ],
+      [
+        [21.7, 4.3],
+        [19.4, 7.9],
+        [16.2, 11.8],
+        [12.8, 15.5],
+        [8.4, 19.5],
+        [7.0, 23.2]
+      ],
+      [
+        [-19.3, -12.4],
+        [-16.5, -15.1],
+        [-13.4, -18.9],
+        [-9.7, -21.9],
+        [-4.5, -24.7],
+        [-3.4, -26.3]
+      ],
+      [
+        [3.4, -26.3],
+        [4.5, -24.7],
+        [9.7, -21.9],
+        [13.4, -18.9],
+        [16.5, -15.1],
+        [19.3, -12.4]
+      ]
+    ]
+  },
+  "portal_art": {
+    "cascade_length": 4.4,
+    "cascade_width_wave": 0.16,
+    "cascade_lip_curl": 0.22,
+    "cascade_alpha": 0.82,
+    "cascade_highlight_strength": 0.54,
+    "foam_rim_scallop_strength": 0.032,
+    "inner_foam_scallop_strength": 0.020
+  },
+  "budgets": {
+    "primary_material_target": 11,
+    "primary_material_absolute_max": 12,
+    "transparent_batch_max": 3,
+    "texture_max_dimension": 2048,
+    "basis_universal_required": true,
+    "runtime_node_growth_allowed": false
+  },
+  "review": {
+    "candidate_id": "art_v7_benchmark_corner_01",
+    "base_candidate_id": "art_v6_professional_finish_01",
+    "production_assets_must_remain_byte_identical": true,
+    "art_v5_must_remain_byte_identical": true,
+    "art_v6_must_remain_byte_identical": true,
+    "golden_update_allowed": false,
+    "fast_gate_modes": [
+      "high",
+      "drain_9_battle",
+      "portal_close"
+    ],
+    "weighted_regions": {
+      "platform_silhouette": 0.20,
+      "bay_water_contact": 0.20,
+      "portal_hero_asset": 0.20,
+      "water_material": 0.15,
+      "periphery": 0.15,
+      "lighting_and_readability": 0.10
+    },
+    "minimum_normal_camera_gain_percent": 3.0
+  },
+  "forbidden": [
+    "production_overwrite",
+    "art_v5_overwrite",
+    "art_v6_overwrite",
+    "golden_update",
+    "gameplay_collision",
+    "layout_coordinates",
+    "camera_changes",
+    "tide_gameplay_changes",
+    "static_floor_puddles",
+    "new_runtime_material_batch",
+    "runtime_node_growth"
+  ]
+}

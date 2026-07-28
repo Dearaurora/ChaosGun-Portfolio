@@ -8,6 +8,8 @@ extends SceneTree
 ## quotas during a short smoke run.
 
 const SCENE_PATH := "res://scenes/maps/twin_bays_splash_arena.tscn"
+const ART_V6_REVIEW_SCENE_PATH := \
+	"res://scenes/maps/review/twin_bays_art_v6_performance.tscn"
 const DEFAULT_REPORT_PATH := "res://reports/twin_bays_splash_arena_ai_batch.json"
 const DEFAULT_SEEDS := [101, 211, 307, 401, 503, 601, 701, 809]
 const DEFAULT_ROUNDS := 8
@@ -28,6 +30,8 @@ var _round_started_msec := 0
 var _portal_cooldown_seconds := 0.55
 var _report_path := DEFAULT_REPORT_PATH
 var _enforce_engagement := true
+var _scene_path := SCENE_PATH
+var _art_v6_review_enabled := false
 
 
 func _initialize() -> void:
@@ -35,6 +39,9 @@ func _initialize() -> void:
 	print("[Twin Bays Splash Arena AI Batch]")
 	print("==================================================")
 	root.set_meta("disable_runtime_audio", true)
+	_art_v6_review_enabled = "--art-v6-review" in OS.get_cmdline_user_args()
+	if _art_v6_review_enabled:
+		_scene_path = ART_V6_REVIEW_SCENE_PATH
 
 	var match_config := root.get_node_or_null("MatchConfig")
 	var game_config := root.get_node_or_null("GameConfig")
@@ -42,15 +49,15 @@ func _initialize() -> void:
 		_fail("MatchConfig autoload is missing")
 	if game_config == null:
 		_fail("GameConfig autoload is missing")
-	if not ResourceLoader.exists(SCENE_PATH):
-		_fail("Production scene is missing: %s" % SCENE_PATH)
+	if not ResourceLoader.exists(_scene_path):
+		_fail("Twin Bays AI batch scene is missing: %s" % _scene_path)
 	if not _failures.is_empty():
 		await _finish([], {})
 		return
 
-	var packed := load(SCENE_PATH) as PackedScene
+	var packed := load(_scene_path) as PackedScene
 	if packed == null:
-		_fail("Could not load production scene: %s" % SCENE_PATH)
+		_fail("Could not load Twin Bays AI batch scene: %s" % _scene_path)
 		await _finish([], {})
 		return
 
@@ -100,6 +107,9 @@ func _run_round(
 	await process_frame
 	await process_frame
 	await physics_frame
+	if _art_v6_review_enabled \
+			and not bool(arena.get_meta("art_v6_performance_direct", false)):
+		_fail("Art V6 direct AI batch route did not initialize")
 
 	var characters := _get_characters(arena)
 	var result: Dictionary = {
@@ -475,7 +485,7 @@ func _is_valid_report_path(path: String) -> bool:
 func _write_report(results: Array[Dictionary], aggregate: Dictionary) -> void:
 	var report := {
 		"schema_version": 1,
-		"scene": SCENE_PATH,
+		"scene": _scene_path,
 		"configuration": {
 			"seeds": DEFAULT_SEEDS.slice(0, results.size()),
 			"rounds": results.size(),
@@ -483,6 +493,8 @@ func _write_report(results: Array[Dictionary], aggregate: Dictionary) -> void:
 			"release_gate": results.size() == DEFAULT_ROUNDS and (
 				results.is_empty() or is_equal_approx(float(results[0]["duration_seconds"]), DEFAULT_DURATION_SECONDS)
 			),
+			"engagement_gate_enforced": _enforce_engagement,
+			"art_v6_review": _art_v6_review_enabled,
 			"engine_output_validation": "PowerShell wrapper scans stdout/stderr for script, engine, crash, and leak errors",
 		},
 		"aggregate": aggregate,

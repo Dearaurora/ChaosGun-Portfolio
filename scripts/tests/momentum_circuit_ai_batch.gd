@@ -89,7 +89,7 @@ func _initialize() -> void:
 
 
 func _verify_danger_bias(packed: PackedScene, match_config: Node) -> Dictionary:
-	print("\n--- Deterministic Gravity-Danger Bias Probe ---")
+	print("\n--- Light Bridge Warning Escape / Teleporter Availability Probe ---")
 	match_config.set("slots", [
 		match_config.SlotType.EMPTY,
 		match_config.SlotType.EMPTY,
@@ -103,8 +103,7 @@ func _verify_danger_bias(packed: PackedScene, match_config: Node) -> Dictionary:
 	await process_frame
 	await physics_frame
 
-	var controller := _find_method_node(arena, [&"request_toggle", &"get_debug_state", &"get_ai_movement_bias"])
-	var activator := _find_method_node(arena, [&"apply_hit", &"get_debug_state"])
+	var teleporters := arena.get_tree().get_nodes_in_group(&"momentum_circuit_random_teleporter")
 	var result := {
 		"verified": false,
 		"candidate": [],
@@ -112,49 +111,54 @@ func _verify_danger_bias(packed: PackedScene, match_config: Node) -> Dictionary:
 		"weight": 0.0,
 		"reason": "",
 	}
-	if controller == null or activator == null:
-		result["reason"] = "gravity controller or activator missing"
-		_fail("AI danger-bias probe requires production gravity controller and activator")
+	if teleporters.size() != 4:
+		result["reason"] = "random teleporters missing"
+		_fail("Momentum Circuit requires four random teleporters")
 		await _release_arena(arena)
 		return result
-
-	var candidate := _find_unsafe_force_edge(arena, 1)
-	if candidate == Vector3.ZERO:
-		result["reason"] = "no grounded +X edge candidate"
-		_fail("Could not find grounded corridor point with void seven units in +X")
+	var controllers := arena.get_tree().get_nodes_in_group(&"momentum_circuit_light_bridge_controller")
+	var controller: Node = null
+	for candidate: Node in controllers:
+		if candidate == arena or arena.is_ancestor_of(candidate):
+			controller = candidate
+			break
+	if controller == null or not controller.has_method("test_step") or not controller.has_method("get_ai_movement_bias"):
+		result["reason"] = "light bridge controller missing"
+		_fail("Momentum Circuit requires the rotating light-bridge controller")
 		await _release_arena(arena)
 		return result
-
-	var ai_packed := load(AI_SCENE_PATH) as PackedScene
-	var probe := ai_packed.instantiate() as BaseCharacter
-	probe.name = "AIDangerBiasProbe"
-	probe.freeze = true
-	# The arena root has identity transform; author local position before the
-	# probe enters the tree to avoid Node3D global-transform engine errors.
-	probe.position = candidate
-	probe.add_to_group(&"player")
-	probe.add_to_group(&"ai")
+	controller.set_physics_process(false)
+	var debug := controller.call("get_debug_state") as Dictionary
+	controller.call("test_step", maxf(0.0, float(debug.get("state_duration", 8.0)) - float(debug.get("state_elapsed", 0.0))))
+	var specs := controller.call("get_bridge_specs") as Array
+	var opening_spec: Dictionary = {}
+	for value: Variant in specs:
+		var spec := value as Dictionary
+		if String(spec.get("id", "")) == "bridge_hole_02":
+			opening_spec = spec
+			break
+	if opening_spec.is_empty():
+		_fail("Opening hole-2 bridge spec is missing")
+		await _release_arena(arena)
+		return result
+	var start_values := opening_spec.get("start_xz", []) as Array
+	var end_values := opening_spec.get("end_xz", []) as Array
+	var start := Vector3(float(start_values[0]), 1.86, float(start_values[1]))
+	var finish := Vector3(float(end_values[0]), 1.86, float(end_values[1]))
+	var probe := Node3D.new()
+	probe.position = start.lerp(finish, 0.25)
 	arena.add_child(probe)
 	await process_frame
-	probe.global_position = candidate
-	controller.set_physics_process(false)
-	if not bool(controller.call("request_toggle", activator, probe)):
-		result["reason"] = "controller rejected initial activation"
-		_fail("Gravity controller rejected deterministic AI bias activation")
-	else:
-		controller.call("test_step", 1.25)
-		var bias := controller.call("get_ai_movement_bias", probe) as Dictionary
-		var direction := bias.get("direction", Vector3.ZERO) as Vector3
-		var weight := float(bias.get("weight", 0.0))
-		result["candidate"] = [candidate.x, candidate.y, candidate.z]
-		result["direction"] = [direction.x, direction.y, direction.z]
-		result["weight"] = weight
-		if direction.distance_to(Vector3.LEFT) > 0.01 or absf(weight - 0.55) > 0.01:
-			result["reason"] = "bias did not oppose +X at weight 0.55"
-			_fail("Unsafe +X field edge must produce -X AI bias with weight 0.55")
-		else:
-			result["verified"] = true
-			print("OK  candidate=%s direction=%s weight=%.2f" % [candidate, direction, weight])
+	var bias := controller.call("get_ai_movement_bias", probe) as Dictionary
+	var bias_direction := bias.get("direction", Vector3.ZERO) as Vector3
+	result["direction"] = [bias_direction.x, bias_direction.y, bias_direction.z]
+	result["weight"] = float(bias.get("weight", 0.0))
+	result["verified"] = absf(float(result["weight"]) - 0.85) <= 0.001
+	result["reason"] = String(bias.get("reason", ""))
+	if not bool(result["verified"]):
+		_fail("Warning-bridge AI escape bias was not 0.85")
+	print("OK  warning bridge yields 0.85 nearest-bank bias; four random teleporters remain available")
+	probe.queue_free()
 	await _release_arena(arena)
 	return result
 
@@ -207,6 +211,7 @@ func _run_round(
 		"maximum_continuous_fall_seconds": 0.0,
 		"minimum_distance_travelled": 0.0,
 		"controller_activation_serial": 0,
+		"bridge_switch_serial": 0,
 	}
 	if characters.size() != 4:
 		result["setup_failure"] = "Expected four AI characters, got %d" % characters.size()
@@ -278,10 +283,11 @@ func _run_round(
 	result["maximum_continuous_fall_seconds"] = float(maximum_fall_frames) / float(physics_rate)
 	for character in characters:
 		result["total_kills"] = int(result["total_kills"]) + int(character.kills)
-	var controller := _find_method_node(arena, [&"request_toggle", &"get_debug_state", &"get_character_context"])
+	var controller := _find_method_node(arena, [&"get_debug_state", &"get_ai_movement_bias", &"test_step"])
 	if controller != null:
 		var debug := controller.call("get_debug_state") as Dictionary
-		result["controller_activation_serial"] = int(debug.get("activation_serial", debug.get("activation_count", 0)))
+		result["bridge_switch_serial"] = int(debug.get("switch_serial", 0))
+		result["controller_activation_serial"] = int(result["bridge_switch_serial"])
 
 	await _release_arena(arena)
 	return result
@@ -303,11 +309,11 @@ func _summarize_and_verify(results: Array[Dictionary], danger_bias: Dictionary) 
 			_fail("Round %d had all AI unavailable inside %.1f seconds" % [round_number, ABNORMAL_WIPE_SECONDS])
 		total_deaths += int(result.get("total_deaths", 0))
 		total_kills += int(result.get("total_kills", 0))
-		if int(result.get("controller_activation_serial", 0)) > 0:
+		if int(result.get("bridge_switch_serial", 0)) > 0:
 			activation_rounds += 1
 	if not bool(danger_bias.get("verified", false)):
-		_fail("Deterministic gravity-danger bias was not verified")
-	print("BATCH rounds=%d deaths=%d kills=%d gravity_activation_rounds=%d danger_bias=%s" % [
+		_fail("Deterministic warning-bridge escape bias was not verified")
+	print("BATCH rounds=%d deaths=%d kills=%d bridge_switch_rounds=%d warning_escape_bias=%s" % [
 		results.size(), total_deaths, total_kills, activation_rounds, danger_bias.get("verified", false)
 	])
 	return {
@@ -315,6 +321,7 @@ func _summarize_and_verify(results: Array[Dictionary], danger_bias: Dictionary) 
 		"total_deaths": total_deaths,
 		"total_kills": total_kills,
 		"gravity_activation_rounds": activation_rounds,
+		"bridge_switch_rounds": activation_rounds,
 		"danger_bias": danger_bias,
 	}
 
@@ -471,11 +478,11 @@ func _finite_vector(value: Vector3) -> bool:
 
 
 func _print_round(result: Dictionary) -> void:
-	print("ROUND %d seed=%d deaths=%d kills=%d nan=%d permanent_falls=%d early_wipe=%s activations=%d" % [
+	print("ROUND %d seed=%d deaths=%d kills=%d nan=%d permanent_falls=%d early_wipe=%s bridge_switches=%d" % [
 		result.get("round", 0), result.get("seed", 0), result.get("total_deaths", 0),
 		result.get("total_kills", 0), result.get("nan_or_inf_frames", 0),
 		result.get("permanent_fall_count", 0), result.get("abnormal_early_wipe", false),
-		result.get("controller_activation_serial", 0),
+		result.get("bridge_switch_serial", 0),
 	])
 
 

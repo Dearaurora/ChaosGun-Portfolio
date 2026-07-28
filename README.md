@@ -1,91 +1,73 @@
-# 🔫 ChaosGun
+# ChaosGun
 
-> **2.5D 击退射击对战原型** — 用枪的击退力把对手打下平台！
+> 2.5D 击退射击对战游戏原型：用枪的击退力把对手打下平台。
 
-## 📖 项目简介
+## 面试官快速入口
 
-ChaosGun 是一款基于 **Godot 4.6** 开发的 2.5D 多人对战射击游戏原型。游戏的核心玩法不是传统的 HP 伤害，而是通过武器的**击退力 (Knockback)** 将对手推出竞技场边缘。灵感来自《任天堂明星大乱斗》的场外击飞机制。
+打开仓库后，建议按这个顺序查看：
 
-## 🎮 核心玩法
+1. 先看下方的演示截图，了解最终视觉方向。
+2. 阅读 [作品集演示指南](docs/portfolio/demo-guide.md)，其中列出了推荐场景、操作方式和验证结果。
+3. 用 Godot 4.6 打开 `project.godot`，按 F6 运行推荐演示场景；也可以直接运行主场景后从菜单进入地图。
+4. 查看 `scenes/`、`scripts/` 和 `tools/`，了解场景、玩法系统与自动化资产/验证流程。
 
-- **击退为王**：所有武器造成击退而非伤害，目标是把对手推下平台
-- **武器系统**：4 种风格各异的武器（手枪、SMG、AK 步枪、狙击枪），各有不同的射速、击退力、后坐力和散布特性
-- **武器拾取**：地图上会周期性刷新强力武器，拾取后替换当前主武器
-- **AI 对手**：FSM 状态机驱动的 AI，具备巡逻、追击、射击、边缘逃离行为
-- **生命复活**：每位角色有 10 条命，坠落后倒计时复活，复活时附带无敌盾
+## 作品展示
 
-## 🛠️ 技术栈
+### 主力可玩竞技场切片
+
+![ChaosGun arena](docs/art-direction/previews/sunset_hero_slice_v1.png)
+
+### Twin Bays：视觉与关卡制作切片
+
+![Twin Bays](docs/art-direction/previews/twin_bays_splash_arena_foreground.png)
+
+更多截图、对比稿和制作决策见 [`docs/art-direction/`](docs/art-direction/) 与 [`docs/ui/`](docs/ui/)。
+
+## 核心玩法
+
+- **击退为王**：武器主要通过击退而非传统 HP 伤害取胜。
+- **多武器对战**：手枪、SMG、AK 步枪、狙击枪拥有不同射速、后坐力、散布和击退参数。
+- **多人 + AI**：支持本地多人、AI 对手、目标选择和多种瞄准/操控模式。
+- **竞技场机制**：边缘掉落、复活无敌、传送门、风场、潮汐/水体与环境动效。
+- **可验证工作流**：脚本化截图、结构审计、性能测试和发布前验证均位于 `scripts/tests/`。
+
+## 技术栈
 
 | 项目 | 技术 |
-|------|------|
-| 引擎 | Godot 4.6 (Forward+, gl_compatibility) |
+| --- | --- |
+| 引擎 | Godot 4.6 |
 | 语言 | GDScript |
-| 视角 | 2.5D 正交投影 (120 单位视野) |
-| 渲染 | gl_compatibility 模式 |
+| 渲染 | Forward+ / gl_compatibility |
+| 视角 | 2.5D 正交投影 |
+| 资产流程 | Blender + Python/PowerShell 构建脚本 |
 
-## 📁 项目结构
+## 如何运行
 
-```
-ChaosGun/
-├── project.godot              # Godot 项目配置
-├── README.md                  # 本文件
-├── scenes/
-│   ├── characters/
-│   │   ├── player.tscn        # 玩家角色场景
-│   │   ├── ai_character.tscn  # AI 对手场景
-│   │   └── dummy_target.tscn  # 测试用靶子
-│   ├── maps/
-│   │   └── demo_arena.tscn    # 演示竞技场（主场景）
-│   └── weapons/
-│       ├── pistol_projectile.tscn
-│       ├── smg_projectile.tscn
-│       ├── ak_projectile.tscn
-│       ├── sniper_projectile.tscn
-│       └── weapon_pickup.tscn # 武器拾取物
-├── scripts/
-│   ├── player/
-│   │   ├── player_character.gd  # 玩家控制器
-│   │   ├── ai_character.gd      # AI 状态机
-│   │   └── dummy_target.gd      # 靶子逻辑
-│   ├── weapons/
-│   │   ├── weapon.gd            # 单把武器运行时逻辑
-│   │   ├── weapon_data.gd       # 武器数据资源 + 工厂方法
-│   │   ├── weapon_manager.gd    # 武器槽位管理
-│   │   ├── weapon_pickup.gd     # 武器拾取物
-│   │   ├── weapon_spawner.gd    # 武器刷新系统
-│   │   └── projectile.gd       # 通用子弹
-│   └── ui/
-│       └── debug_hud.gd        # 临时调试 HUD
-└── roadmap/                     # 开发计划（见下方）
+1. 安装 [Godot 4.6](https://godotengine.org/download)。
+2. 克隆仓库并在 Godot 中导入 `project.godot`。
+3. 运行主场景，或按 [作品集演示指南](docs/portfolio/demo-guide.md) 选择推荐场景。
+4. 自动化验证优先使用 headless 模式；任何可见测试窗口均保持普通窗口、非全屏、最大 960×540。
+
+基础操作：W/A/S/D 移动，鼠标瞄准，鼠标左键射击，1/2 或滚轮切换武器。
+
+## 项目结构
+
+```text
+scenes/       Godot 场景与 UI
+scripts/      玩家、AI、武器、地图和验证脚本
+assets/       Blender 源文件、生成模型、材质和音频
+tools/        资产构建、重建、对比与审计工具
+docs/         视觉契约、演示指南、验证证据和工作流文档
+resources/    地图、UI 与验证配置
 ```
 
-## 🎯 操作方式
+## 验证与开发记录
 
-| 操作 | 按键 |
-|------|------|
-| 移动 | W / A / S / D |
-| 射击 | 鼠标左键 |
-| 瞄准 | 鼠标方向 |
-| 切换武器 | 1 / 2 / 滚轮 / Tab |
+- `docs/portfolio/demo-guide.md`：面试展示顺序与运行说明。
+- `docs/workflow/chaosgun-demo-production-playbook.md`：从概念到可玩切片的全自动制作流程。
+- `scripts/tests/`：运行时、结构、性能和截图验证器。
+- `AGENTS.md`：Godot 测试窗口安全规则。
 
-## 🗺️ 开发路线图
+## License
 
-详细的改进计划存放在 `roadmap/` 文件夹中，每个文件对应一个独立的改进方向。请参考各计划文件了解具体实现方案。
-
-## 🚀 如何运行
-
-1. 安装 [Godot 4.6](https://godotengine.org/download)
-2. 克隆本仓库：`git clone <仓库地址>`
-3. 在 Godot 中打开 `project.godot`
-4. 按 **F5** 运行主场景 (`demo_arena.tscn`)
-
-## 🤝 协作指南
-
-- 使用 **Feature Branch** 工作流：每个功能在独立分支上开发
-- 通过 **Pull Request** 进行代码审查后合并到 `main`
-- Commit 信息请使用中文或 Angular 规范（`feat:` / `fix:` / `refactor:` 等）
-- 参考 `roadmap/` 中的计划文件分配任务
-
-## 📄 License
-
-待定
+当前为个人作品集与面试演示项目。

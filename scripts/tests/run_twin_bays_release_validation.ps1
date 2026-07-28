@@ -18,6 +18,14 @@ param(
 
     [string]$ReleaseReason = "",
 
+    [string]$PerformanceEvidencePath = "",
+
+    [string]$AIEvidencePath = "",
+
+    [switch]$VisiblePerformanceWindowApproved,
+
+    [string]$VisiblePerformanceWindowApprovalReason = "",
+
     [switch]$OverrideRetryLimit,
 
     [string]$OverrideReason = ""
@@ -36,13 +44,17 @@ $masterLog = Join-Path $reportsPath "twin_bays_release_validation.log"
 $releaseReportPath = Join-Path $reportsPath "twin_bays_release_validation.json"
 $baselinePath = Join-Path $reportsPath "baselines\twin_bays_splash_arena"
 $layoutPath = Join-Path $projectPath "resources\maps\twin_bays_layout_v1.json"
-$manifestPath = Join-Path $projectPath "assets\models\generated\twin_bays_splash_arena\twin_bays_splash_arena_manifest.json"
+$artProfilePath = Join-Path $projectPath "resources\maps\twin_bays_art_v4.json"
+$tideProfilePath = Join-Path $projectPath "resources\maps\twin_bays_tide_v1.json"
+$manifestPath = Join-Path $projectPath "assets\models\generated\twin_bays_splash_arena_v4\twin_bays_splash_arena_v4_manifest.json"
 $referenceManifestPath = Join-Path $projectPath "docs\art-direction\references\twin_bays\twin_bays_as_built_reference_v1.json"
 $verificationPolicyPath = Join-Path $projectPath "resources\validation\twin_bays_verification_policy_v1.json"
 $attemptLedgerPath = Join-Path $reportsPath "twin_bays_release_attempts.json"
 $captureHashes = [ordered]@{}
 $aiReportBinding = $null
 $performanceReportBinding = $null
+$performanceReportPath = $null
+$performanceReport = $null
 
 if (-not (Test-Path -LiteralPath $GodotPath -PathType Leaf)) {
     throw "Godot executable not found: $GodotPath"
@@ -63,10 +75,36 @@ if ($isFullGateRequest -and [string]::IsNullOrWhiteSpace($ReleaseReason)) {
 if ($OverrideRetryLimit -and [string]::IsNullOrWhiteSpace($OverrideReason)) {
     throw "-OverrideRetryLimit requires a non-empty -OverrideReason."
 }
+if ($isFullGateRequest `
+    -and [string]::IsNullOrWhiteSpace($PerformanceEvidencePath) `
+    -and (-not $VisiblePerformanceWindowApproved `
+        -or [string]::IsNullOrWhiteSpace($VisiblePerformanceWindowApprovalReason))) {
+    throw (
+        "Full release needs either unchanged passing performance evidence or explicit " +
+        "approval for the normal 960x540 visible performance host. Pass " +
+        "-VisiblePerformanceWindowApproved and -VisiblePerformanceWindowApprovalReason."
+    )
+}
 if (-not (Test-Path -LiteralPath $verificationPolicyPath -PathType Leaf)) {
     throw "Twin Bays verification policy is missing: $verificationPolicyPath"
 }
 $verificationPolicy = Get-Content -LiteralPath $verificationPolicyPath -Raw | ConvertFrom-Json
+$fullMapArtApproval = $verificationPolicy.human_approval_gates.art_v4_full_map
+if ($isFullGateRequest) {
+    if ([string]$fullMapArtApproval.status -ne "approved") {
+        throw "Full release is locked until the Art V4 full-map visual candidate receives explicit human approval."
+    }
+    $currentLayoutSha = (Get-FileHash -LiteralPath $layoutPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $currentArtSha = (Get-FileHash -LiteralPath $artProfilePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $currentTideSha = (Get-FileHash -LiteralPath $tideProfilePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    foreach ($approval in @($fullMapArtApproval)) {
+        if ([string]$approval.reviewed_layout_sha256 -ne $currentLayoutSha `
+            -or [string]$approval.reviewed_art_sha256 -ne $currentArtSha `
+            -or [string]$approval.reviewed_tide_sha256 -ne $currentTideSha) {
+            throw "The approved Art V4 visual gate does not match the current Layout/Art/Tide fingerprint; review must be repeated."
+        }
+    }
+}
 $maximumConsecutiveFailedAttempts = [int]$verificationPolicy.expensive_gates.full_release.maximum_consecutive_failed_attempts_per_fingerprint
 if ($maximumConsecutiveFailedAttempts -lt 1) {
     throw "Twin Bays verification policy contains an invalid retry limit."
@@ -93,6 +131,10 @@ Set-Content -LiteralPath $masterLog -Value @(
     "UpdateBaseline: $UpdateBaseline",
     "ReleaseCandidate: $ReleaseCandidate",
     "ReleaseReason: $ReleaseReason",
+    "PerformanceEvidencePath: $PerformanceEvidencePath",
+    "AIEvidencePath: $AIEvidencePath",
+    "VisiblePerformanceWindowApproved: $VisiblePerformanceWindowApproved",
+    "VisiblePerformanceWindowApprovalReason: $VisiblePerformanceWindowApprovalReason",
     "OverrideRetryLimit: $OverrideRetryLimit",
     "OverrideReason: $OverrideReason",
     ""
@@ -199,9 +241,192 @@ function Get-Sha256 {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+function Get-ExpectedPerformanceArtifactBinding {
+    $paths = [ordered]@{
+        project = (Join-Path $projectPath "project.godot")
+        layout = $layoutPath
+        art = $artProfilePath
+        tide = $tideProfilePath
+        twin_manifest = $manifestPath
+        twin_foreground = (Join-Path $projectPath "assets\models\generated\twin_bays_splash_arena_v4\twin_bays_splash_arena_v4_foreground.glb")
+        open_manifest = (Join-Path $projectPath "assets\source\open_ringout_art_v3\open_ringout_art_v3_manifest.json")
+        open_scene = (Join-Path $projectPath "scenes\maps\open_ringout_slice.tscn")
+        twin_scene = (Join-Path $projectPath "scenes\maps\twin_bays_splash_arena.tscn")
+        twin_arena_script = (Join-Path $projectPath "scripts\maps\twin_bays_splash_arena.gd")
+        tide_controller = (Join-Path $projectPath "scripts\maps\twin_bays_tide_controller.gd")
+        shallow_water = (Join-Path $projectPath "scripts\maps\twin_bays_shallow_water.gd")
+        splash_backdrop = (Join-Path $projectPath "scripts\maps\twin_bays_splash_backdrop.gd")
+        water_materials = (Join-Path $projectPath "scripts\maps\twin_bays_water_materials.gd")
+        water_master_shader = (Join-Path $projectPath "assets\shaders\twin_bays_water_master_v4.gdshader")
+        backdrop_water_shader = (Join-Path $projectPath "assets\shaders\twin_bays_backdrop_water_v4.gdshader")
+        benchmark_script = (Join-Path $projectPath "scripts\tests\twin_bays_splash_arena_performance.gd")
+        benchmark_wrapper = (Join-Path $projectPath "scripts\tests\run_twin_bays_splash_arena_performance.ps1")
+    }
+    $binding = [ordered]@{}
+    foreach ($entry in $paths.GetEnumerator()) {
+        $resolved = (Resolve-Path -LiteralPath $entry.Value).Path
+        $relative = $resolved.Substring($projectPath.Length).TrimStart("\").Replace("\", "/")
+        $binding[$entry.Key] = [ordered]@{
+            path = $relative
+            sha256 = Get-Sha256 -Path $resolved
+        }
+    }
+    return $binding
+}
+
+function Assert-PerformanceEvidence {
+    param(
+        [Parameter(Mandatory = $true)] [string]$Path,
+        [Parameter(Mandatory = $true)] [object]$Report
+    )
+    if ([string]$Report.mode -ne "separate_process_comparison" -or -not [bool]$Report.passed) {
+        throw "Performance evidence is not a passing separate-process comparison."
+    }
+    if (@($Report.failures).Count -ne 0) {
+        throw "Performance evidence contains recorded failures."
+    }
+    $configuration = $Report.configuration
+    if ([string]$configuration.rendering_method -ne "forward_plus" `
+        -or [string]$configuration.rendering_driver -ne "d3d12") {
+        throw "Performance evidence must use D3D12 Forward+."
+    }
+    foreach ($field in @("resolution", "viewport_size")) {
+        if (($configuration.$field | ConvertTo-Json -Compress) -ne (@(1920, 1080) | ConvertTo-Json -Compress)) {
+            throw "Performance evidence must use a true 1920x1080 $field."
+        }
+    }
+    if ([string]$configuration.render_target -ne "always_updating_offscreen_subviewport") {
+        throw "Performance evidence must use the always-updating offscreen render target."
+    }
+    if (-not [bool]$configuration.visible_window_approval.approved `
+        -or [string]::IsNullOrWhiteSpace([string]$configuration.visible_window_approval.reason)) {
+        throw "Performance evidence lacks the required visible-window approval record."
+    }
+    $hostSize = @($configuration.host_window_size)
+    if ($hostSize.Count -ne 2 -or [int]$hostSize[0] -gt 960 -or [int]$hostSize[1] -gt 540) {
+        throw "Performance evidence host window must not exceed 960x540."
+    }
+    if ([double]$configuration.warmup_seconds -lt 10.0 `
+        -or [double]$configuration.sample_seconds -lt 60.0 `
+        -or [int]$configuration.matched_idle_cooldown_seconds_before_each_map -lt 30) {
+        throw "Performance evidence does not contain the formal warmup, sample, and matched cooldown durations."
+    }
+    $launcherSha = (Get-FileHash -LiteralPath $GodotPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ([string]$configuration.launcher_sha256 -ne $launcherSha) {
+        throw "Performance evidence was produced by a different Godot launcher."
+    }
+    $expectedBinding = Get-ExpectedPerformanceArtifactBinding
+    foreach ($key in $expectedBinding.Keys) {
+        $actual = $Report.artifact_binding.$key
+        if ($null -eq $actual `
+            -or [string]$actual.path -ne [string]$expectedBinding[$key].path `
+            -or [string]$actual.sha256 -ne [string]$expectedBinding[$key].sha256) {
+            throw "Performance evidence is stale for artifact input '$key'."
+        }
+    }
+    foreach ($entry in @(
+        [pscustomobject]@{ Label = "Open Ring-Out"; Sample = $Report.open_ringout },
+        [pscustomobject]@{ Label = "Twin Bays"; Sample = $Report.twin_bays }
+    )) {
+        $sample = $entry.Sample
+        if ($null -eq $sample -or [double]$sample.accepted_sample_seconds -lt 60.0) {
+            throw "$($entry.Label) performance evidence is incomplete."
+        }
+        if ([int]$sample.orphan_node_delta -gt 0) {
+            throw "$($entry.Label) performance evidence contains orphan-node growth."
+        }
+        if (-not [bool]$sample.focus_at_sample_start `
+            -or -not [bool]$sample.focus_at_sample_end `
+            -or [bool]$sample.focus_lost_during_sample `
+            -or [bool]$sample.minimized_during_sample `
+            -or [int]$sample.rejected_unfocused_frames -gt 0) {
+            throw "$($entry.Label) performance evidence lost focus or was minimized."
+        }
+    }
+    if ([double]$Report.twin_bays.average_fps -lt 60.0 `
+        -or [double]$Report.twin_bays.one_percent_low_fps -lt 55.0 `
+        -or [double]$Report.twin_bays.frame_time_p99_ms -gt 18.2 `
+        -or [double]$Report.twin_bays.memory_drift_bytes -gt 5MB) {
+        throw "Twin Bays performance evidence does not meet the absolute release thresholds."
+    }
+    foreach ($metric in @("draw_calls", "primitives", "render_memory_proxy")) {
+        if ([double]$Report.ratios.$metric -gt 1.10) {
+            throw "Twin Bays performance evidence exceeds the 110 percent $metric budget."
+        }
+    }
+    foreach ($map in @("open_ringout", "twin_bays")) {
+        $process = $Report.process_validation.$map
+        if ([int]$process.exit_code -ne 0 `
+            -or @($process.engine_or_script_error_lines).Count -ne 0 `
+            -or @($process.shutdown_leak_warning_lines).Count -ne 0) {
+            throw "Performance evidence process validation failed for $map."
+        }
+    }
+    $resolvedReportsPath = (Resolve-Path -LiteralPath $reportsPath).Path.TrimEnd("\") + "\"
+    if (-not $Path.StartsWith($resolvedReportsPath, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Performance evidence must be stored under the project reports directory."
+    }
+}
+
+function Assert-AIEvidence {
+    param(
+        [Parameter(Mandatory = $true)] [string]$Path,
+        [Parameter(Mandatory = $true)] [object]$Report,
+        [Parameter(Mandatory = $true)] [object]$ExpectedBinding
+    )
+    if (-not [bool]$Report.passed -or @($Report.failures).Count -ne 0) {
+        throw "AI evidence is not a passing strict batch."
+    }
+    if ([int]$Report.configuration.rounds -ne 8 -or [double]$Report.configuration.duration_seconds -lt 30.0) {
+        throw "AI evidence must contain the formal 8 x 30 second batch."
+    }
+    $engagementGateEnforced = $false
+    if ($Report.configuration.PSObject.Properties.Name -contains "engagement_gate_enforced") {
+        $engagementGateEnforced = [bool]$Report.configuration.engagement_gate_enforced
+    } elseif ($Report.aggregate.PSObject.Properties.Name -contains "engagement_gate_enforced") {
+        # Schema v1 originally emitted this run-configuration flag beside the
+        # aggregate counters. Accept that signed evidence while new reports
+        # write the same flag under configuration.
+        $engagementGateEnforced = [bool]$Report.aggregate.engagement_gate_enforced
+    }
+    if (-not $engagementGateEnforced) {
+		throw "AI evidence did not enforce the engagement gate."
+	}
+    if ([int]$Report.aggregate.armed_rounds -lt 6 `
+        -or [int]$Report.aggregate.kill_rounds -lt 6 `
+        -or [int]$Report.aggregate.ringout_rounds -lt 4) {
+        throw "AI evidence does not meet the armed, kill, and ring-out thresholds."
+    }
+    foreach ($round in @($Report.results)) {
+        if ([int]$round.illegal_spawn_count -ne 0 `
+            -or [int]$round.nan_or_inf_frames -ne 0 `
+            -or [int]$round.stuck_count -ne 0 `
+            -or [bool]$round.portal_ping_pong `
+            -or ([double]$round.first_death_seconds -ge 0.0 -and [double]$round.first_death_seconds -lt 2.0)) {
+            throw "AI evidence contains an invalid round result."
+        }
+    }
+    if ([int]$Report.process_validation.exit_code -ne 0 `
+        -or [int]$Report.process_validation.engine_or_script_error_count -ne 0 `
+        -or [int]$Report.process_validation.shutdown_leak_warning_count -ne 0) {
+        throw "AI evidence process validation failed."
+    }
+    if ([string]$Report.artifact_binding.layout_sha256 -ne [string]$ExpectedBinding.layout.sha256 `
+        -or [string]$Report.artifact_binding.manifest_sha256 -ne [string]$ExpectedBinding.manifest.sha256 `
+        -or -not [bool]$Report.artifact_binding.stable_during_run) {
+        throw "AI evidence is stale for the current layout or production manifest."
+    }
+    $resolvedReportsPath = (Resolve-Path -LiteralPath $reportsPath).Path.TrimEnd("\") + "\"
+    if (-not $Path.StartsWith($resolvedReportsPath, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "AI evidence must be stored under the project reports directory."
+    }
+}
+
 function Get-ReleaseAttemptFingerprint {
     $inputs = @(
         $layoutPath,
+        $artProfilePath,
+        $tideProfilePath,
         $manifestPath,
         $referenceManifestPath,
         $verificationPolicyPath,
@@ -211,6 +436,12 @@ function Get-ReleaseAttemptFingerprint {
         (Join-Path $projectPath "scripts\tests\capture_twin_bays_splash_arena.gd"),
         (Join-Path $projectPath "scripts\globals\match_config.gd")
     )
+    if (-not [string]::IsNullOrWhiteSpace($PerformanceEvidencePath)) {
+        $inputs += (Resolve-Path -LiteralPath $PerformanceEvidencePath).Path
+    }
+    if (-not [string]::IsNullOrWhiteSpace($AIEvidencePath)) {
+        $inputs += (Resolve-Path -LiteralPath $AIEvidencePath).Path
+    }
     $records = foreach ($path in $inputs) {
         $resolved = (Resolve-Path -LiteralPath $path).Path
         "$($resolved.ToLowerInvariant())=$(Get-Sha256 -Path $resolved)"
@@ -259,10 +490,22 @@ function Add-ReleaseAttemptEntry {
 
 function Get-ReleaseArtifactBinding {
     $layoutSha = Get-Sha256 -Path $layoutPath
+    $artSha = Get-Sha256 -Path $artProfilePath
+    $tideSha = Get-Sha256 -Path $tideProfilePath
     $manifestSha = Get-Sha256 -Path $manifestPath
+    $artProfile = Get-Content -LiteralPath $artProfilePath -Raw | ConvertFrom-Json
+    if ([string]$artProfile.schema -ne "chaos_gun.twin_bays_art" -or [int]$artProfile.version -ne 4) {
+        throw "Twin Bays Art V4 profile schema/version is invalid."
+    }
+    if ([string]$artProfile.layout_sha256 -ne $layoutSha -or [string]$artProfile.tide_sha256 -ne $tideSha) {
+        throw "Twin Bays Art V4 is not bound to the current Layout/Tide fingerprint."
+    }
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
     if ([string]$manifest.layout_sha256 -ne $layoutSha) {
         throw "Twin Bays manifest is not bound to the current canonical layout."
+    }
+    if ([string]$manifest.art_profile_sha256 -ne $artSha -or [string]$manifest.tide_profile_sha256 -ne $tideSha) {
+        throw "Twin Bays production manifest is stale; rebuild it from the approved Art V4 and Tide V1 profiles."
     }
 
     $assets = [ordered]@{}
@@ -343,11 +586,15 @@ function Get-ReleaseArtifactBinding {
     # uncompressed extracted textures or the retired Windows driver.
     $runtimeConfigurationAssets = [ordered]@{
         runtime_project_config = "project.godot"
-        runtime_foreground_import = "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_foreground.glb.import"
-        runtime_hero_kit_import = "assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_hero_kit.glb.import"
+        runtime_foreground_import = "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_foreground.glb.import"
+        runtime_hero_kit_import = "assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_hero_kit.glb.import"
         runtime_performance_wrapper = "scripts/tests/run_twin_bays_splash_arena_performance.ps1"
         runtime_performance_script = "scripts/tests/twin_bays_splash_arena_performance.gd"
         runtime_capture_script = "scripts/tests/capture_twin_bays_splash_arena.gd"
+        runtime_tide_controller = "scripts/maps/twin_bays_tide_controller.gd"
+        runtime_shallow_water = "scripts/maps/twin_bays_shallow_water.gd"
+        runtime_tide_verifier = "scripts/tests/twin_bays_tide_verifier.gd"
+        runtime_tide_stress = "scripts/tests/twin_bays_tide_stress.gd"
         runtime_test_window_policy = "scripts/globals/test_window_policy.gd"
         runtime_verification_policy = "resources/validation/twin_bays_verification_policy_v1.json"
     }
@@ -365,10 +612,22 @@ function Get-ReleaseArtifactBinding {
             path = "res://resources/maps/twin_bays_layout_v1.json"
             sha256 = $layoutSha
         }
+        art = [ordered]@{
+            path = "res://resources/maps/twin_bays_art_v4.json"
+            sha256 = $artSha
+            candidate_id = [string]$fullMapArtApproval.candidate_id
+            full_map_review_status = [string]$fullMapArtApproval.status
+        }
+        tide = [ordered]@{
+            path = "res://resources/maps/twin_bays_tide_v1.json"
+            sha256 = $tideSha
+        }
         manifest = [ordered]@{
-            path = "res://assets/models/generated/twin_bays_splash_arena/twin_bays_splash_arena_manifest.json"
+            path = "res://assets/models/generated/twin_bays_splash_arena_v4/twin_bays_splash_arena_v4_manifest.json"
             sha256 = $manifestSha
             recorded_layout_sha256 = [string]$manifest.layout_sha256
+            recorded_art_sha256 = [string]$manifest.art_profile_sha256
+            recorded_tide_sha256 = [string]$manifest.tide_profile_sha256
         }
         reference = [ordered]@{
             manifest_path = "res://docs/art-direction/references/twin_bays/twin_bays_as_built_reference_v1.json"
@@ -378,6 +637,20 @@ function Get-ReleaseArtifactBinding {
         }
         assets = $assets
     }
+}
+
+function Assert-ReleaseInputsUnchanged {
+    param(
+        [Parameter(Mandatory = $true)] [object]$Expected,
+        [Parameter(Mandatory = $true)] [string]$Checkpoint
+    )
+    $current = Get-ReleaseArtifactBinding
+    $expectedJson = $Expected | ConvertTo-Json -Depth 30 -Compress
+    $currentJson = $current | ConvertTo-Json -Depth 30 -Compress
+    if ($currentJson -ne $expectedJson) {
+        throw "Release inputs changed during '$Checkpoint'. Stop before consuming another expensive gate and restart from a stable fingerprint."
+    }
+    Write-Host "OK  release inputs unchanged: $Checkpoint"
 }
 
 function Get-DirectoryHashMap {
@@ -413,9 +686,14 @@ function Invoke-GodotScript {
         $arguments += @(
             "--audio-driver", "Dummy",
             "--rendering-method", "forward_plus",
+            # Godot 4.7 Forward+ Vulkan can crash during terminal destruction of
+            # the four-character capture scene on Windows after a valid PNG has
+            # already been written. D3D12 is the project's supported Windows
+            # Forward+ backend and exits the same evidence scene cleanly.
+            "--rendering-driver", "d3d12",
             "--disable-vsync",
             "--windowed",
-            "--position", "0,0"
+            "--resolution", "960x540"
         )
     }
     $arguments += @("--path", $projectPath, "-s", $ScriptPath)
@@ -454,7 +732,7 @@ if ($isFullGateRequest) {
 
 try {
 if ($RebuildAssets) {
-    $rebuildScript = Join-Path $projectPath "tools\rebuild_twin_bays_splash_arena.ps1"
+    $rebuildScript = Join-Path $projectPath "tools\rebuild_twin_bays_art_v4.ps1"
     if (-not (Test-Path -LiteralPath $rebuildScript -PathType Leaf)) {
         throw "Twin Bays rebuild wrapper is missing: $rebuildScript"
     }
@@ -476,9 +754,21 @@ Invoke-CheckedProcess `
 $artifactBinding = Get-ReleaseArtifactBinding
 Add-Content -LiteralPath $masterLog -Value @(
     "ArtifactBinding.LayoutSha256: $($artifactBinding.layout.sha256)",
+    "ArtifactBinding.ArtSha256: $($artifactBinding.art.sha256)",
+    "ArtifactBinding.TideSha256: $($artifactBinding.tide.sha256)",
     "ArtifactBinding.ManifestSha256: $($artifactBinding.manifest.sha256)",
     ""
 )
+
+# Reused evidence is intentionally validated before any long-running test.  A
+# stale report is an input error, not something worth discovering after the
+# 55-second tide stress and eight 30-second AI matches.
+if (-not $Quick -and -not $SkipRender -and -not [string]::IsNullOrWhiteSpace($PerformanceEvidencePath)) {
+    Write-Host "`n=== Early performance evidence fingerprint gate ==="
+    $performanceReportPath = (Resolve-Path -LiteralPath $PerformanceEvidencePath).Path
+    $performanceReport = Get-Content -LiteralPath $performanceReportPath -Raw | ConvertFrom-Json
+    Assert-PerformanceEvidence -Path $performanceReportPath -Report $performanceReport
+}
 
 Write-Host "`n=== Structure and production contract ==="
 Invoke-GodotScript -Label "Open Ring-Out frozen-map regression" -ScriptPath "res://scripts/tests/open_ringout_slice_verifier.gd"
@@ -491,6 +781,7 @@ Invoke-GodotScript -Label "Twin Bays visual-only ambient motion" -ScriptPath "re
 Invoke-GodotScript -Label "Open Ring-Out independent camera regression" -ScriptPath "res://scripts/tests/open_ringout_camera_verifier.gd"
 Invoke-GodotScript -Label "Twin Bays shared party camera" -ScriptPath "res://scripts/tests/twin_bays_camera_verifier.gd"
 Invoke-GodotScript -Label "Cross-map camera consistency" -ScriptPath "res://scripts/tests/party_shooter_camera_consistency_verifier.gd"
+Assert-ReleaseInputsUnchanged -Expected $artifactBinding -Checkpoint "after structure and camera gates"
 
 Write-Host "`n=== Shared character and weapon system ==="
 Invoke-GodotScript -Label "Party shooter v1 profile" -ScriptPath "res://scripts/tests/party_shooter_profile_verifier.gd"
@@ -500,6 +791,8 @@ Invoke-GodotScript -Label "Expanded shared weapon roster" -ScriptPath "res://scr
 
 Write-Host "`n=== Portal, spawn, pickup, fall, respawn, HUD, result, pause ==="
 Invoke-GodotScript -Label "Twin Bays runtime flow" -ScriptPath "res://scripts/tests/twin_bays_splash_arena_runtime_verifier.gd"
+Invoke-GodotScript -Label "Twin Bays tide state and motion modifiers" -ScriptPath "res://scripts/tests/twin_bays_tide_verifier.gd"
+Invoke-GodotScript -Label "Twin Bays tide interaction feedback" -ScriptPath "res://scripts/tests/twin_bays_shallow_water_verifier.gd"
 Invoke-GodotScript -Label "Player-facing map routes" -ScriptPath "res://scripts/tests/playable_match_routes_open_ringout_verifier.gd"
 
 Write-Host "`n=== Shared match presentation ==="
@@ -515,38 +808,58 @@ if ($Quick) {
         ""
     )
 } else {
-    Write-Host "`n=== Fixed-seed 8 x 30 s AI batch ==="
-    $aiWrapper = Join-Path $projectPath "scripts\tests\run_twin_bays_splash_arena_ai_batch.ps1"
-    if (-not (Test-Path -LiteralPath $aiWrapper -PathType Leaf)) {
-        throw "Twin Bays strict AI wrapper is missing: $aiWrapper"
-    }
-    $aiStageLog = Join-Path $workPath "twin_bays_ai_batch_strict_wrapper.combined.txt"
-    Set-Content -LiteralPath $aiStageLog -Value ""
-    Add-Content -LiteralPath $masterLog -Value @(
-        "==================================================",
-        "[Twin Bays strict AI batch wrapper]",
-        "Combined stage log: $aiStageLog"
-    )
-    try {
-        & $aiWrapper `
-            -GodotPath $GodotPath `
-            -ExpectedLayoutSha256 $artifactBinding.layout.sha256 `
-            -ExpectedManifestSha256 $artifactBinding.manifest.sha256 *>&1 | ForEach-Object {
-                $line = $_.ToString()
-                Add-Content -LiteralPath $aiStageLog -Value $line
-                Add-Content -LiteralPath $masterLog -Value $line
-                Write-Host $line
-            }
-        Add-Content -LiteralPath $masterLog -Value @("EXIT=0", "")
-    } catch {
-        $aiError = $_.Exception.Message
-        Add-Content -LiteralPath $aiStageLog -Value "ERROR: $aiError"
-        Add-Content -LiteralPath $masterLog -Value @("EXIT=1", "ERROR: $aiError", "")
-        throw
-    }
+    Assert-ReleaseInputsUnchanged -Expected $artifactBinding -Checkpoint "before tide stress"
+    Write-Host "`n=== Fixed-seed 55 s complete tide stress ==="
+    Invoke-GodotScript -Label "Twin Bays 55-second tide stress" -ScriptPath "res://scripts/tests/twin_bays_tide_stress.gd"
 
-    $aiReportPath = Join-Path $reportsPath "twin_bays_splash_arena_ai_batch.json"
-    $aiReport = Get-Content -LiteralPath $aiReportPath -Raw | ConvertFrom-Json
+    if (-not [string]::IsNullOrWhiteSpace($AIEvidencePath)) {
+        Write-Host "`n=== Revalidate unchanged 8 x 30 s AI evidence ==="
+        $aiReportPath = (Resolve-Path -LiteralPath $AIEvidencePath).Path
+        $aiReport = Get-Content -LiteralPath $aiReportPath -Raw | ConvertFrom-Json
+        Assert-AIEvidence -Path $aiReportPath -Report $aiReport -ExpectedBinding $artifactBinding
+        Add-Content -LiteralPath $masterLog -Value @(
+            "==================================================",
+            "[Twin Bays unchanged strict AI evidence]",
+            "Evidence: $aiReportPath",
+            "EvidenceSha256: $(Get-Sha256 -Path $aiReportPath)",
+            "ArtifactBinding: verified",
+            "EXIT=0",
+            ""
+        )
+    } else {
+        Write-Host "`n=== Fixed-seed 8 x 30 s AI batch ==="
+        $aiWrapper = Join-Path $projectPath "scripts\tests\run_twin_bays_splash_arena_ai_batch.ps1"
+        if (-not (Test-Path -LiteralPath $aiWrapper -PathType Leaf)) {
+            throw "Twin Bays strict AI wrapper is missing: $aiWrapper"
+        }
+        $aiStageLog = Join-Path $workPath "twin_bays_ai_batch_strict_wrapper.combined.txt"
+        Set-Content -LiteralPath $aiStageLog -Value ""
+        Add-Content -LiteralPath $masterLog -Value @(
+            "==================================================",
+            "[Twin Bays strict AI batch wrapper]",
+            "Combined stage log: $aiStageLog"
+        )
+        try {
+            & $aiWrapper `
+                -GodotPath $GodotPath `
+                -ExpectedLayoutSha256 $artifactBinding.layout.sha256 `
+                -ExpectedManifestSha256 $artifactBinding.manifest.sha256 *>&1 | ForEach-Object {
+                    $line = $_.ToString()
+                    Add-Content -LiteralPath $aiStageLog -Value $line
+                    Add-Content -LiteralPath $masterLog -Value $line
+                    Write-Host $line
+                }
+            Add-Content -LiteralPath $masterLog -Value @("EXIT=0", "")
+        } catch {
+            $aiError = $_.Exception.Message
+            Add-Content -LiteralPath $aiStageLog -Value "ERROR: $aiError"
+            Add-Content -LiteralPath $masterLog -Value @("EXIT=1", "ERROR: $aiError", "")
+            throw
+        }
+        $aiReportPath = Join-Path $reportsPath "twin_bays_splash_arena_ai_batch.json"
+        $aiReport = Get-Content -LiteralPath $aiReportPath -Raw | ConvertFrom-Json
+    }
+    Assert-AIEvidence -Path $aiReportPath -Report $aiReport -ExpectedBinding $artifactBinding
     if ([string]$aiReport.artifact_binding.layout_sha256 -ne $artifactBinding.layout.sha256 `
         -or [string]$aiReport.artifact_binding.manifest_sha256 -ne $artifactBinding.manifest.sha256 `
         -or -not [bool]$aiReport.artifact_binding.stable_during_run) {
@@ -558,50 +871,73 @@ if ($Quick) {
         layout_sha256 = [string]$aiReport.artifact_binding.layout_sha256
         manifest_sha256 = [string]$aiReport.artifact_binding.manifest_sha256
     }
+    Assert-ReleaseInputsUnchanged -Expected $artifactBinding -Checkpoint "after AI batch"
 }
 
 if (-not $SkipRender) {
     if (-not $Quick) {
-        Write-Host "`n=== Forward+ matched performance gate ==="
-        $performanceWrapper = Join-Path $projectPath "scripts\tests\run_twin_bays_splash_arena_performance.ps1"
-        if (-not (Test-Path -LiteralPath $performanceWrapper -PathType Leaf)) {
-            throw "Twin Bays performance wrapper is missing: $performanceWrapper"
-        }
-        # Invoke the wrapper in this PowerShell process. A nested PowerShell
-        # launched through Start-Process inherits an extra background job layer
-        # in the desktop runner and produced non-representative frame pacing.
-        $performanceStageLog = Join-Path $workPath "twin_bays_forward_separate-process_performance.combined.txt"
-        Set-Content -LiteralPath $performanceStageLog -Value ""
-        Add-Content -LiteralPath $masterLog -Value @(
-            "==================================================",
-            "[Twin Bays Forward+ separate-process performance]",
-            "Combined stage log: $performanceStageLog"
-        )
-        try {
-            & $performanceWrapper -GodotPath $GodotPath *>&1 | ForEach-Object {
-                $line = $_.ToString()
-                Add-Content -LiteralPath $performanceStageLog -Value $line
-                Add-Content -LiteralPath $masterLog -Value $line
-                Write-Host $line
+        if (-not [string]::IsNullOrWhiteSpace($PerformanceEvidencePath)) {
+            Write-Host "`n=== Revalidate unchanged Forward+ performance evidence ==="
+            Assert-PerformanceEvidence -Path $performanceReportPath -Report $performanceReport
+            Add-Content -LiteralPath $masterLog -Value @(
+                "==================================================",
+                "[Twin Bays Forward+ unchanged performance evidence]",
+                "Evidence: $performanceReportPath",
+                "EvidenceSha256: $(Get-Sha256 -Path $performanceReportPath)",
+                "ArtifactBinding: verified",
+                "WindowFocusAndMinimization: verified",
+                "Thresholds: verified",
+                "EXIT=0",
+                ""
+            )
+        } else {
+            Write-Host "`n=== Forward+ matched performance gate ==="
+            $performanceWrapper = Join-Path $projectPath "scripts\tests\run_twin_bays_splash_arena_performance.ps1"
+            if (-not (Test-Path -LiteralPath $performanceWrapper -PathType Leaf)) {
+                throw "Twin Bays performance wrapper is missing: $performanceWrapper"
             }
-            Add-Content -LiteralPath $masterLog -Value @("EXIT=0", "")
-        } catch {
-            $performanceError = $_.Exception.Message
-            Add-Content -LiteralPath $performanceStageLog -Value "ERROR: $performanceError"
-            Add-Content -LiteralPath $masterLog -Value @("EXIT=1", "ERROR: $performanceError", "")
-            throw
-        }
-        $performanceReportPath = Join-Path $reportsPath "twin_bays_splash_arena_performance.json"
-        $performanceReport = Get-Content -LiteralPath $performanceReportPath -Raw | ConvertFrom-Json
-        if (-not [bool]$performanceReport.passed) {
-            throw "Twin Bays paired performance report did not record a passing result."
+            # Invoke the wrapper in this PowerShell process. A nested PowerShell
+            # launched through Start-Process inherits an extra background job layer
+            # in the desktop runner and produced non-representative frame pacing.
+            $performanceStageLog = Join-Path $workPath "twin_bays_forward_separate-process_performance.combined.txt"
+            Set-Content -LiteralPath $performanceStageLog -Value ""
+            Add-Content -LiteralPath $masterLog -Value @(
+                "==================================================",
+                "[Twin Bays Forward+ separate-process performance]",
+                "Combined stage log: $performanceStageLog"
+            )
+            try {
+                & $performanceWrapper `
+                    -GodotPath $GodotPath `
+                    -VisibleWindowApproved:$VisiblePerformanceWindowApproved `
+                    -VisibleWindowApprovalReason $VisiblePerformanceWindowApprovalReason *>&1 | ForEach-Object {
+                    $line = $_.ToString()
+                    Add-Content -LiteralPath $performanceStageLog -Value $line
+                    Add-Content -LiteralPath $masterLog -Value $line
+                    Write-Host $line
+                }
+                Add-Content -LiteralPath $masterLog -Value @("EXIT=0", "")
+            } catch {
+                $performanceError = $_.Exception.Message
+                Add-Content -LiteralPath $performanceStageLog -Value "ERROR: $performanceError"
+                Add-Content -LiteralPath $masterLog -Value @("EXIT=1", "ERROR: $performanceError", "")
+                throw
+            }
+            $performanceReportPath = Join-Path $reportsPath "twin_bays_splash_arena_performance.json"
+            $performanceReport = Get-Content -LiteralPath $performanceReportPath -Raw | ConvertFrom-Json
+            if (-not [bool]$performanceReport.passed) {
+                throw "Twin Bays paired performance report did not record a passing result."
+            }
         }
         $performanceReportBinding = [ordered]@{
-            path = "res://reports/twin_bays_splash_arena_performance.json"
+            path = "res://reports/$([IO.Path]::GetFileName($performanceReportPath))"
             sha256 = Get-Sha256 -Path $performanceReportPath
+            reused_unchanged_evidence = -not [string]::IsNullOrWhiteSpace($PerformanceEvidencePath)
+            artifact_binding = $performanceReport.artifact_binding
         }
     }
 
+    Assert-ReleaseInputsUnchanged -Expected $artifactBinding -Checkpoint "before rendered captures"
     Write-Host "`n=== Rendered release captures ==="
     $captures = @(
         @("empty",  "1536", "1024", "res://reports/twin_bays_splash_arena_empty_1536x1024.png"),
@@ -614,7 +950,17 @@ if (-not $SkipRender) {
         @("ambient_end", "1536", "1024", "res://reports/twin_bays_splash_arena_ambient_end_1536x1024.png"),
         @("intro_ready", "1920", "1080", "res://reports/twin_bays_splash_arena_intro_ready_1920x1080.png"),
         @("intro_go", "1920", "1080", "res://reports/twin_bays_splash_arena_intro_go_1920x1080.png"),
-        @("winner", "1920", "1080", "res://reports/twin_bays_splash_arena_winner_1920x1080.png")
+        @("winner", "1920", "1080", "res://reports/twin_bays_splash_arena_winner_1920x1080.png"),
+        @("tide_dry", "1536", "1024", "res://reports/twin_bays_tide_dry_1536x1024.png"),
+        @("tide_warning", "1536", "1024", "res://reports/twin_bays_tide_warning_1536x1024.png"),
+        @("tide_rising", "1536", "1024", "res://reports/twin_bays_tide_rising_1536x1024.png"),
+        @("tide_high", "1536", "1024", "res://reports/twin_bays_tide_high_1536x1024.png"),
+        @("tide_falling", "1536", "1024", "res://reports/twin_bays_tide_falling_1536x1024.png"),
+        @("tide_drain_0", "1536", "1024", "res://reports/twin_bays_tide_drain_0_1536x1024.png"),
+        @("tide_drain_9", "1536", "1024", "res://reports/twin_bays_tide_drain_9_1536x1024.png"),
+        @("tide_drain_18", "1536", "1024", "res://reports/twin_bays_tide_drain_18_1536x1024.png"),
+        @("tide_high_battle", "1920", "1080", "res://reports/twin_bays_tide_high_battle_1920x1080.png"),
+        @("tide_mobile", "1280", "720", "res://reports/twin_bays_tide_mobile_1280x720.png")
     )
     foreach ($capture in $captures) {
         $captureOutputPath = Join-Path $projectPath ($capture[3] -replace '^res://', '' -replace '/', '\')

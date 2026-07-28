@@ -1,0 +1,117 @@
+{
+  "schema": "chaos_gun.twin_bays_art",
+  "version": 2,
+  "layout_sha256": "4e928d232be9cc77d5b48f3f2890bae0255eab177151cb38db10d82098b377f0",
+  "mood_reference": "docs/art-direction/references/twin_bays/twin_bays_splash_arena_selected_background.png",
+  "palette": {
+    "dry_cream": "#FFF3E6",
+    "cyan": "#58CDE0",
+    "cyan_dark": "#249DB8",
+    "coral": "#FF9587",
+    "safety_yellow": "#FFD84C",
+    "pickup_orange": "#FF8A3D",
+    "portal_cyan": "#36D9FF",
+    "portal_recess": "#176E88",
+    "water_mark": "#72D9EA"
+  },
+  "surface": {
+    "floor": {
+      "uv_world_scale": 10.0,
+      "roughness": 0.70,
+      "roughness_seam": 0.80,
+      "variation": 0.010,
+      "seam_darkening": 0.022,
+      "normal_strength": 1.65
+    },
+    "cyan": {"roughness": 0.50, "roughness_seam": 0.60, "normal_strength": 2.2},
+    "cyan_dark": {"roughness": 0.61, "roughness_seam": 0.70, "normal_strength": 2.0},
+    "coral": {"roughness": 0.48, "roughness_seam": 0.58, "normal_strength": 1.45},
+    "safety_trim_visible_width": 0.52,
+    "wall_cap_bevel_multiplier": 0.42,
+    "wall_cap_bevel_segments": 5,
+    "cover_bevel_multiplier": 1.18
+  },
+  "water_marks": {
+    "enabled": true,
+    "height": 0.012,
+    "visual_contract": "interactive_shallow_water_v1",
+    "surface": {
+      "wet_bed_color": "#55BFD0",
+      "wet_bed_alpha": 0.20,
+      "wet_bed_roughness": 0.46,
+      "water_color": "#7BE4F0",
+      "water_alpha": 0.24,
+      "water_roughness": 0.20,
+      "specular": 0.34,
+      "meniscus_color": "#C8F8FA",
+      "meniscus_alpha": 0.58,
+      "meniscus_width": 0.22,
+      "flow_speed_a": [0.035, -0.022],
+      "flow_speed_b": [-0.018, 0.031],
+      "flow_scale_a": 0.22,
+      "flow_scale_b": 0.37,
+      "highlight_strength": 0.30,
+      "depth_prepass": true,
+      "casts_shadow": false
+    },
+    "interaction": {
+      "gameplay_effect": "none",
+      "wet_step_budget": 3,
+      "wet_footprint_lifetime": 1.2,
+      "projectile_cell_throttle_seconds": 0.06,
+      "projectile_global_rate_limit": 24,
+      "surface_height_tolerance": 1.25,
+      "ripple_pool_size": 32,
+      "footprint_pool_size": 24,
+      "audio_pool_size": 12
+    },
+    "coverage_min": 0.12,
+    "coverage_max": 0.18,
+    "polygon_vertices": 32,
+    "clean_zones": {
+      "ordinary_pickup_radius": 2.5,
+      "special_pickup_radius": 3.5,
+      "spawn_radius": 2.5,
+      "portal_exit_radius": 2.5,
+      "cover_margin": 0.5,
+      "lethal_edge_margin": 1.0
+    },
+    "clusters": [
+      {"id": "west_portal_splash", "center": [-47.0, 3.5], "radii": [6.1, 3.4], "rotation_degrees": 18.0, "seed": 11},
+      {"id": "east_portal_splash", "center": [48.0, 3.2], "radii": [6.5, 3.5], "rotation_degrees": -16.0, "seed": 19},
+      {"id": "west_north_wall_splash", "center": [-43.5, -9.5], "radii": [6.5, 3.9], "rotation_degrees": 32.0, "seed": 23},
+      {"id": "east_north_wall_splash", "center": [42.5, -8.8], "radii": [6.5, 4.0], "rotation_degrees": -29.0, "seed": 31},
+      {"id": "west_north_inner_splash", "center": [-23.5, -17.0], "radii": [5.15, 2.9], "rotation_degrees": -12.0, "seed": 41},
+      {"id": "east_north_inner_splash", "center": [23.5, -17.0], "radii": [5.25, 2.95], "rotation_degrees": 14.0, "seed": 47},
+      {"id": "west_south_inner_splash", "center": [-27.0, 13.0], "radii": [5.25, 2.95], "rotation_degrees": 21.0, "seed": 53},
+      {"id": "east_south_inner_splash", "center": [27.0, 13.0], "radii": [5.25, 2.95], "rotation_degrees": -19.0, "seed": 61},
+      {"id": "west_south_edge_splash", "center": [-48.0, 10.0], "radii": [6.2, 3.6], "rotation_degrees": -35.0, "seed": 71},
+      {"id": "east_south_edge_splash", "center": [48.2, 10.6], "radii": [6.0, 3.7], "rotation_degrees": 34.0, "seed": 79}
+    ],
+    "droplets": [
+      {"center": [-37.0, -4.0], "radii": [1.15, 0.85], "rotation_degrees": 12.0},
+      {"center": [-32.0, -1.0], "radii": [0.72, 0.58], "rotation_degrees": -18.0},
+      {"center": [36.5, -3.4], "radii": [1.05, 0.82], "rotation_degrees": -8.0},
+      {"center": [31.5, 0.1], "radii": [0.68, 0.52], "rotation_degrees": 20.0},
+      {"center": [-27.0, 10.5], "radii": [1.20, 0.88], "rotation_degrees": 33.0},
+      {"center": [-23.0, 14.7], "radii": [0.70, 0.55], "rotation_degrees": -11.0},
+      {"center": [27.5, 9.8], "radii": [1.18, 0.86], "rotation_degrees": -29.0},
+      {"center": [23.0, 14.4], "radii": [0.76, 0.58], "rotation_degrees": 15.0},
+      {"center": [-10.5, -7.8], "radii": [1.12, 0.72], "rotation_degrees": 4.0},
+      {"center": [11.0, -7.2], "radii": [1.08, 0.70], "rotation_degrees": -6.0},
+      {"center": [-6.8, -2.0], "radii": [0.62, 0.48], "rotation_degrees": 0.0},
+      {"center": [7.2, -1.5], "radii": [0.64, 0.46], "rotation_degrees": 0.0}
+    ],
+    "hero_review": {
+      "clusters": [
+        {"id": "hero_wall_splash", "center": [-5.0, -3.35], "radii": [2.3, 0.82], "rotation_degrees": 4.0, "seed": 101},
+        {"id": "hero_portal_splash", "center": [5.45, -2.0], "radii": [1.55, 0.92], "rotation_degrees": -12.0, "seed": 109}
+      ],
+      "droplets": [
+        {"center": [-7.6, -2.3], "radii": [0.52, 0.38], "rotation_degrees": 8.0},
+        {"center": [-1.9, -3.0], "radii": [0.44, 0.33], "rotation_degrees": -5.0},
+        {"center": [6.9, -0.4], "radii": [0.48, 0.35], "rotation_degrees": 12.0}
+      ]
+    }
+  }
+}

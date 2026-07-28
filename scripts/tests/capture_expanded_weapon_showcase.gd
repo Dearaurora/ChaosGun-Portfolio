@@ -1,7 +1,7 @@
 extends SceneTree
 
 const DEFAULT_OUT_PATH := "res://reports/expanded_weapon_showcase.png"
-const VIEWPORT_SIZE := Vector2i(1536, 820)
+const VIEWPORT_SIZE := Vector2i(960, 540)
 
 func _initialize() -> void:
 	if DisplayServer.get_name().to_lower() == "headless":

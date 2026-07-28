@@ -1,0 +1,7 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/maps/twin_bays_splash_arena.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/maps/twin_bays_art_v5_performance_runtime.gd" id="2_script"]
+
+[node name="TwinBaysArtV5Performance" instance=ExtResource("1_base")]
+script = ExtResource("2_script")

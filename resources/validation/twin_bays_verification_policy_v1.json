@@ -7,6 +7,113 @@
     "environment_failure_is_not_product_failure": true,
     "golden_is_release_only": true
   },
+  "human_approval_gates": {
+    "tide_visual_candidate": {
+      "required_before_full_release": false,
+      "status": "superseded_by_art_v3",
+      "reviewed_tide_sha256": "",
+      "evidence": [
+        "reports/twin_bays_tide_high_1536x1024.png",
+        "reports/twin_bays_tide_drain_0_1536x1024.png",
+        "reports/twin_bays_tide_drain_9_1536x1024.png",
+        "reports/twin_bays_tide_high_battle_1920x1080.png",
+        "reports/twin_bays_tide_mobile_1280x720.png"
+      ]
+    },
+    "art_v3_hero_candidate": {
+      "required_before_full_map_rollout": true,
+      "status": "approved",
+      "reviewer": "project_owner",
+      "reviewed_at": "2026-07-23",
+      "reviewed_layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+      "reviewed_art_sha256": "ccbaba05cf471e400f1102318ae44defa886133bf484d8cbf3cbb645db68cd3d",
+      "reviewed_tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+      "evidence": [
+        "reports/twin_bays_art_v3_hero_dry_1536x1024.png",
+        "reports/twin_bays_art_v3_hero_high_1536x1024.png",
+        "reports/twin_bays_art_v3_hero_drain_0_1536x1024.png",
+        "reports/twin_bays_art_v3_hero_drain_9_1536x1024.png",
+        "reports/twin_bays_art_v3_hero_battle_1920x1080.png"
+      ]
+    },
+    "art_v3_full_map": {
+      "required_before_full_release": true,
+      "status": "approved",
+      "reviewer": "project_owner",
+      "reviewed_at": "2026-07-23",
+      "reviewed_layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+      "reviewed_art_sha256": "ccbaba05cf471e400f1102318ae44defa886133bf484d8cbf3cbb645db68cd3d",
+      "reviewed_tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+      "reviewed_foreground_sha256": "fd2e41a75263973cdfcfc446ded480af9d6c48606b697dd4420061b0070851f8",
+      "art_score": 37,
+      "minimum_art_score": 37,
+      "minimum_category_score": 4,
+      "evidence": [
+        "reports/twin_bays_art_v3_full_dry_1536x1024.png",
+        "reports/twin_bays_art_v3_full_high_1536x1024.png",
+        "reports/twin_bays_art_v3_full_drain_0_1536x1024.png",
+        "reports/twin_bays_art_v3_full_drain_9_1536x1024.png",
+        "reports/twin_bays_art_v3_full_battle_1920x1080.png",
+        "reports/twin_bays_art_v3_full_mobile_1280x720.png"
+      ]
+    },
+    "art_v4_full_map": {
+      "required_before_full_release": true,
+      "status": "rejected_by_project_owner",
+      "candidate_id": "art_v4_convergence_01",
+      "reviewer": "project_owner",
+      "reviewed_at": "2026-07-24",
+      "reviewed_layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+      "reviewed_art_sha256": "29423c7a9e82710db3b18afc3c0432909e191d917916077b6754b2de54665909",
+      "reviewed_tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+      "reviewed_foreground_sha256": "14f3284d95e3b94ffac6674624e3370f42eaca9e9bb334c149002e79b9c673ec",
+      "art_score": null,
+      "rejection_reason": "Fixed-camera concept comparison shows insufficient convergence in silhouette thickness, portal staging, platform-water contact, water depth, and peripheral storytelling.",
+      "rejection_evidence": "reports/twin_bays_art_v5/concept_gap_triptych.png",
+      "minimum_art_score": 37,
+      "minimum_category_score": 4,
+      "evidence": [
+        "reports/twin_bays_art_v4/candidate/v4_dry_1536x1024.png",
+        "reports/twin_bays_art_v4/candidate/v4_high_1536x1024.png",
+        "reports/twin_bays_art_v4/candidate/v4_drain_0_1536x1024.png",
+        "reports/twin_bays_art_v4/candidate/v4_drain_9_1536x1024.png",
+        "reports/twin_bays_art_v4/candidate/v4_battle_1920x1080.png",
+        "reports/twin_bays_art_v4/candidate/v4_portal_1920x1080.png",
+        "reports/twin_bays_art_v4/candidate/v4_mobile_1280x720.png"
+      ]
+    },
+    "art_v5_full_map": {
+      "required_before_full_release": true,
+      "status": "pending_human_review",
+      "candidate_id": "art_v5_camera_convergence_01",
+      "reviewed_layout_sha256": "211ed22c8b9a3af358ec2058bbabf2a976b7a2158d1f18f887bebd9cd966217a",
+      "reviewed_art_sha256": "f621e132f7b16447ca2cdd1ae3f183b4f4898c4c82943bb76fc4368cf60b4e95",
+      "reviewed_tide_sha256": "45caaa9ea785b9bd136e0839cae20bf6ba70a662c949119484e04d32c84b7a46",
+      "reviewed_foreground_sha256": "85cbd6ba68c8f95d8f9cb39e2b873698dd8ee3f3e0197f8513b7ab43692eab15",
+      "reviewed_manifest_sha256": "da3aebfd6a0efac84224ba243a7de45daaf3f9567c0bb91908beb4d1baae6614",
+      "golden_update_allowed": false,
+      "art_score": null,
+      "minimum_art_score": 37,
+      "minimum_category_score": 4,
+      "open_review_findings": [],
+      "resolved_review_findings": [
+        "high_tide_platform_coverage_is_visually_weak",
+        "drain_residue_still_reads_as_leaf_like",
+        "platform_waterline_foam_is_discontinuous",
+        "peripheral_storytelling_density_trails_camera_target"
+      ],
+      "evidence": [
+        "reports/twin_bays_art_v5/v4_target_v5_runtime.png",
+        "reports/twin_bays_art_v5/candidate/v5_dry_1536x1024.png",
+        "reports/twin_bays_art_v5/candidate/v5_high_1536x1024.png",
+        "reports/twin_bays_art_v5/candidate/v5_drain_0_1536x1024.png",
+        "reports/twin_bays_art_v5/candidate/v5_drain_9_1536x1024.png",
+        "reports/twin_bays_art_v5/candidate/v5_battle_1920x1080.png",
+        "reports/twin_bays_art_v5/candidate/v5_portal_1920x1080.png",
+        "reports/twin_bays_art_v5/candidate/v5_mobile_1280x720.png"
+      ]
+    }
+  },
   "change_scopes": {
     "reference_or_docs": ["reference_contract"],
     "visual_only": ["reference_contract", "rendered_captures", "human_visual_review"],

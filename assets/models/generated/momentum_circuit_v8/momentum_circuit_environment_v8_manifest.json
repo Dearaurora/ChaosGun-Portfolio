@@ -1,0 +1,33 @@
+{
+  "schema": "chaos_gun.momentum_circuit_environment_asset",
+  "version": 8,
+  "visual_only": true,
+  "model_family_count": 10,
+  "families": [
+    "RingSegment",
+    "EnergyTower",
+    "NavigationBeacon",
+    "MaintenanceDisc",
+    "MechanicalArm",
+    "DockingFrame",
+    "CargoSkiff",
+    "MaintenanceDrone",
+    "PatrolProbe",
+    "SensorPylon"
+  ],
+  "shared_material_count": 5,
+  "triangle_count": 2796,
+  "runtime_instance_count": 13,
+  "estimated_visible_draw_calls": 53,
+  "collision_nodes": 0,
+  "camera_nodes": 0,
+  "light_nodes": 0,
+  "authored_animation_tracks": 0,
+  "runtime_animation_owner": "res://scripts/maps/momentum_circuit_environment_dressing_v8.gd",
+  "source_path": "res://assets/source/momentum_circuit_v8/momentum_circuit_environment_v8.blend",
+  "source_sha256": "4D1086E7F807DDCFCF0CDB41111FB7C9FEC3BFF068438575503EC485E1D452BE",
+  "glb_path": "res://assets/models/generated/momentum_circuit_v8/momentum_circuit_environment_v8.glb",
+  "glb_sha256": "ED8A36661E8D028FA0449EB4694D269A61D28488C8F47C3C47E67EFA1AFDE7FF",
+  "far_backdrop_path": "res://assets/textures/generated/momentum_circuit_v8/momentum_circuit_v8_far_backdrop.png",
+  "far_backdrop_sha256": "B43CFD745F14072A64CAF6506C0084B9387818439E6AE719E4FA3BCC9F4D2875"
+}

@@ -1,0 +1,110 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud_player_card.gd" id="1_script"]
+[ext_resource type="Theme" path="res://resources/ui/chaosgun_theme.tres" id="2_theme"]
+[ext_resource type="Script" path="res://scripts/ui/weapon_thumbnail.gd" id="3_weapon"]
+
+[node name="HudPlayerCard" type="Panel"]
+custom_minimum_size = Vector2(200, 72)
+offset_right = 200.0
+offset_bottom = 72.0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="PlayerAccent" type="ColorRect" parent="."]
+offset_left = 3.0
+offset_top = 6.0
+offset_right = 7.0
+offset_bottom = 66.0
+mouse_filter = 2
+color = Color(0.302, 0.643, 1, 1)
+
+[node name="Avatar" type="TextureRect" parent="."]
+offset_left = 11.0
+offset_top = 12.0
+offset_right = 53.0
+offset_bottom = 59.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Visor" type="Panel" parent="Avatar"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PlayerTag" type="Label" parent="."]
+offset_left = 59.0
+offset_top = 3.0
+offset_right = 151.0
+offset_bottom = 20.0
+theme_override_font_sizes/font_size = 13
+text = "P1  玩家"
+vertical_alignment = 1
+clip_text = true
+
+[node name="LifeLabel" type="Label" parent="."]
+offset_left = 154.0
+offset_top = 3.0
+offset_right = 190.0
+offset_bottom = 20.0
+theme_override_colors/font_color = Color(0.875, 0.8, 0.722, 1)
+theme_override_font_sizes/font_size = 10
+text = "x4"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Hearts" type="Label" parent="."]
+offset_left = 59.0
+offset_top = 19.0
+offset_right = 189.0
+offset_bottom = 40.0
+theme_override_colors/font_color = Color(1, 0.384, 0.282, 1)
+theme_override_font_sizes/font_size = 15
+text = "♥♥♥♥"
+vertical_alignment = 1
+
+[node name="InformationDivider" type="ColorRect" parent="."]
+offset_left = 59.0
+offset_top = 41.0
+offset_right = 190.0
+offset_bottom = 42.0
+mouse_filter = 2
+color = Color(1, 0.945, 0.812, 0.16)
+
+[node name="WeaponSilhouette" type="TextureRect" parent="."]
+offset_left = 58.0
+offset_top = 44.0
+offset_right = 124.0
+offset_bottom = 68.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+script = ExtResource("3_weapon")
+
+[node name="WeaponName" type="Label" parent="."]
+offset_left = 127.0
+offset_top = 42.0
+offset_right = 190.0
+offset_bottom = 56.0
+theme_override_colors/font_color = Color(0.875, 0.8, 0.722, 1)
+theme_override_font_sizes/font_size = 9
+text = "手枪"
+vertical_alignment = 1
+clip_text = true
+
+[node name="AmmoLabel" type="Label" parent="."]
+offset_left = 127.0
+offset_top = 54.0
+offset_right = 190.0
+offset_bottom = 69.0
+theme_override_font_sizes/font_size = 11
+text = "INF"
+vertical_alignment = 1
+clip_text = true
