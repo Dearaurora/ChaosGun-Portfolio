@@ -4,7 +4,7 @@
   "version": 1,
   "generated_at_utc": "deterministic-art-v10-soft-cap-build",
   "generator": "tools/build_twin_bays_splash_arena.py",
-  "generator_sha256": "3daa7fa682012d779de95b5f2dad3933971d7420d2aeda19e2a52aebe54b1b1c",
+  "generator_sha256": "9737a991e64c11d2cf71c17eaa58c514e32f65afdf375087c86704c0a64101c9",
   "layout": "resources/maps/twin_bays_layout_v1.json",
   "layout_schema": "chaos_gun.twin_bays_layout",
   "layout_version": 1,
@@ -26,8 +26,8 @@
     "foreground_preview": "assets/review/twin_bays_art_v10/candidate/twin_bays_art_v10_foreground.png"
   },
   "output_sha256": {
-    "hero_glb": "8be147c69306d32f0c20df8edb0558fdada7c54bda259d57523174874e2e0811",
-    "foreground_glb": "48d46fd848dc15d6538e44767cc5935eaa110fa106271f1491d6e353db933101"
+    "hero_glb": "8b04528b5bd7dd3daa2b6cf9c3e43a559a303a2f5f52cc6e28b16464543187f3",
+    "foreground_glb": "aab959ac5a695276c1db4fd0608f5495a298a3513e80f94d6291cfada21eedf0"
   },
   "palette": {
     "dry_cream": "#FCEBDD",

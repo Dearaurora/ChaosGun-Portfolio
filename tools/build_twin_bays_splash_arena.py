@@ -12,7 +12,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import struct
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -3128,9 +3130,10 @@ def canonicalize_glb_mesh_data(path: Path, decimal_places: int = 5) -> None:
     Blender 5.1 can produce byte-different GLBs from the same scene because a
     handful of generated UV, position, normal and tangent floats vary between
     clean processes, and it can emit the same triangle set in different index
-    order after procedural object joins. Quantizing floating mesh attributes to
-    five decimals and sorting equivalent triangle records is far below a
-    rendered pixel at the production camera and makes artifacts reproducible.
+    order after procedural object joins. Positions and UVs remain at five
+    decimals; generated normals/tangents use four because Blender's curve
+    conversion can drift by roughly two 1e-5 units between clean processes.
+    Both tolerances are far below a rendered pixel at the production camera.
     """
 
     raw = bytearray(path.read_bytes())
@@ -3152,12 +3155,15 @@ def canonicalize_glb_mesh_data(path: Path, decimal_places: int = 5) -> None:
         raise RuntimeError(f"GLB binary chunk is truncated: {path}")
 
     float_attribute_accessors: set[int] = set()
+    normal_attribute_accessors: set[int] = set()
     triangle_index_accessors: set[int] = set()
     for mesh in document.get("meshes", []):
         for primitive in mesh.get("primitives", []):
             for semantic, accessor_index in primitive.get("attributes", {}).items():
                 if semantic in {"POSITION", "NORMAL", "TANGENT"} or semantic.startswith("TEXCOORD_"):
                     float_attribute_accessors.add(int(accessor_index))
+                if semantic in {"NORMAL", "TANGENT"}:
+                    normal_attribute_accessors.add(int(accessor_index))
             if primitive.get("mode", 4) == 4 and "indices" in primitive:
                 triangle_index_accessors.add(int(primitive["indices"]))
 
@@ -3179,12 +3185,20 @@ def canonicalize_glb_mesh_data(path: Path, decimal_places: int = 5) -> None:
             + int(view.get("byteOffset", 0))
             + int(accessor.get("byteOffset", 0))
         )
+        accessor_decimal_places = (
+            4 if accessor_index in normal_attribute_accessors else decimal_places
+        )
         for element_index in range(int(accessor["count"])):
             element_offset = base_offset + element_index * stride
             for component_index in range(component_count):
                 offset = element_offset + component_index * 4
                 value = struct.unpack_from("<f", raw, offset)[0]
-                struct.pack_into("<f", raw, offset, round(value, decimal_places))
+                struct.pack_into(
+                    "<f",
+                    raw,
+                    offset,
+                    round(value, accessor_decimal_places),
+                )
 
     integer_formats = {5121: ("B", 1), 5123: ("H", 2), 5125: ("I", 4)}
     for accessor_index in sorted(triangle_index_accessors):
@@ -3226,7 +3240,21 @@ def canonicalize_glb_mesh_data(path: Path, decimal_places: int = 5) -> None:
                 value,
             )
 
-    path.write_bytes(raw)
+    temporary = path.with_name(path.name + ".canonical.tmp")
+    temporary.write_bytes(raw)
+    last_error: OSError | None = None
+    for attempt in range(6):
+        try:
+            os.replace(temporary, path)
+            last_error = None
+            break
+        except OSError as error:
+            last_error = error
+            if attempt < 5:
+                time.sleep(0.05 * float(attempt + 1))
+    if last_error is not None:
+        temporary.unlink(missing_ok=True)
+        raise last_error
 
 
 def collection_stats(collection: bpy.types.Collection) -> dict:
