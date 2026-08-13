@@ -4,9 +4,9 @@
 
 ## Demo 视频
 
-[![观看 ChaosGun Demo 视频](media/demo/ChaosGun_Demo_Cover.jpg)](media/demo/ChaosGun_Demo_Final.mp4)
+[![观看 ChaosGun Demo 视频](docs/demo/ChaosGun_Demo_Cover.jpg)](https://dearaurora.github.io/ChaosGun-Portfolio/demo/)
 
-**[▶ 点击观看 45 秒完整 Demo（有声）](media/demo/ChaosGun_Demo_Final.mp4)**
+**[▶ 点击播放 45 秒完整 Demo（有声）](https://dearaurora.github.io/ChaosGun-Portfolio/demo/)**
 
 视频展示三张竞技场、核心击退玩法，以及动态武器与地图机制。
 
