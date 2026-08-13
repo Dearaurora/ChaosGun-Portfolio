@@ -2,11 +2,19 @@
 
 > 2.5D 击退射击对战游戏原型：用枪的击退力把对手打下平台。
 
+## Demo 视频
+
+[![观看 ChaosGun Demo 视频](media/demo/ChaosGun_Demo_Cover.jpg)](media/demo/ChaosGun_Demo_Final.mp4)
+
+**[▶ 点击观看 45 秒完整 Demo（有声）](media/demo/ChaosGun_Demo_Final.mp4)**
+
+视频展示三张竞技场、核心击退玩法，以及动态武器与地图机制。
+
 ## 面试官快速入口
 
 打开仓库后，建议按这个顺序查看：
 
-1. 先看下方的演示截图，了解最终视觉方向。
+1. 先观看上方 45 秒 Demo，快速了解核心玩法与最终视觉方向。
 2. 阅读 [作品集演示指南](docs/portfolio/demo-guide.md)，其中列出了推荐场景、操作方式和验证结果。
 3. 用 Godot 4.6 打开 `project.godot`，按 F6 运行推荐演示场景；也可以直接运行主场景后从菜单进入地图。
 4. 查看 `scenes/`、`scripts/` 和 `tools/`，了解场景、玩法系统与自动化资产/验证流程。
